@@ -306,6 +306,10 @@
     .day-food-macros { display: none; }
     .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
   }
+  /* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
+  @supports (-webkit-touch-callout: none) {
+    input, textarea, select { font-size: 16px !important; }
+  }
 </style>
 </head>
 <body>
@@ -676,7 +680,7 @@ async function renderProfileList() {
             <div class="profile-btn-name">${p.name}</div>
           </div>
         </button>
-        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;padding:6px;border-radius:6px;flex-shrink:0;" title="Delete profile">×</button>
+        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;" title="Delete profile">🗑</button>
       </div>`).join('');
   } catch(e) {
     list.innerHTML = '<div style="font-size:13px;color:var(--red-text);padding:8px 0;">Could not load profiles</div>';
@@ -710,7 +714,7 @@ async function createProfile() {
 }
 
 async function deleteProfile(id, name) {
-  if (!confirm(`Delete profile "${name}" and all their data? This cannot be undone.`)) return;
+  if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will permanently delete all their food logs, weights, and settings. This cannot be undone.`)) return;
   try {
     await api(`profiles?id=${id}`, { method: 'DELETE' });
     if (activeProfileId === id) { activeProfileId = null; activeProfileData = null; }
