@@ -219,6 +219,71 @@
   .profile-chip:hover { background: var(--bg); }
   .profile-chip-avatar { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
   .profile-chip-name { font-size: 12px; font-weight: 500; color: var(--text-2); }
+
+  /* Meal sections */
+  .meal-section { margin-bottom: 0.5rem; }
+  .meal-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; }
+  .meal-title { font-size: 11px; font-weight: 500; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; font-family: 'DM Mono', monospace; }
+  .meal-kcal { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
+  .meal-save-btn { font-size: 11px; color: var(--text-3); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .meal-save-btn:hover { background: var(--bg); color: var(--text-2); }
+  .meal-select { height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; }
+  .meal-empty { font-size: 12px; color: var(--text-3); padding: 6px 0 4px; font-style: italic; }
+
+  /* Water tracker */
+  .water-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .water-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .water-label { font-size: 13px; color: var(--text-2); flex: 1; }
+  .water-amount { font-size: 20px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .water-goal-lbl { font-size: 11px; color: var(--text-3); }
+  .water-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .water-btn { height: 30px; padding: 0 10px; font-size: 12px; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius); cursor: pointer; color: var(--text-2); transition: background 0.15s; white-space: nowrap; }
+  .water-btn:hover { background: var(--surface); color: var(--text); }
+  .water-bar { width: 100%; height: 5px; background: var(--bg); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .water-fill { height: 100%; border-radius: 3px; background: var(--blue); transition: width 0.4s; }
+
+  /* Exercise */
+  .exercise-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .exercise-row:last-of-type { border-bottom: none; }
+  .exercise-name { flex: 1; font-size: 14px; }
+  .exercise-burned { font-size: 13px; font-weight: 500; color: var(--green); font-family: 'DM Mono', monospace; }
+  .exercise-add-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .exercise-input { flex: 1; min-width: 120px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .exercise-kcal-input { width: 80px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
+  .exercise-add-btn { height: 34px; padding: 0 12px; font-size: 13px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: var(--radius); cursor: pointer; color: var(--text-2); white-space: nowrap; }
+  .exercise-add-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* Net calories */
+  .net-banner { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .net-item { display: flex; flex-direction: column; gap: 1px; }
+  .net-item-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
+  .net-item-val { font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .net-divider { color: var(--text-3); font-size: 14px; padding: 0 2px; }
+  .net-result-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
+  .net-result-val { font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .net-result-val.under { color: var(--green); }
+  .net-result-val.over { color: var(--red); }
+
+  /* Saved meals */
+  .saved-meal-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .saved-meal-row:last-of-type { border-bottom: none; }
+  .saved-meal-info { flex: 1; }
+  .saved-meal-name { font-size: 14px; color: var(--text); }
+  .saved-meal-sub { font-size: 12px; color: var(--text-3); font-family: 'DM Mono', monospace; margin-top: 1px; }
+  .saved-meal-log-btn { height: 28px; padding: 0 10px; font-size: 12px; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: 6px; cursor: pointer; color: var(--text-2); white-space: nowrap; }
+  .saved-meal-log-btn:hover { background: var(--surface); color: var(--text); }
+
+  /* Streak */
+  .streak-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 20px; background: var(--amber); color: #fff; }
+
+  @media (max-width: 600px) {
+    .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .summary-grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .food-macros { display: none; }
+    .day-card-meta { display: none; }
+    .day-food-macros { display: none; }
+    .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
 </style>
 </head>
 <body>
@@ -292,17 +357,73 @@
       </div>
 
       <!-- Food log -->
-      <div class="section-title" style="margin-top:1rem;">Food log</div>
-      <div id="foodItems"><div class="empty-msg">No foods logged yet — search below to add your first entry</div></div>
+      <!-- Net calories banner -->
+      <div class="net-banner" id="netBanner">
+        <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val" id="netFood">0</div></div>
+        <div class="net-divider">−</div>
+        <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val" id="netExercise">0</div></div>
+        <div class="net-divider">=</div>
+        <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val" id="netResult">0</div></div>
+        <div style="flex:1"></div>
+        <div class="net-item" style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val" id="netTarget">2,850</div></div>
+      </div>
+
+      <!-- Food log by meal -->
+      <div class="section-title">Food log</div>
+      <div id="foodItems"></div>
+
+      <!-- Saved meals quick-log -->
+      <div id="savedMealsArea" style="display:none;margin-top:0.75rem;">
+        <div class="section-title" style="margin-bottom:8px;">Saved meals</div>
+        <div id="savedMealsList"></div>
+      </div>
 
       <div class="search-area">
         <div class="section-title">Look up food</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+          <label style="font-size:12px;color:var(--text-3);white-space:nowrap;">Add to</label>
+          <select class="meal-select" id="mealSelect">
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snacks">Snacks</option>
+          </select>
+        </div>
         <div class="search-wrap">
-          <textarea id="searchInput" class="search-textarea" placeholder="e.g. 6oz grilled chicken breast, Big Mac, Chick-fil-A egg white grill with colby jack instead of american..."></textarea>
+          <textarea id="searchInput" class="search-textarea" placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
           <button class="lookup-btn" id="lookupBtn" onclick="lookupFood()">Look up</button>
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Ctrl+Enter to look up.</div>
         <div id="resultArea"></div>
+      </div>
+    </div>
+
+    <!-- Water tracker -->
+    <div class="water-card">
+      <div class="section-title">Water intake</div>
+      <div class="water-row">
+        <div class="water-label">Today</div>
+        <div>
+          <div class="water-amount" id="waterAmount">0 oz</div>
+          <div class="water-goal-lbl" id="waterGoalLbl">of 128 oz goal</div>
+        </div>
+        <div class="water-btns">
+          <button class="water-btn" onclick="addWater(8)">+8 oz</button>
+          <button class="water-btn" onclick="addWater(16)">+16 oz</button>
+          <button class="water-btn" onclick="addWater(-8)" style="color:var(--text-3)">−8</button>
+        </div>
+      </div>
+      <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Exercise -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="section-title">Exercise</div>
+      <div id="exerciseItems"><div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div></div>
+      <div class="exercise-add-row">
+        <input class="exercise-input" id="exerciseName" placeholder="e.g. Morning run, weight training..." />
+        <input class="exercise-kcal-input" id="exerciseKcal" type="number" min="0" placeholder="kcal" />
+        <button class="exercise-add-btn" onclick="addExercise()">+ Add</button>
       </div>
     </div>
 
@@ -327,6 +448,7 @@
       <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val" id="statAvgCal">—</div><div class="stat-sub">goal: 2,850</div></div>
       <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val" id="statAvgPro">—</div><div class="stat-sub">goal: 200g</div></div>
       <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val" id="statWeight">—</div><div class="stat-sub">lbs</div></div>
+      <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val" id="statStreak">0</div><div class="stat-sub">days in a row</div></div>
     </div>
 
     <!-- Charts -->
@@ -502,7 +624,7 @@ async function selectProfile(id, profileData) {
   updateProfileChip();
   document.getElementById('profileScreen').classList.add('hidden');
   // Load everything fresh from Supabase
-  await Promise.all([loadAllFromServer(), loadWeightsFromServer()]);
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
   initSettings();
   setDate(todayStr());
 }
@@ -605,12 +727,16 @@ async function bootProfiles() {
 }
 // ── End profile system ───────────────────────────────────────────
 
-let GOALS = { cal: 2850, pro: 200, carb: 300, fat: 75, satFat: 25, sug: 50, sod: 2300, fib: 35 };
+let GOALS = { cal: 2850, pro: 200, carb: 300, fat: 75, satFat: 25, sug: 50, sod: 2300, fib: 35, water: 128 };
 let pendingFood = null;
+let pendingMeal = 'breakfast';
 let chartInstances = {};
 let activeDate = '';
-let _allFoods = {};   // in-memory food log cache: { date: [food,...] }
-let _weights  = {};   // in-memory weight cache:   { date: weight }
+let _allFoods  = {};
+let _weights   = {};
+let _water     = {};   // { date: oz }
+let _exercise  = {};   // { date: [{id,name,calories_burned},...] }
+let _savedMeals = [];  // [{id,name,foods}]
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -645,23 +771,62 @@ async function loadWeightsFromServer() {
   }
 }
 
+async function loadWaterFromServer() {
+  try {
+    const rows = await api(`water?profile_id=${activeProfileId}`);
+    _water = {};
+    rows.forEach(r => { _water[r.date] = parseFloat(r.oz); });
+    cacheSet('water', _water);
+  } catch(e) {
+    const cached = cacheGet('water');
+    if (cached) _water = cached;
+  }
+}
+
+async function loadExerciseFromServer() {
+  try {
+    const rows = await api(`exercise?profile_id=${activeProfileId}`);
+    _exercise = {};
+    rows.forEach(r => {
+      if (!_exercise[r.date]) _exercise[r.date] = [];
+      _exercise[r.date].push({ id: r.id, name: r.name, calories_burned: r.calories_burned });
+    });
+    cacheSet('exercise', _exercise);
+  } catch(e) {
+    const cached = cacheGet('exercise');
+    if (cached) _exercise = cached;
+  }
+}
+
+async function loadSavedMealsFromServer() {
+  try {
+    _savedMeals = await api(`saved-meals?profile_id=${activeProfileId}`);
+    cacheSet('savedMeals', _savedMeals);
+  } catch(e) {
+    const cached = cacheGet('savedMeals');
+    if (cached) _savedMeals = cached;
+  }
+}
+
 function dbRowToFood(r) {
-  return { id: r.food_id, dbId: r.id, name: r.name, cal: r.cal, pro: r.pro, carb: r.carb, fat: r.fat, satFat: r.sat_fat, sug: r.sug, sod: r.sod, fib: r.fib };
+  return { id: r.food_id, dbId: r.id, name: r.name, cal: r.cal, pro: r.pro, carb: r.carb, fat: r.fat, satFat: r.sat_fat, sug: r.sug, sod: r.sod, fib: r.fib, meal: r.meal || 'uncategorized' };
 }
 
 function getActiveFoods() { return _allFoods[activeDate] || []; }
 
-async function addFood(food) {
+async function addFood(food, meal) {
+  const mealVal = meal || pendingMeal || 'uncategorized';
   const row = {
     profile_id: activeProfileId, date: activeDate, food_id: food.id,
     name: food.name, cal: food.cal, pro: food.pro, carb: food.carb,
-    fat: food.fat, sat_fat: food.satFat||0, sug: food.sug, sod: food.sod||0, fib: food.fib||0
+    fat: food.fat, sat_fat: food.satFat||0, sug: food.sug, sod: food.sod||0, fib: food.fib||0,
+    meal: mealVal
   };
   const result = await api('foods', { method: 'POST', body: row });
   const saved = Array.isArray(result) ? result[0] : result;
-  food.dbId = saved?.id;
+  const savedFood = { ...food, meal: mealVal, dbId: saved?.id };
   if (!_allFoods[activeDate]) _allFoods[activeDate] = [];
-  _allFoods[activeDate].push(food);
+  _allFoods[activeDate].push(savedFood);
   cacheSet('allFoods', _allFoods);
 }
 
@@ -918,10 +1083,11 @@ async function lookupFood() {
 
 async function confirmAdd() {
   if (!pendingFood) return;
+  const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
   const btn = document.querySelector('.confirm-btn');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
-    await addFood(pendingFood);
+    await addFood(pendingFood, meal);
     pendingFood = null;
     document.getElementById('searchInput').value = '';
     document.getElementById('resultArea').innerHTML = '';
@@ -955,6 +1121,136 @@ async function resetDay() {
   } catch(e) { showToast('Could not reset — try again'); }
 }
 
+// ── Water ────────────────────────────────────────────────────────
+async function addWater(oz) {
+  const current = _water[activeDate] || 0;
+  const newVal = Math.max(0, current + oz);
+  _water[activeDate] = newVal;
+  cacheSet('water', _water);
+  renderWater();
+  try { await api('water', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, oz: newVal } }); }
+  catch(e) {}
+}
+
+function renderWater() {
+  const oz = _water[activeDate] || 0;
+  const goal = GOALS.water || 128;
+  const pct = Math.min((oz / goal) * 100, 100);
+  document.getElementById('waterAmount').textContent = oz + ' oz';
+  document.getElementById('waterGoalLbl').textContent = `of ${goal} oz goal`;
+  document.getElementById('waterFill').style.width = pct + '%';
+  document.getElementById('waterFill').style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)';
+}
+
+// ── Exercise ─────────────────────────────────────────────────────
+async function addExercise() {
+  const name = document.getElementById('exerciseName').value.trim();
+  const kcal = parseInt(document.getElementById('exerciseKcal').value) || 0;
+  if (!name || !kcal) { showToast('Enter exercise name and calories burned'); return; }
+  try {
+    const result = await api('exercise', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, name, calories_burned: kcal } });
+    const saved = Array.isArray(result) ? result[0] : result;
+    if (!_exercise[activeDate]) _exercise[activeDate] = [];
+    _exercise[activeDate].push({ id: saved?.id, name, calories_burned: kcal });
+    cacheSet('exercise', _exercise);
+    document.getElementById('exerciseName').value = '';
+    document.getElementById('exerciseKcal').value = '';
+    renderExercise(); renderNetBanner(); showToast('Exercise logged!');
+  } catch(e) { showToast('Could not save exercise'); }
+}
+
+async function removeExercise(id) {
+  try {
+    await api(`exercise?id=${id}`, { method: 'DELETE' });
+    _exercise[activeDate] = (_exercise[activeDate]||[]).filter(e => e.id !== id);
+    cacheSet('exercise', _exercise);
+    renderExercise(); renderNetBanner();
+  } catch(e) { showToast('Could not remove'); }
+}
+
+function renderExercise() {
+  const items = _exercise[activeDate] || [];
+  const c = document.getElementById('exerciseItems');
+  if (!items.length) { c.innerHTML = '<div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div>'; return; }
+  c.innerHTML = items.map(e => `<div class="exercise-row">
+    <span class="exercise-name">${e.name}</span>
+    <span class="exercise-burned">−${e.calories_burned} kcal</span>
+    <button class="del-btn" onclick="removeExercise(${e.id})">✕</button>
+  </div>`).join('');
+}
+
+function getExerciseBurned() {
+  return (_exercise[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
+}
+
+function renderNetBanner() {
+  const foodCal = totals(getActiveFoods()).cal;
+  const burned = getExerciseBurned();
+  const net = foodCal - burned;
+  const target = GOALS.cal;
+  document.getElementById('netFood').textContent = foodCal.toLocaleString();
+  document.getElementById('netExercise').textContent = burned.toLocaleString();
+  document.getElementById('netTarget').textContent = target.toLocaleString();
+  const el = document.getElementById('netResult');
+  el.textContent = net.toLocaleString();
+  el.className = 'net-result-val ' + (net > target ? 'over' : 'under');
+}
+
+// ── Saved meals ───────────────────────────────────────────────────
+async function saveMeal(mealName) {
+  const foods = getActiveFoods().filter(f => f.meal === mealName);
+  if (!foods.length) { showToast('No foods in ' + mealName + ' to save'); return; }
+  const name = prompt('Name this saved meal:', mealName.charAt(0).toUpperCase() + mealName.slice(1));
+  if (!name) return;
+  try {
+    const result = await api('saved-meals', { method: 'POST', body: { profile_id: activeProfileId, name, foods } });
+    const saved = Array.isArray(result) ? result[0] : result;
+    _savedMeals.push({ id: saved?.id, name, foods });
+    cacheSet('savedMeals', _savedMeals);
+    renderSavedMeals(); showToast('Meal saved!');
+  } catch(e) { showToast('Could not save meal'); }
+}
+
+async function logSavedMeal(id) {
+  const meal = _savedMeals.find(m => m.id === id);
+  if (!meal) return;
+  const targetMeal = document.getElementById('mealSelect')?.value || 'uncategorized';
+  try {
+    for (const f of meal.foods) {
+      await addFood({ ...f, id: Date.now() + Math.random() }, targetMeal);
+    }
+    renderToday(); showToast('Logged: ' + meal.name);
+  } catch(e) { showToast('Could not log meal'); }
+}
+
+async function deleteSavedMeal(id) {
+  if (!confirm('Delete this saved meal?')) return;
+  try {
+    await api(`saved-meals?id=${id}`, { method: 'DELETE' });
+    _savedMeals = _savedMeals.filter(m => m.id !== id);
+    cacheSet('savedMeals', _savedMeals);
+    renderSavedMeals(); showToast('Saved meal deleted');
+  } catch(e) { showToast('Could not delete'); }
+}
+
+function renderSavedMeals() {
+  const area = document.getElementById('savedMealsArea');
+  const list = document.getElementById('savedMealsList');
+  if (!_savedMeals.length) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+  list.innerHTML = _savedMeals.map(m => {
+    const t = totals(m.foods);
+    return `<div class="saved-meal-row">
+      <div class="saved-meal-info">
+        <div class="saved-meal-name">${m.name}</div>
+        <div class="saved-meal-sub">${m.foods.length} items · ${t.cal} kcal · ${t.pro}g P</div>
+      </div>
+      <button class="saved-meal-log-btn" onclick="logSavedMeal(${m.id})">+ Log</button>
+      <button class="del-btn" onclick="deleteSavedMeal(${m.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
 function barColor(pct) {
   if(pct>=100) return 'var(--red)';
   if(pct>=85) return 'var(--amber)';
@@ -972,62 +1268,80 @@ function renderToday() {
   document.getElementById('totSod').textContent = t.sod;
   document.getElementById('totFib').textContent = t.fib+'g';
   [
-    ['cal',2850,'barCal','var(--blue)'],
-    ['pro',200,'barPro','var(--green)'],
-    ['carb',300,'barCarb','var(--amber)'],
-    ['fat',75,'barFat','var(--pink)'],
-    ['satFat',25,'barSatFat','var(--coral)'],
-    ['sug',50,'barSug','var(--red)'],
-    ['sod',2300,'barSod','var(--blue)'],
-    ['fib',35,'barFib','var(--green)'],
+    ['cal',GOALS.cal,'barCal','var(--blue)'],
+    ['pro',GOALS.pro,'barPro','var(--green)'],
+    ['carb',GOALS.carb,'barCarb','var(--amber)'],
+    ['fat',GOALS.fat,'barFat','var(--pink)'],
+    ['satFat',GOALS.satFat,'barSatFat','var(--coral)'],
+    ['sug',GOALS.sug,'barSug','var(--red)'],
+    ['sod',GOALS.sod,'barSod','var(--blue)'],
+    ['fib',GOALS.fib,'barFib','var(--green)'],
   ].forEach(([k,goal,barId,def])=>{
     const pct=Math.min((t[k]/goal)*100,100);
     const bar=document.getElementById(barId);
     bar.style.width=pct+'%';
-    // fiber: more is better — don't go red when over
     bar.style.background = k==='fib' ? def : (barColor(pct)||def);
   });
   const TYPES = { cal:'target', pro:'goal', carb:'target', fat:'limit', satFat:'limit', sug:'limit', sod:'limit', fib:'goal' };
   const labels = { cal:'kcal',pro:'protein',carb:'carbs',fat:'fat',satFat:'sat fat',sug:'sugar',sod:'sodium',fib:'fiber' };
   const units  = { cal:' kcal',pro:'g',carb:'g',fat:'g',satFat:'g',sug:'g',sod:'mg',fib:'g' };
-  document.getElementById('remainingRow').innerHTML=Object.entries(GOALS).map(([k,goal])=>{
+  document.getElementById('remainingRow').innerHTML=Object.entries(GOALS).filter(([k])=>units[k]).map(([k,goal])=>{
     const rem=goal-t[k], unit=units[k], type=TYPES[k];
     if (k==='fib') {
       const cls=rem<=0?'on-track':'';
-      const txt=rem<=0?`${Math.abs(rem)}g over fiber goal — nice!`:`${rem}g fiber to go`;
-      return `<span class="rem-pill ${cls}">${txt}</span>`;
+      return `<span class="rem-pill ${cls}">${rem<=0?Math.abs(rem)+'g over fiber goal — nice!':rem+'g fiber to go'}</span>`;
     }
     if (type==='limit') {
       const cls=rem<0?'over':(rem<goal*0.15?'on-track':'');
-      const txt=rem<0?`${Math.abs(rem)}${unit} over ${labels[k]} limit`:`${rem}${unit} under ${labels[k]} limit`;
-      return `<span class="rem-pill ${cls}">${txt}</span>`;
+      return `<span class="rem-pill ${cls}">${rem<0?Math.abs(rem)+unit+' over '+labels[k]+' limit':rem+unit+' under '+labels[k]+' limit'}</span>`;
     }
     if (type==='target') {
       const cls=rem<0?'over':(Math.abs(rem)<goal*0.05?'on-track':'');
-      const txt=rem<0?`${Math.abs(rem)}${unit} over ${labels[k]} target`:`${rem}${unit} to ${labels[k]} target`;
-      return `<span class="rem-pill ${cls}">${txt}</span>`;
+      return `<span class="rem-pill ${cls}">${rem<0?Math.abs(rem)+unit+' over '+labels[k]+' target':rem+unit+' to '+labels[k]+' target'}</span>`;
     }
-    // goal
-    const cls=rem<=0?'on-track':(rem<goal*0.1?'on-track':'');
-    const txt=rem<=0?`${labels[k]} goal hit!`:`${rem}${unit} to ${labels[k]} goal`;
-    return `<span class="rem-pill ${cls}">${txt}</span>`;
+    const cls=rem<=0?'on-track':'';
+    return `<span class="rem-pill ${cls}">${rem<=0?labels[k]+' goal hit!':rem+unit+' to '+labels[k]+' goal'}</span>`;
   }).join('');
-  const c=document.getElementById('foodItems');
-  if(!foods.length){c.innerHTML='<div class="empty-msg">No foods logged — search below to add an entry</div>';return;}
-  c.innerHTML=foods.map(f=>`<div class="food-item">
-    <span class="food-name">${f.name}</span>
-    <span class="food-macros">
-      <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
-      <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
-      <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
-      <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-      <span><span class="macro-dot" style="background:var(--red)"></span>${f.sug}g S</span>
-      <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-      <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
-    </span>
-    <span class="food-kcal">${f.cal} kcal</span>
-    <button class="del-btn" onclick="delFood(${f.id})">✕</button>
-  </div>`).join('');
+
+  // Meal sections
+  const MEALS = ['breakfast','lunch','dinner','snacks'];
+  const MEAL_LABELS = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
+  const c = document.getElementById('foodItems');
+  if (!foods.length) {
+    c.innerHTML = '<div class="empty-msg">No foods logged yet — look up a food below to get started</div>';
+  } else {
+    c.innerHTML = MEALS.map(meal => {
+      const mf = foods.filter(f => (f.meal||'uncategorized') === meal);
+      const mt = totals(mf);
+      return `<div class="meal-section">
+        <div class="meal-header">
+          <span class="meal-title">${MEAL_LABELS[meal]}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            ${mf.length ? `<button class="meal-save-btn" onclick="saveMeal('${meal}')">Save meal</button>` : ''}
+            <span class="meal-kcal">${mf.length ? mt.cal+' kcal' : '—'}</span>
+          </span>
+        </div>
+        ${mf.length ? mf.map(f=>`<div class="food-item">
+          <span class="food-name">${f.name}</span>
+          <span class="food-macros">
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
+            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
+            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
+            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
+            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
+          </span>
+          <span class="food-kcal">${f.cal} kcal</span>
+          <button class="del-btn" onclick="delFood(${f.id})">✕</button>
+        </div>`).join('') : '<div class="meal-empty">Nothing logged yet</div>'}
+      </div>`;
+    }).join('');
+  }
+
+  renderNetBanner();
+  renderWater();
+  renderExercise();
+  renderSavedMeals();
 }
 
 // Charts
@@ -1154,6 +1468,21 @@ function renderHistory() {
   document.getElementById('statDays').textContent = days.length;
   document.getElementById('statAvgCal').textContent = Math.round(allTotals.reduce((a,t)=>a+t.cal,0)/allTotals.length).toLocaleString();
   document.getElementById('statAvgPro').textContent = Math.round(allTotals.reduce((a,t)=>a+t.pro,0)/allTotals.length)+'g';
+
+  // Streak calculation
+  let streak = 0;
+  const today = todayStr();
+  const check = new Date(today+'T12:00:00');
+  while (true) {
+    const ds = check.toISOString().slice(0,10);
+    if (all[ds]) { streak++; check.setDate(check.getDate()-1); } else break;
+  }
+  const streakEl = document.getElementById('statStreak');
+  if (streakEl) {
+    streakEl.textContent = streak;
+    streakEl.closest('.stat-card').querySelector('.stat-sub').textContent =
+      streak >= 7 ? '🔥 on fire!' : streak >= 3 ? '⚡ keep it up' : 'days in a row';
+  }
 
   const weightDays = Object.keys(weights).sort();
   const latestWeight = weightDays.length ? weights[weightDays[weightDays.length-1]] : null;
