@@ -1073,7 +1073,7 @@ function loadActiveWeight() {
 }
 
 // Food lookup
-async function lookupFood() {
+async function lookupFood(excludeSource = null) {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) { document.getElementById('searchInput').focus(); return; }
   const btn = document.getElementById('lookupBtn');
@@ -1084,7 +1084,7 @@ async function lookupFood() {
     const res = await fetch('/api/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ query, excludeSource })
     });
     if (!res.ok) throw new Error('Server error ' + res.status);
     const data = await res.json();
@@ -1093,11 +1093,14 @@ async function lookupFood() {
       carb: Math.round(data.carbs_g), fat: Math.round(data.fat_g),
       satFat: Math.round(data.sat_fat_g||0), sug: Math.round(data.sugar_g),
       sod: Math.round(data.sodium_mg||0), fib: Math.round(data.fiber_g||0) };
+    const sourceText = data.note || 'USDA estimate';
     resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${data.name}</div>
       <div class="result-source">
-        <div style="width:100%;"><span class="result-source-badge">📊 ${data.note || 'USDA estimate'}</span></div>
-        <button class="result-retry" onclick="retryLookup()">Numbers look off? Try a more specific description</button>
+        <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="result-source-badge">📊 ${sourceText}</span>
+          <button class="result-retry" onclick="lookupFood(${JSON.stringify(sourceText)})">Try different source</button>
+        </div>
       </div>
       <div class="result-edit-grid">
         <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${pendingFood.cal}" /></div>
@@ -1152,15 +1155,6 @@ function discardResult() {
   pendingFood = null;
   document.getElementById('resultArea').innerHTML = '';
   document.getElementById('searchInput').focus();
-}
-
-function retryLookup() {
-  pendingFood = null;
-  document.getElementById('resultArea').innerHTML = '';
-  const input = document.getElementById('searchInput');
-  input.focus();
-  input.select();
-  showToast('Try adding brand, portion size, or prep method for better accuracy');
 }
 
 function toggleFoodEdit(foodId) {
