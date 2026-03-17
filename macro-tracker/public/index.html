@@ -241,8 +241,9 @@
 
 <div class="container">
   <div class="tabs">
-    <button class="tab active" onclick="showView('today')">Log</button>
-    <button class="tab" onclick="showView('history')">History</button>
+    <button class="tab active" id="tab-today" onclick="showView('today')">Log</button>
+    <button class="tab" id="tab-history" onclick="showView('history')">History</button>
+    <button class="tab" id="tab-goals" onclick="showView('goals')">Goals</button>
   </div>
 
   <!-- TODAY -->
@@ -262,82 +263,6 @@
         <input type="date" id="datePicker" style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;" onchange="onDateChange()" />
         <button onclick="setDate(todayStr())" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
         <span id="pastDayBadge" style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
-      </div>
-    </div>
-
-    <!-- Settings panel -->
-    <div class="settings-panel">
-      <div class="settings-toggle" onclick="toggleSettings()">
-        <div class="settings-toggle-left">
-          <div class="settings-toggle-title">Goals &amp; Profile</div>
-          <div class="settings-toggle-sub" id="settingsSub">Loading...</div>
-        </div>
-        <div class="settings-chevron" id="settingsChevron">▾</div>
-      </div>
-      <div class="settings-body" id="settingsBody">
-        <div class="settings-divider">About you</div>
-        <div class="settings-grid">
-          <div class="settings-field">
-            <label class="settings-label">Sex</label>
-            <select class="settings-select" id="sSex" onchange="recalcGoals()">
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Age</label>
-            <input class="settings-input" type="number" id="sAge" min="16" max="100" placeholder="30" oninput="recalcGoals()" />
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Height</label>
-            <div style="display:flex;gap:6px;">
-              <input class="settings-input" type="number" id="sHeightFt" min="3" max="8" placeholder="ft" oninput="recalcGoals()" style="width:50%;" />
-              <input class="settings-input" type="number" id="sHeightIn" min="0" max="11" placeholder="in" oninput="recalcGoals()" style="width:50%;" />
-            </div>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Weight (lbs)</label>
-            <input class="settings-input" type="number" id="sWeight" min="80" max="500" placeholder="183" oninput="recalcGoals()" />
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Activity level</label>
-            <select class="settings-select" id="sActivity" onchange="recalcGoals()">
-              <option value="1.2">Sedentary (desk job, little exercise)</option>
-              <option value="1.375">Lightly active (1–3x/week)</option>
-              <option value="1.55">Moderately active (3–5x/week)</option>
-              <option value="1.725">Very active (6–7x/week)</option>
-              <option value="1.9">Extremely active (2x/day training)</option>
-            </select>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Goal</label>
-            <select class="settings-select" id="sGoal" onchange="recalcGoals()">
-              <option value="cut">Fat loss (–500 kcal)</option>
-              <option value="maintain">Maintenance</option>
-              <option value="gain">Muscle gain (+300 kcal)</option>
-            </select>
-          </div>
-        </div>
-        <div class="settings-divider">Diet style</div>
-        <div class="settings-grid-2">
-          <div class="settings-field">
-            <label class="settings-label">Macro split</label>
-            <select class="settings-select" id="sSplit" onchange="recalcGoals()">
-              <option value="highprotein">High protein (40/30/30)</option>
-              <option value="standard">Standard (35/35/30)</option>
-              <option value="lowcarb">Low carb (40/20/40)</option>
-              <option value="balanced">Balanced (33/33/33)</option>
-            </select>
-          </div>
-          <div class="settings-field">
-            <label class="settings-label">Units</label>
-            <select class="settings-select" id="sUnits" onchange="recalcGoals()">
-              <option value="imperial">Imperial (lbs, ft/in)</option>
-              <option value="metric">Metric (kg, cm)</option>
-            </select>
-          </div>
-        </div>
-        <div class="settings-result" id="settingsResult"></div>
       </div>
     </div>
 
@@ -462,6 +387,85 @@
 
     <div id="historyList"><div class="empty-msg" style="padding:2rem 0;">No history yet — start logging today!</div></div>
   </div>
+
+  <!-- GOALS -->
+  <div class="view" id="view-goals">
+    <div class="header">
+      <div class="header-top">
+        <div class="app-title">Goals &amp; Profile</div>
+        <div class="header-meta" id="headerMetaGoals"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">About you</div>
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label class="settings-label">Sex</label>
+          <select class="settings-select" id="sSex" onchange="recalcGoals()">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Age</label>
+          <input class="settings-input" type="number" id="sAge" min="16" max="100" placeholder="30" oninput="recalcGoals()" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Height</label>
+          <div style="display:flex;gap:6px;">
+            <input class="settings-input" type="number" id="sHeightFt" min="3" max="8" placeholder="ft" oninput="recalcGoals()" style="width:50%;" />
+            <input class="settings-input" type="number" id="sHeightIn" min="0" max="11" placeholder="in" oninput="recalcGoals()" style="width:50%;" />
+          </div>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Weight (lbs)</label>
+          <input class="settings-input" type="number" id="sWeight" min="80" max="500" placeholder="183" oninput="recalcGoals()" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Activity level</label>
+          <select class="settings-select" id="sActivity" onchange="recalcGoals()">
+            <option value="1.2">Sedentary (desk job, little exercise)</option>
+            <option value="1.375">Lightly active (1–3x/week)</option>
+            <option value="1.55">Moderately active (3–5x/week)</option>
+            <option value="1.725">Very active (6–7x/week)</option>
+            <option value="1.9">Extremely active (2x/day training)</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Goal</label>
+          <select class="settings-select" id="sGoal" onchange="recalcGoals()">
+            <option value="cut">Fat loss (–500 kcal)</option>
+            <option value="maintain">Maintenance</option>
+            <option value="gain">Muscle gain (+300 kcal)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:1.25rem;">Diet style</div>
+      <div class="settings-grid-2">
+        <div class="settings-field">
+          <label class="settings-label">Macro split</label>
+          <select class="settings-select" id="sSplit" onchange="recalcGoals()">
+            <option value="highprotein">High protein (40/30/30)</option>
+            <option value="standard">Standard (35/35/30)</option>
+            <option value="lowcarb">Low carb (40/20/40)</option>
+            <option value="balanced">Balanced (33/33/33)</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Units</label>
+          <select class="settings-select" id="sUnits" onchange="recalcGoals()">
+            <option value="imperial">Imperial (lbs, ft/in)</option>
+            <option value="metric">Metric (kg, cm)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-result" id="settingsResult" style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -489,12 +493,12 @@ function lsKey(k) { return `${k}_${activeProfileId}`; }
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(lsKey(k))||'null'); } catch(e) { return null; } }
 function cacheSet(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
 
-async function selectProfile(id) {
+async function selectProfile(id, profileData) {
   activeProfileId = id;
   localStorage.setItem(LS_LAST, id);
-  // Find profile data from the already-loaded list
-  const cached = cacheGet('profileData');
-  activeProfileData = cached || { id, name: '', color: PROFILE_COLORS[0] };
+  // Use passed data, or cached, or bare minimum fallback
+  activeProfileData = profileData || cacheGet('profileData') || { id, name: '', color: PROFILE_COLORS[0] };
+  cacheSet('profileData', activeProfileData);
   updateProfileChip();
   document.getElementById('profileScreen').classList.add('hidden');
   // Load everything fresh from Supabase
@@ -538,7 +542,7 @@ async function renderProfileList() {
 function selectProfileFromList(id, name, color) {
   activeProfileData = { id, name, color };
   cacheSet('profileData', activeProfileData);
-  selectProfile(id);
+  selectProfile(id, activeProfileData);
 }
 
 async function createProfile() {
@@ -554,7 +558,7 @@ async function createProfile() {
     document.getElementById('newProfileName').value = '';
     activeProfileData = { id, name, color };
     cacheSet('profileData', activeProfileData);
-    await selectProfile(id);
+    await selectProfile(id, activeProfileData);
   } catch(e) {
     showToast('Could not create profile');
   }
@@ -588,21 +592,14 @@ async function bootProfiles() {
   document.getElementById('newProfileName').addEventListener('keydown', e => { if(e.key==='Enter') createProfile(); });
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId) {
-    // Try to restore last profile quickly from cache
     const cached = JSON.parse(localStorage.getItem(`profileData_${lastId}`)||'null');
-    if (cached) {
-      activeProfileData = cached;
-      await selectProfile(lastId);
-      return;
-    }
-    // Otherwise verify it still exists on server
+    if (cached) { activeProfileData = cached; await selectProfile(lastId, cached); return; }
     try {
       const profiles = await api('profiles');
       const found = profiles.find(p => p.id === lastId);
-      if (found) { activeProfileData = found; cacheSet('profileData', found); await selectProfile(lastId); return; }
+      if (found) { activeProfileData = found; cacheSet('profileData', found); await selectProfile(lastId, found); return; }
     } catch(e) {}
   }
-  // No last profile or not found — show picker
   await renderProfileList();
   document.getElementById('profileScreen').classList.remove('hidden');
 }
@@ -788,8 +785,10 @@ function populateSettingsForm(s) {
 
 function updateSettingsSummary(s, g) {
   const goalLabel = s.goal==='cut'?'Fat loss cut':s.goal==='gain'?'Muscle gain':'Maintenance';
-  document.getElementById('settingsSub').textContent = `${goalLabel} · ${g.cal.toLocaleString()} kcal · TDEE ${g.tdee.toLocaleString()}`;
+  const summary = `${goalLabel} · ${g.cal.toLocaleString()} kcal · TDEE ${g.tdee.toLocaleString()}`;
   document.getElementById('headerMeta').textContent  = `${goalLabel} · ${g.cal.toLocaleString()} kcal`;
+  const goalsHeader = document.getElementById('headerMetaGoals');
+  if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
     ['TDEE',     `${g.tdee.toLocaleString()} kcal`],
@@ -812,11 +811,6 @@ function updateMetricSubLabels() {
   document.querySelector('#barSug').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.sug}g`;
   document.querySelector('#barSod').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.sod.toLocaleString()}mg`;
   document.querySelector('#barFib').closest('.metric-card').querySelector('.metric-goal').textContent = `goal: ${GOALS.fib}g`;
-}
-
-function toggleSettings() {
-  document.getElementById('settingsBody').classList.toggle('open');
-  document.getElementById('settingsChevron').classList.toggle('open');
 }
 
 async function initSettings() {
@@ -847,11 +841,12 @@ function onDateChange() {
 }
 
 function showView(name) {
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t=>{ if(t.textContent.toLowerCase()===name) t.classList.add('active'); });
-  if(name==='history') renderHistory();
+  const tabEl = document.getElementById('tab-'+name);
+  if (tabEl) tabEl.classList.add('active');
+  if (name === 'history') renderHistory();
 }
 
 // Weight
