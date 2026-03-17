@@ -17,6 +17,8 @@ exports.handler = async (event) => {
 
     if (method === 'POST') {
       const body = JSON.parse(event.body);
+      // ensure meal field is present
+      if (!body.meal) body.meal = 'uncategorized';
       const result = await query('food_logs', {
         method: 'POST',
         body: JSON.stringify(body),
