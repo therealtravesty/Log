@@ -13,7 +13,8 @@ Return ONLY a raw JSON object, no markdown, no explanation, just JSON:
 
 Use USDA or standard food label values. Round all numbers to nearest integer. If portion unspecified, assume standard single serving and note it.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const baseUrl = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
+  const res = await fetch(`${baseUrl}/v1/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
