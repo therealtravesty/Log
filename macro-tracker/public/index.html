@@ -94,7 +94,10 @@
   .result-card { margin-top: 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); padding: 14px; background: var(--bg); animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .result-name { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
-  .result-note { font-size: 12px; color: var(--text-2); margin-bottom: 12px; line-height: 1.4; }
+  .result-note { font-size: 12px; color: var(--text-3); margin-bottom: 4px; line-height: 1.4; font-style: italic; }
+  .result-source { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+  .result-source-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--bg); border: 0.5px solid var(--border-med); color: var(--text-2); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .result-retry { font-size: 12px; color: var(--blue); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
   .result-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
   .result-chip { font-size: 12px; padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border-med); background: var(--surface); color: var(--text-2); font-family: 'DM Mono', monospace; }
   .result-actions { display: flex; gap: 8px; }
@@ -411,7 +414,7 @@
           <textarea id="searchInput" class="search-textarea" placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
           <button class="lookup-btn" id="lookupBtn" onclick="lookupFood()">Look up</button>
         </div>
-        <div class="search-hint">Include quantity and prep for best accuracy. Ctrl+Enter to look up.</div>
+        <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
         <div id="resultArea"></div>
       </div>
     </div>
@@ -1088,7 +1091,11 @@ async function lookupFood() {
       sod: Math.round(data.sodium_mg||0), fib: Math.round(data.fiber_g||0) };
     resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${data.name}</div>
-      <div class="result-note">${data.note||''}</div>
+      <div class="result-source">
+        <span class="result-source-badge">📊 ${data.note || 'USDA estimate'}</span>
+        <span style="color:var(--border-med);">·</span>
+        <button class="result-retry" onclick="retryLookup()">Numbers look off? Try a more specific description</button>
+      </div>
       <div class="result-edit-grid">
         <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${pendingFood.cal}" /></div>
         <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input" id="re_pro" type="number" value="${pendingFood.pro}" /></div>
@@ -1142,6 +1149,15 @@ function discardResult() {
   pendingFood = null;
   document.getElementById('resultArea').innerHTML = '';
   document.getElementById('searchInput').focus();
+}
+
+function retryLookup() {
+  pendingFood = null;
+  document.getElementById('resultArea').innerHTML = '';
+  const input = document.getElementById('searchInput');
+  input.focus();
+  input.select();
+  showToast('Try adding brand, portion size, or prep method for better accuracy');
 }
 
 function toggleFoodEdit(foodId) {
@@ -1679,9 +1695,9 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-// Ctrl+Enter to lookup
+// Enter to lookup (Shift+Enter for newline)
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.ctrlKey||e.metaKey)) lookupFood();
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
 });
 
 bootProfiles();
