@@ -1,5 +1,4 @@
 [build]
-  base = "macro-tracker"
   publish = "public"
   functions = "netlify/functions"
 
