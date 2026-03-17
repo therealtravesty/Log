@@ -332,22 +332,31 @@
     </div>
 
     <div class="summary-grid">
-      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val" id="totCal">0</div><div class="metric-goal">target: 2,850</div><div class="progress-bar"><div class="progress-fill" id="barCal" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val" id="totPro">0g</div><div class="metric-goal">goal: 200g</div><div class="progress-bar"><div class="progress-fill" id="barPro" style="background:var(--green);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val" id="totCarb">0g</div><div class="metric-goal">target: 300g</div><div class="progress-bar"><div class="progress-fill" id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val" id="totFat">0g</div><div class="metric-goal">limit: 75g</div><div class="progress-bar"><div class="progress-fill" id="barFat" style="background:var(--pink);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val" id="totCal">0</div><div class="progress-bar"><div class="progress-fill" id="barCal" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val" id="totPro">0g</div><div class="progress-bar"><div class="progress-fill" id="barPro" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val" id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill" id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val" id="totFat">0g</div><div class="progress-bar"><div class="progress-fill" id="barFat" style="background:var(--pink);width:0%"></div></div></div>
     </div>
     <div class="summary-grid-2">
-      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val" id="totSatFat">0g</div><div class="metric-goal">limit: 25g</div><div class="progress-bar"><div class="progress-fill" id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val" id="totSug">0g</div><div class="metric-goal">limit: 50g</div><div class="progress-bar"><div class="progress-fill" id="barSug" style="background:var(--red);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val" id="totSod">0</div><div class="metric-goal">limit: 2,300mg</div><div class="progress-bar"><div class="progress-fill" id="barSod" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val" id="totFib">0g</div><div class="metric-goal">goal: 35g</div><div class="progress-bar"><div class="progress-fill" id="barFib" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val" id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill" id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val" id="totSug">0g</div><div class="progress-bar"><div class="progress-fill" id="barSug" style="background:var(--red);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val" id="totSod">0</div><div class="progress-bar"><div class="progress-fill" id="barSod" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val" id="totFib">0g</div><div class="progress-bar"><div class="progress-fill" id="barFib" style="background:var(--green);width:0%"></div></div></div>
     </div>
 
-    <div class="remaining" id="remainingRow"></div>
+    <!-- Net calories banner — sits right below macros -->
+    <div class="net-banner" id="netBanner">
+      <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val" id="netFood">0</div></div>
+      <div class="net-divider">−</div>
+      <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val" id="netExercise">0</div></div>
+      <div class="net-divider">=</div>
+      <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val" id="netResult">0</div></div>
+      <div style="flex:1"></div>
+      <div class="net-item" style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val" id="netTarget">2,850</div></div>
+    </div>
 
-    <div class="card">
-      <!-- Weight logging -->
+    <!-- Weight — standalone card -->
+    <div class="card" style="margin-bottom:1rem;">
       <div class="section-title" id="weightSectionTitle">Today's weight</div>
       <div class="weight-row">
         <label for="weightInput">Body weight</label>
@@ -355,20 +364,10 @@
         <span class="weight-unit">lbs</span>
         <span class="weight-saved" id="weightSaved">✓ Saved</span>
       </div>
+    </div>
 
-      <!-- Food log -->
-      <!-- Net calories banner -->
-      <div class="net-banner" id="netBanner">
-        <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val" id="netFood">0</div></div>
-        <div class="net-divider">−</div>
-        <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val" id="netExercise">0</div></div>
-        <div class="net-divider">=</div>
-        <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val" id="netResult">0</div></div>
-        <div style="flex:1"></div>
-        <div class="net-item" style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val" id="netTarget">2,850</div></div>
-      </div>
-
-      <!-- Food log by meal -->
+    <!-- Food log -->
+    <div class="card">
       <div class="section-title">Food log</div>
       <div id="foodItems"></div>
 
@@ -398,7 +397,18 @@
       </div>
     </div>
 
-    <!-- Water tracker -->
+    <!-- Exercise -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="section-title">Exercise</div>
+      <div id="exerciseItems"><div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div></div>
+      <div class="exercise-add-row">
+        <input class="exercise-input" id="exerciseName" placeholder="e.g. Morning run, weight training..." />
+        <input class="exercise-kcal-input" id="exerciseKcal" type="number" min="0" placeholder="kcal" />
+        <button class="exercise-add-btn" onclick="addExercise()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Water tracker — bottom of log -->
     <div class="water-card">
       <div class="section-title">Water intake</div>
       <div class="water-row">
@@ -410,21 +420,12 @@
         <div class="water-btns">
           <button class="water-btn" onclick="addWater(8)">+8 oz</button>
           <button class="water-btn" onclick="addWater(16)">+16 oz</button>
-          <button class="water-btn" onclick="addWater(-8)" style="color:var(--text-3)">−8</button>
+          <button class="water-btn" onclick="addWater(32)">+32 oz</button>
+          <button class="water-btn" onclick="addWater(40)">+40 oz</button>
+          <button class="water-btn" onclick="fillWater()" style="font-weight:500;">Fill goal</button>
         </div>
       </div>
       <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
-    </div>
-
-    <!-- Exercise -->
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="section-title">Exercise</div>
-      <div id="exerciseItems"><div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div></div>
-      <div class="exercise-add-row">
-        <input class="exercise-input" id="exerciseName" placeholder="e.g. Morning run, weight training..." />
-        <input class="exercise-kcal-input" id="exerciseKcal" type="number" min="0" placeholder="kcal" />
-        <button class="exercise-add-btn" onclick="addExercise()">+ Add</button>
-      </div>
     </div>
 
     <div class="footer-actions">
@@ -916,8 +917,7 @@ async function recalcGoals() {
   const s = readSettingsFromForm();
   await saveSettings(s);
   const g = calcGoals(s);
-  GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib };
-  updateMetricSubLabels();
+  GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
   updateSettingsSummary(s, g);
   renderToday();
 }
@@ -968,23 +968,16 @@ function updateSettingsSummary(s, g) {
 }
 
 function updateMetricSubLabels() {
-  document.querySelector('#barCal').closest('.metric-card').querySelector('.metric-goal').textContent = `target: ${GOALS.cal.toLocaleString()}`;
-  document.querySelector('#barPro').closest('.metric-card').querySelector('.metric-goal').textContent = `goal: ${GOALS.pro}g`;
-  document.querySelector('#barCarb').closest('.metric-card').querySelector('.metric-goal').textContent = `target: ${GOALS.carb}g`;
-  document.querySelector('#barFat').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.fat}g`;
-  document.querySelector('#barSatFat').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.satFat}g`;
-  document.querySelector('#barSug').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.sug}g`;
-  document.querySelector('#barSod').closest('.metric-card').querySelector('.metric-goal').textContent = `limit: ${GOALS.sod.toLocaleString()}mg`;
-  document.querySelector('#barFib').closest('.metric-card').querySelector('.metric-goal').textContent = `goal: ${GOALS.fib}g`;
+  // Progress bars still need goal values — handled in renderToday via GOALS
+  // Sub-label text removed from cards per UI update
 }
 
 async function initSettings() {
   const s = await loadSettings();
   populateSettingsForm(s);
   const g = calcGoals(s);
-  GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib };
+  GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
   updateSettingsSummary(s, g);
-  updateMetricSubLabels();
 }
 
 function todayStr() { return new Date().toISOString().slice(0,10); }
@@ -1130,6 +1123,13 @@ async function addWater(oz) {
   renderWater();
   try { await api('water', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, oz: newVal } }); }
   catch(e) {}
+}
+
+async function fillWater() {
+  const goal = GOALS.water || 128;
+  const current = _water[activeDate] || 0;
+  if (current >= goal) { showToast('Already at goal!'); return; }
+  await addWater(goal - current);
 }
 
 function renderWater() {
@@ -1282,27 +1282,6 @@ function renderToday() {
     bar.style.width=pct+'%';
     bar.style.background = k==='fib' ? def : (barColor(pct)||def);
   });
-  const TYPES = { cal:'target', pro:'goal', carb:'target', fat:'limit', satFat:'limit', sug:'limit', sod:'limit', fib:'goal' };
-  const labels = { cal:'kcal',pro:'protein',carb:'carbs',fat:'fat',satFat:'sat fat',sug:'sugar',sod:'sodium',fib:'fiber' };
-  const units  = { cal:' kcal',pro:'g',carb:'g',fat:'g',satFat:'g',sug:'g',sod:'mg',fib:'g' };
-  document.getElementById('remainingRow').innerHTML=Object.entries(GOALS).filter(([k])=>units[k]).map(([k,goal])=>{
-    const rem=goal-t[k], unit=units[k], type=TYPES[k];
-    if (k==='fib') {
-      const cls=rem<=0?'on-track':'';
-      return `<span class="rem-pill ${cls}">${rem<=0?Math.abs(rem)+'g over fiber goal — nice!':rem+'g fiber to go'}</span>`;
-    }
-    if (type==='limit') {
-      const cls=rem<0?'over':(rem<goal*0.15?'on-track':'');
-      return `<span class="rem-pill ${cls}">${rem<0?Math.abs(rem)+unit+' over '+labels[k]+' limit':rem+unit+' under '+labels[k]+' limit'}</span>`;
-    }
-    if (type==='target') {
-      const cls=rem<0?'over':(Math.abs(rem)<goal*0.05?'on-track':'');
-      return `<span class="rem-pill ${cls}">${rem<0?Math.abs(rem)+unit+' over '+labels[k]+' target':rem+unit+' to '+labels[k]+' target'}</span>`;
-    }
-    const cls=rem<=0?'on-track':'';
-    return `<span class="rem-pill ${cls}">${rem<=0?labels[k]+' goal hit!':rem+unit+' to '+labels[k]+' goal'}</span>`;
-  }).join('');
-
   // Meal sections
   const MEALS = ['breakfast','lunch','dinner','snacks'];
   const MEAL_LABELS = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
