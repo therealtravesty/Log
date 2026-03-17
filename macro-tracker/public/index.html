@@ -638,12 +638,11 @@ function cacheSet(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)
 async function selectProfile(id, profileData) {
   activeProfileId = id;
   localStorage.setItem(LS_LAST, id);
-  // Use passed data, or cached, or bare minimum fallback
-  activeProfileData = profileData || cacheGet('profileData') || { id, name: '', color: PROFILE_COLORS[0] };
-  cacheSet('profileData', activeProfileData);
+  activeProfileData = profileData || JSON.parse(localStorage.getItem(`profileData_${id}`) || 'null') || { id, name: '', color: PROFILE_COLORS[0] };
+  // Always write with explicit key so bootProfiles can read it next time
+  localStorage.setItem(`profileData_${id}`, JSON.stringify(activeProfileData));
   updateProfileChip();
   document.getElementById('profileScreen').classList.add('hidden');
-  // Load everything fresh from Supabase
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
   await initSettings();
   setDate(todayStr());
@@ -682,9 +681,9 @@ async function renderProfileList() {
 }
 
 async function selectProfileFromList(id, name, color) {
-  activeProfileData = { id, name, color };
-  cacheSet('profileData', activeProfileData);
-  await selectProfile(id, activeProfileData);
+  const data = { id, name, color };
+  localStorage.setItem(`profileData_${id}`, JSON.stringify(data));
+  await selectProfile(id, data);
 }
 
 async function createProfile() {
@@ -698,9 +697,9 @@ async function createProfile() {
   try {
     await api('profiles', { method: 'POST', body: { id, name, color } });
     document.getElementById('newProfileName').value = '';
-    activeProfileData = { id, name, color };
-    cacheSet('profileData', activeProfileData);
-    await selectProfile(id, activeProfileData);
+    const data = { id, name, color };
+    localStorage.setItem(`profileData_${id}`, JSON.stringify(data));
+    await selectProfile(id, data);
   } catch(e) {
     showToast('Could not create profile');
   }
@@ -734,14 +733,25 @@ async function bootProfiles() {
   document.getElementById('newProfileName').addEventListener('keydown', e => { if(e.key==='Enter') createProfile(); });
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId) {
-    const cached = JSON.parse(localStorage.getItem(`profileData_${lastId}`)||'null');
-    if (cached) { activeProfileData = cached; await selectProfile(lastId, cached); return; }
+    // Must read cache with explicit key since activeProfileId is null at boot
+    const cached = JSON.parse(localStorage.getItem(`profileData_${lastId}`) || 'null');
+    if (cached) {
+      activeProfileData = cached;
+      await selectProfile(lastId, cached);
+      return;
+    }
+    // Not in cache — fetch from Supabase
     try {
       const profiles = await api('profiles');
       const found = profiles.find(p => p.id === lastId);
-      if (found) { activeProfileData = found; cacheSet('profileData', found); await selectProfile(lastId, found); return; }
+      if (found) {
+        localStorage.setItem(`profileData_${lastId}`, JSON.stringify(found));
+        await selectProfile(lastId, found);
+        return;
+      }
     } catch(e) {}
   }
+  // No last profile or not found — show picker
   await renderProfileList();
   document.getElementById('profileScreen').classList.remove('hidden');
 }
@@ -1154,12 +1164,13 @@ async function saveEditedFood(foodId) {
     fib:    Math.round(parseFloat(document.getElementById(`fe_fib_${foodId}`).value)||0),
   };
   try {
-    // Delete old entry and re-insert with updated values
     await removeFood(food);
     await addFood(updated, food.meal);
     renderToday(); showToast('Updated!');
   } catch(e) { showToast('Could not save edit'); }
 }
+
+async function delFood(foodId) {
   const food = getActiveFoods().find(f => f.id === foodId);
   if (!food) return;
   try {
