@@ -466,92 +466,109 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── API helpers ──────────────────────────────────────────────────
+async function api(path, options = {}) {
+  const res = await fetch('/api/' + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (!res.ok) throw new Error('API error ' + res.status);
+  return res.json();
+}
+
 // ── Profile system ──────────────────────────────────────────────
-const LS_PROFILES    = 'macroProfiles';
 const LS_LAST        = 'macroLastProfile';
 const PROFILE_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#0F6E56','#BA7517','#993556'];
 
 let activeProfileId = null;
+let activeProfileData = null;
 
-function lsKey(key) { return `${key}_${activeProfileId}`; }
-const LS_FOODS    = () => lsKey('macroTrackerAllDays');
-const LS_WEIGHT   = () => lsKey('macroTrackerWeight');
-const LS_SETTINGS = () => lsKey('macroTrackerSettings');
+// Cache keys (per profile, per device — for fast local reads)
+function lsKey(k) { return `${k}_${activeProfileId}`; }
+function cacheGet(k) { try { return JSON.parse(localStorage.getItem(lsKey(k))||'null'); } catch(e) { return null; } }
+function cacheSet(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
 
-function loadProfiles() { try { return JSON.parse(localStorage.getItem(LS_PROFILES)||'[]'); } catch(e) { return []; } }
-function saveProfiles(p) { localStorage.setItem(LS_PROFILES, JSON.stringify(p)); }
-
-function selectProfile(id) {
+async function selectProfile(id) {
   activeProfileId = id;
   localStorage.setItem(LS_LAST, id);
-  const profiles = loadProfiles();
-  const p = profiles.find(x => x.id === id);
-  if (p) {
-    document.getElementById('profileChipAvatar').style.background = p.color;
-    document.getElementById('profileChipName').textContent = p.name;
-  }
+  // Find profile data from the already-loaded list
+  const cached = cacheGet('profileData');
+  activeProfileData = cached || { id, name: '', color: PROFILE_COLORS[0] };
+  updateProfileChip();
   document.getElementById('profileScreen').classList.add('hidden');
+  // Load everything fresh from Supabase
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer()]);
   initSettings();
   setDate(todayStr());
 }
 
-function showProfileScreen() {
-  renderProfileList();
+function updateProfileChip() {
+  if (!activeProfileData) return;
+  document.getElementById('profileChipAvatar').style.background = activeProfileData.color;
+  document.getElementById('profileChipName').textContent = activeProfileData.name;
+}
+
+async function showProfileScreen() {
+  await renderProfileList();
   document.getElementById('profileScreen').classList.remove('hidden');
 }
 
-function renderProfileList() {
-  const profiles = loadProfiles();
+async function renderProfileList() {
   const list = document.getElementById('profileList');
-  if (!profiles.length) { list.innerHTML = ''; return; }
-  list.innerHTML = profiles.map(p => `
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button class="profile-btn" style="flex:1;" onclick="selectProfile('${p.id}')">
-        <div class="profile-avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
-        <div>
-          <div class="profile-btn-name">${p.name}</div>
-          <div class="profile-btn-sub">${getProfileStats(p.id)}</div>
-        </div>
-      </button>
-      <button onclick="deleteProfile('${p.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;padding:6px;border-radius:6px;flex-shrink:0;" title="Delete profile">×</button>
-    </div>`).join('');
-}
-
-function getProfileStats(id) {
+  list.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:8px 0;">Loading profiles...</div>';
   try {
-    const all = JSON.parse(localStorage.getItem(`macroTrackerAllDays_${id}`)||'{}');
-    const days = Object.keys(all).length;
-    return days ? `${days} day${days===1?'':'s'} logged` : 'No data yet';
-  } catch(e) { return 'No data yet'; }
+    const profiles = await api('profiles');
+    if (!profiles.length) { list.innerHTML = ''; return; }
+    list.innerHTML = profiles.map(p => `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="profile-btn" style="flex:1;" onclick="selectProfileFromList('${p.id}','${p.name}','${p.color}')">
+          <div class="profile-avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
+          <div>
+            <div class="profile-btn-name">${p.name}</div>
+          </div>
+        </button>
+        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;padding:6px;border-radius:6px;flex-shrink:0;" title="Delete profile">×</button>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--red-text);padding:8px 0;">Could not load profiles</div>';
+  }
 }
 
-function createProfile() {
+function selectProfileFromList(id, name, color) {
+  activeProfileData = { id, name, color };
+  cacheSet('profileData', activeProfileData);
+  selectProfile(id);
+}
+
+async function createProfile() {
   const name = document.getElementById('newProfileName').value.trim();
   if (!name) { document.getElementById('newProfileName').focus(); return; }
   const selected = document.querySelector('.color-swatch.selected');
   const color = selected ? selected.dataset.color : PROFILE_COLORS[0];
   const id = 'p_' + Date.now();
-  const profiles = loadProfiles();
-  profiles.push({ id, name, color });
-  saveProfiles(profiles);
-  document.getElementById('newProfileName').value = '';
-  selectProfile(id);
+  const btn = document.querySelector('.create-btn');
+  btn.textContent = 'Creating...'; btn.disabled = true;
+  try {
+    await api('profiles', { method: 'POST', body: { id, name, color } });
+    document.getElementById('newProfileName').value = '';
+    activeProfileData = { id, name, color };
+    cacheSet('profileData', activeProfileData);
+    await selectProfile(id);
+  } catch(e) {
+    showToast('Could not create profile');
+  }
+  btn.textContent = 'Create profile'; btn.disabled = false;
 }
 
-function deleteProfile(id) {
-  const profiles = loadProfiles();
-  const p = profiles.find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`Delete profile "${p.name}" and all their data? This cannot be undone.`)) return;
-  // Remove all namespaced data
-  ['macroTrackerAllDays','macroTrackerWeight','macroTrackerSettings','macroSeedVersion'].forEach(k => {
-    localStorage.removeItem(`${k}_${id}`);
-  });
-  saveProfiles(profiles.filter(x => x.id !== id));
-  if (activeProfileId === id) { activeProfileId = null; }
-  renderProfileList();
-  // If we deleted the active profile, stay on profile screen
-  if (!activeProfileId) document.getElementById('profileScreen').classList.remove('hidden');
+async function deleteProfile(id, name) {
+  if (!confirm(`Delete profile "${name}" and all their data? This cannot be undone.`)) return;
+  try {
+    await api(`profiles?id=${id}`, { method: 'DELETE' });
+    if (activeProfileId === id) { activeProfileId = null; activeProfileData = null; }
+    await renderProfileList();
+    if (!activeProfileId) document.getElementById('profileScreen').classList.remove('hidden');
+  } catch(e) { showToast('Could not delete profile'); }
 }
 
 function initColorPicker() {
@@ -566,19 +583,28 @@ function selectColor(el) {
   el.classList.add('selected');
 }
 
-function bootProfiles() {
+async function bootProfiles() {
   initColorPicker();
   document.getElementById('newProfileName').addEventListener('keydown', e => { if(e.key==='Enter') createProfile(); });
   const lastId = localStorage.getItem(LS_LAST);
-  const profiles = loadProfiles();
-  if (lastId && profiles.find(p => p.id === lastId)) {
-    selectProfile(lastId);
-  } else if (profiles.length === 1) {
-    selectProfile(profiles[0].id);
-  } else {
-    renderProfileList();
-    document.getElementById('profileScreen').classList.remove('hidden');
+  if (lastId) {
+    // Try to restore last profile quickly from cache
+    const cached = JSON.parse(localStorage.getItem(`profileData_${lastId}`)||'null');
+    if (cached) {
+      activeProfileData = cached;
+      await selectProfile(lastId);
+      return;
+    }
+    // Otherwise verify it still exists on server
+    try {
+      const profiles = await api('profiles');
+      const found = profiles.find(p => p.id === lastId);
+      if (found) { activeProfileData = found; cacheSet('profileData', found); await selectProfile(lastId); return; }
+    } catch(e) {}
   }
+  // No last profile or not found — show picker
+  await renderProfileList();
+  document.getElementById('profileScreen').classList.remove('hidden');
 }
 // ── End profile system ───────────────────────────────────────────
 
@@ -586,17 +612,103 @@ let GOALS = { cal: 2850, pro: 200, carb: 300, fat: 75, satFat: 25, sug: 50, sod:
 let pendingFood = null;
 let chartInstances = {};
 let activeDate = '';
+let _allFoods = {};   // in-memory food log cache: { date: [food,...] }
+let _weights  = {};   // in-memory weight cache:   { date: weight }
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
   activity: '1.725', goal: 'cut', split: 'highprotein', units: 'imperial'
 };
 
-function loadSettings() {
-  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(LS_SETTINGS())||'{}') }; }
-  catch(e) { return { ...DEFAULT_SETTINGS }; }
+// ── Server data loaders ──────────────────────────────────────────
+async function loadAllFromServer() {
+  try {
+    const rows = await api(`foods?profile_id=${activeProfileId}`);
+    _allFoods = {};
+    rows.forEach(r => {
+      if (!_allFoods[r.date]) _allFoods[r.date] = [];
+      _allFoods[r.date].push(dbRowToFood(r));
+    });
+    cacheSet('allFoods', _allFoods);
+  } catch(e) {
+    const cached = cacheGet('allFoods');
+    if (cached) _allFoods = cached;
+  }
 }
-function saveSettings(s) { localStorage.setItem(LS_SETTINGS(), JSON.stringify(s)); }
+
+async function loadWeightsFromServer() {
+  try {
+    const rows = await api(`weights?profile_id=${activeProfileId}`);
+    _weights = {};
+    rows.forEach(r => { _weights[r.date] = parseFloat(r.weight); });
+    cacheSet('weights', _weights);
+  } catch(e) {
+    const cached = cacheGet('weights');
+    if (cached) _weights = cached;
+  }
+}
+
+function dbRowToFood(r) {
+  return { id: r.food_id, dbId: r.id, name: r.name, cal: r.cal, pro: r.pro, carb: r.carb, fat: r.fat, satFat: r.sat_fat, sug: r.sug, sod: r.sod, fib: r.fib };
+}
+
+function getActiveFoods() { return _allFoods[activeDate] || []; }
+
+async function addFood(food) {
+  const row = {
+    profile_id: activeProfileId, date: activeDate, food_id: food.id,
+    name: food.name, cal: food.cal, pro: food.pro, carb: food.carb,
+    fat: food.fat, sat_fat: food.satFat||0, sug: food.sug, sod: food.sod||0, fib: food.fib||0
+  };
+  const result = await api('foods', { method: 'POST', body: row });
+  const saved = Array.isArray(result) ? result[0] : result;
+  food.dbId = saved?.id;
+  if (!_allFoods[activeDate]) _allFoods[activeDate] = [];
+  _allFoods[activeDate].push(food);
+  cacheSet('allFoods', _allFoods);
+}
+
+async function removeFood(food) {
+  if (food.dbId) {
+    await api(`foods?id=${food.dbId}`, { method: 'DELETE' });
+  }
+  _allFoods[activeDate] = (_allFoods[activeDate]||[]).filter(f => f.id !== food.id);
+  if (!_allFoods[activeDate].length) delete _allFoods[activeDate];
+  cacheSet('allFoods', _allFoods);
+}
+
+async function clearDay(date) {
+  await api(`foods?profile_id=${activeProfileId}&date=${date}`, { method: 'DELETE' });
+  delete _allFoods[date];
+  cacheSet('allFoods', _allFoods);
+}
+
+// Settings
+async function loadSettings() {
+  try {
+    const result = await api(`settings?profile_id=${activeProfileId}`);
+    const data = result?.data || {};
+    cacheSet('settings', data);
+    return { ...DEFAULT_SETTINGS, ...data };
+  } catch(e) {
+    const cached = cacheGet('settings');
+    return { ...DEFAULT_SETTINGS, ...(cached||{}) };
+  }
+}
+
+async function saveSettings(s) {
+  cacheSet('settings', s);
+  try { await api('settings', { method: 'POST', body: { profile_id: activeProfileId, data: s } }); }
+  catch(e) {}
+}
+
+function totals(foods) {
+  return (foods||[]).reduce((a,f)=>({
+    cal:a.cal+f.cal, pro:a.pro+f.pro, carb:a.carb+f.carb,
+    fat:a.fat+f.fat, satFat:a.satFat+(f.satFat||0),
+    sug:a.sug+f.sug, sod:a.sod+(f.sod||0), fib:a.fib+(f.fib||0)
+  }),{cal:0,pro:0,carb:0,fat:0,satFat:0,sug:0,sod:0,fib:0});
+}
 
 function calcGoals(s) {
   // Mifflin-St Jeor BMR
@@ -638,9 +750,9 @@ function calcGoals(s) {
   return { cal, pro, carb, fat, satFat, sug, sod, fib, tdee };
 }
 
-function recalcGoals() {
+async function recalcGoals() {
   const s = readSettingsFromForm();
-  saveSettings(s);
+  await saveSettings(s);
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib };
   updateMetricSubLabels();
@@ -707,8 +819,8 @@ function toggleSettings() {
   document.getElementById('settingsChevron').classList.toggle('open');
 }
 
-function initSettings() {
-  const s = loadSettings();
+async function initSettings() {
+  const s = await loadSettings();
   populateSettingsForm(s);
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib };
@@ -717,23 +829,6 @@ function initSettings() {
 }
 
 function todayStr() { return new Date().toISOString().slice(0,10); }
-function loadAll() { try { return JSON.parse(localStorage.getItem(LS_FOODS())||'{}'); } catch(e) { return {}; } }
-function saveAll(all) { localStorage.setItem(LS_FOODS(), JSON.stringify(all)); }
-function loadWeights() { try { return JSON.parse(localStorage.getItem(LS_WEIGHT())||'{}'); } catch(e) { return {}; } }
-function saveWeights(w) { localStorage.setItem(LS_WEIGHT(), JSON.stringify(w)); }
-function getActiveFoods() { return loadAll()[activeDate] || []; }
-function setActiveFoods(foods) {
-  const all = loadAll();
-  if (!foods.length) delete all[activeDate]; else all[activeDate] = foods;
-  saveAll(all);
-}
-function totals(foods) {
-  return (foods||[]).reduce((a,f)=>({
-    cal:a.cal+f.cal, pro:a.pro+f.pro, carb:a.carb+f.carb,
-    fat:a.fat+f.fat, satFat:a.satFat+(f.satFat||0),
-    sug:a.sug+f.sug, sod:a.sod+(f.sod||0), fib:a.fib+(f.fib||0)
-  }),{cal:0,pro:0,carb:0,fat:0,satFat:0,sug:0,sod:0,fib:0});
-}
 
 function setDate(d) {
   activeDate = d;
@@ -760,30 +855,25 @@ function showView(name) {
 }
 
 // Weight
-function saveWeight() {
+async function saveWeight() {
   const val = parseFloat(document.getElementById('weightInput').value);
   if (!val || val < 50 || val > 700) return;
-  const weights = loadWeights();
-  weights[activeDate] = val;
-  saveWeights(weights);
+  _weights[activeDate] = val;
+  cacheSet('weights', _weights);
   const el = document.getElementById('weightSaved');
   el.style.display = 'inline';
   setTimeout(() => el.style.display = 'none', 1800);
+  try { await api('weights', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, weight: val } }); }
+  catch(e) {}
 }
 
 function loadActiveWeight() {
-  const weights = loadWeights();
-  if (weights[activeDate]) {
-    document.getElementById('weightInput').value = weights[activeDate];
+  if (_weights[activeDate]) {
+    document.getElementById('weightInput').value = _weights[activeDate];
     return;
   }
-  // Fall back to most recent prior day's weight
-  const prior = Object.keys(weights).sort().filter(d => d < activeDate);
-  if (prior.length) {
-    document.getElementById('weightInput').value = weights[prior[prior.length - 1]];
-  } else {
-    document.getElementById('weightInput').value = 183.0;
-  }
+  const prior = Object.keys(_weights).sort().filter(d => d < activeDate);
+  document.getElementById('weightInput').value = prior.length ? _weights[prior[prior.length-1]] : 183.0;
 }
 
 // Food lookup
@@ -831,14 +921,19 @@ async function lookupFood() {
   btn.disabled = false;
 }
 
-function confirmAdd() {
+async function confirmAdd() {
   if (!pendingFood) return;
-  const foods = getActiveFoods(); foods.push(pendingFood); setActiveFoods(foods);
-  pendingFood = null;
-  document.getElementById('searchInput').value = '';
-  document.getElementById('resultArea').innerHTML = '';
-  renderToday(); showToast('Added to log!');
-  document.getElementById('searchInput').focus();
+  const btn = document.querySelector('.confirm-btn');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+    await addFood(pendingFood);
+    pendingFood = null;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('resultArea').innerHTML = '';
+    renderToday(); showToast('Added to log!');
+    document.getElementById('searchInput').focus();
+  } catch(e) { showToast('Could not save — try again'); }
+  if (btn) { btn.textContent = '+ Add to log'; btn.disabled = false; }
 }
 
 function discardResult() {
@@ -847,15 +942,22 @@ function discardResult() {
   document.getElementById('searchInput').focus();
 }
 
-function delFood(id) {
-  const foods = getActiveFoods(), f = foods.find(x=>x.id===id);
-  setActiveFoods(foods.filter(x=>x.id!==id));
-  renderToday(); if(f) showToast('Removed: '+f.name);
+async function delFood(foodId) {
+  const food = getActiveFoods().find(f => f.id === foodId);
+  if (!food) return;
+  try {
+    await removeFood(food);
+    renderToday(); showToast('Removed: ' + food.name);
+  } catch(e) { showToast('Could not remove — try again'); }
 }
 
-function resetDay() {
+async function resetDay() {
   const label = activeDate === todayStr() ? 'today' : new Date(activeDate+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  if(confirm('Clear all foods for ' + label + '?')) { setActiveFoods([]); renderToday(); showToast('Day reset'); }
+  if (!confirm('Clear all foods for ' + label + '?')) return;
+  try {
+    await clearDay(activeDate);
+    renderToday(); showToast('Day reset');
+  } catch(e) { showToast('Could not reset — try again'); }
 }
 
 function barColor(pct) {
@@ -1040,34 +1142,35 @@ function switchChart(name) {
 }
 
 function renderHistory() {
-  const all=loadAll(), weights=loadWeights();
-  const days=Object.keys(all).sort();
-  const daysRev=[...days].reverse();
+  const all = _allFoods;
+  const weights = _weights;
+  const days = Object.keys(all).sort();
+  const daysRev = [...days].reverse();
 
-  document.getElementById('historySubtitle').textContent=days.length?`${days.length} day${days.length===1?'':'s'} tracked`:'';
+  document.getElementById('historySubtitle').textContent = days.length ? `${days.length} day${days.length===1?'':'s'} tracked` : '';
 
-  if(!days.length){
-    ['statDays','statAvgCal','statAvgPro','statWeight'].forEach(id=>document.getElementById(id).textContent='—');
-    document.getElementById('historyList').innerHTML='<div class="empty-msg" style="padding:2rem 0;">No history yet — start logging today!</div>';
+  if (!days.length) {
+    ['statDays','statAvgCal','statAvgPro','statWeight'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('historyList').innerHTML = '<div class="empty-msg" style="padding:2rem 0;">No history yet — start logging today!</div>';
     return;
   }
 
-  const allTotals=days.map(d=>totals(all[d]));
-  document.getElementById('statDays').textContent=days.length;
-  document.getElementById('statAvgCal').textContent=Math.round(allTotals.reduce((a,t)=>a+t.cal,0)/allTotals.length).toLocaleString();
-  document.getElementById('statAvgPro').textContent=Math.round(allTotals.reduce((a,t)=>a+t.pro,0)/allTotals.length)+'g';
+  const allTotals = days.map(d => totals(all[d]));
+  document.getElementById('statDays').textContent = days.length;
+  document.getElementById('statAvgCal').textContent = Math.round(allTotals.reduce((a,t)=>a+t.cal,0)/allTotals.length).toLocaleString();
+  document.getElementById('statAvgPro').textContent = Math.round(allTotals.reduce((a,t)=>a+t.pro,0)/allTotals.length)+'g';
 
-  const weightDays=Object.keys(weights).sort();
-  const latestWeight=weightDays.length?weights[weightDays[weightDays.length-1]]:null;
-  document.getElementById('statWeight').textContent=latestWeight?latestWeight+'':' —';
+  const weightDays = Object.keys(weights).sort();
+  const latestWeight = weightDays.length ? weights[weightDays[weightDays.length-1]] : null;
+  document.getElementById('statWeight').textContent = latestWeight ? latestWeight+'' : '—';
 
   buildCharts(days, all, weights);
 
-  document.getElementById('historyList').innerHTML=daysRev.map(d=>{
-    const foods=all[d], t=totals(foods);
-    const dateStr=new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-    const isToday=d===todayStr();
-    const w=weights[d];
+  document.getElementById('historyList').innerHTML = daysRev.map(d => {
+    const foods = all[d], t = totals(foods);
+    const dateStr = new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+    const isToday = d === todayStr();
+    const w = weights[d];
     const calPct=Math.min((t.cal/GOALS.cal)*100,100), proPct=Math.min((t.pro/GOALS.pro)*100,100);
     const carbPct=Math.min((t.carb/GOALS.carb)*100,100), fatPct=Math.min((t.fat/GOALS.fat)*100,100);
     const satFatPct=Math.min(((t.satFat||0)/GOALS.satFat)*100,100), sugPct=Math.min((t.sug/GOALS.sug)*100,100);
@@ -1096,7 +1199,7 @@ function renderHistory() {
           <div class="day-bar-wrap"><div class="day-bar-label">Carb</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${carbPct}%;background:var(--amber)"></div></div></div>
           <div class="day-bar-wrap"><div class="day-bar-label">Fat</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${fatPct}%;background:var(--pink)"></div></div></div>
           <div class="day-bar-wrap"><div class="day-bar-label">Sat F</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${satFatPct}%;background:${satFatPct>=100?'var(--red)':'var(--coral)'}"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Sugar</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${sugPct}%;background:${sugPct>=100?'var(--red)':'var(--red)'}"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Sugar</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${sugPct}%;background:var(--red)"></div></div></div>
           <div class="day-bar-wrap"><div class="day-bar-label">Na</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${sodPct}%;background:${sodPct>=100?'var(--red)':'var(--blue)'}"></div></div></div>
           <div class="day-bar-wrap"><div class="day-bar-label">Fiber</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${fibPct}%;background:var(--green)"></div></div></div>
         </div>
@@ -1127,154 +1230,65 @@ function toggleDay(d) {
 }
 
 function exportDay() {
-  const foods=getActiveFoods(); if(!foods.length){showToast('Nothing to export');return;}
-  const t=totals(foods), d=activeDate, w=loadWeights()[d]||'';
-  let csv='Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
-  foods.forEach(f=>{csv+=`${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`;});
-  csv+=`${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n`;
-  dlCSV(csv,`macros-${d}.csv`); showToast('Exported '+d);
+  const foods = getActiveFoods(); if (!foods.length) { showToast('Nothing to export'); return; }
+  const t = totals(foods), d = activeDate, w = _weights[d]||'';
+  let csv = 'Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
+  foods.forEach(f => { csv += `${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`; });
+  csv += `${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n`;
+  dlCSV(csv, `macros-${d}.csv`); showToast('Exported '+d);
 }
 
 function exportDayById(d) {
-  const foods=(loadAll()[d]||[]); if(!foods.length) return;
-  const t=totals(foods), w=loadWeights()[d]||'';
-  let csv='Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
-  foods.forEach(f=>{csv+=`${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`;});
-  csv+=`${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n`;
-  dlCSV(csv,`macros-${d}.csv`); showToast('Exported '+d);
+  const foods = _allFoods[d]||[]; if (!foods.length) return;
+  const t = totals(foods), w = _weights[d]||'';
+  let csv = 'Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
+  foods.forEach(f => { csv += `${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`; });
+  csv += `${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n`;
+  dlCSV(csv, `macros-${d}.csv`); showToast('Exported '+d);
 }
 
 function exportAll() {
-  const all=loadAll(), weights=loadWeights(); const days=Object.keys(all).sort();
-  if(!days.length){showToast('No history to export');return;}
-  let csv='Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
-  days.forEach(d=>{
-    const w=weights[d]||'';
-    (all[d]||[]).forEach(f=>{csv+=`${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`;});
-    const t=totals(all[d]); csv+=`${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n\n`;
+  const days = Object.keys(_allFoods).sort();
+  if (!days.length) { showToast('No history to export'); return; }
+  let csv = 'Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';
+  days.forEach(d => {
+    const w = _weights[d]||'';
+    (_allFoods[d]||[]).forEach(f => { csv += `${d},${w},"${f.name}",${f.cal},${f.pro},${f.carb},${f.fat},${f.satFat||0},${f.sug},${f.sod||0},${f.fib||0}\n`; });
+    const t = totals(_allFoods[d]);
+    csv += `${d},${w},TOTAL,${t.cal},${t.pro},${t.carb},${t.fat},${t.satFat},${t.sug},${t.sod},${t.fib}\n\n`;
   });
-  dlCSV(csv,'macros-all-time.csv'); showToast('Full history exported');
+  dlCSV(csv, 'macros-all-time.csv'); showToast('Full history exported');
 }
 
-function deleteDayById(d) {
-  const dateStr=new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  if(!confirm(`Delete all data for ${dateStr}? Cannot be undone.`)) return;
-  const all=loadAll(); delete all[d]; saveAll(all);
-  const weights=loadWeights(); delete weights[d]; saveWeights(weights);
-  if(d===todayStr()) renderToday();
-  renderHistory(); showToast('Deleted '+dateStr);
+async function deleteDayById(d) {
+  const dateStr = new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if (!confirm(`Delete all data for ${dateStr}? Cannot be undone.`)) return;
+  try {
+    await clearDay(d);
+    delete _weights[d];
+    cacheSet('weights', _weights);
+    try { await api(`weights?profile_id=${activeProfileId}&date=${d}`, { method: 'DELETE' }); } catch(e) {}
+    if (d === activeDate) renderToday();
+    renderHistory(); showToast('Deleted '+dateStr);
+  } catch(e) { showToast('Could not delete — try again'); }
 }
 
-function dlCSV(csv,filename) {
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=filename; a.click();
+function dlCSV(csv, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = filename; a.click();
 }
 
 function showToast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2200);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
 }
 
 // Ctrl+Enter to lookup
-document.getElementById('searchInput').addEventListener('keydown', e=>{
-  if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) lookupFood();
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey||e.metaKey)) lookupFood();
 });
-
-// Seed demo data — only runs if profile has no data and no seed version
-(function seedDemoData() {
-  const SEED_VERSION = '2';
-  if (localStorage.getItem(`macroSeedVersion_${activeProfileId}`) === SEED_VERSION) return;
-  const existing = loadAll();
-  const hasSatFat = Object.values(existing).flat().some(f => f.satFat !== undefined);
-  if (Object.keys(existing).length > 0 && hasSatFat) {
-    localStorage.setItem(`macroSeedVersion_${activeProfileId}`, SEED_VERSION);
-    return;
-  }
-
-  const today = new Date();
-  function daysAgo(n) {
-    const d = new Date(today); d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0,10);
-  }
-
-  const foods = {
-    [daysAgo(6)]: [
-      {id:1, name:"Chick-fil-A Egg White Grill w/ Colby Jack",cal:345,pro:31,carb:29,fat:13,satFat:5,sug:2,sod:970,fib:1},
-      {id:2, name:"Slate Ultra Protein Chocolate (30g)",       cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1,sod:160,fib:0},
-      {id:3, name:"Chicken breast 6oz grilled",                cal:280,pro:52,carb:0, fat:6, satFat:1,sug:0,sod:130,fib:0},
-      {id:4, name:"White rice 1 cup cooked",                   cal:205,pro:4, carb:45,fat:0, satFat:0,sug:0,sod:0,  fib:1},
-      {id:5, name:"Broccoli 1 cup steamed",                    cal:55, pro:4, carb:11,fat:1, satFat:0,sug:3,sod:65, fib:5},
-      {id:6, name:"Greek yogurt Chobani plain 5.3oz",          cal:90, pro:16,carb:6, fat:0, satFat:0,sug:4,sod:65, fib:0},
-      {id:7, name:"Banana medium",                             cal:105,pro:1, carb:27,fat:0, satFat:0,sug:14,sod:1, fib:3},
-      {id:8, name:"Almond butter 2 tbsp",                      cal:190,pro:7, carb:7, fat:17,satFat:1,sug:1,sod:75, fib:2},
-    ],
-    [daysAgo(5)]: [
-      {id:10,name:"Eggs 3 whole scrambled",                    cal:210,pro:18,carb:2, fat:15,satFat:4,sug:0,sod:210,fib:0},
-      {id:11,name:"Oatmeal 1 cup cooked",                      cal:165,pro:6, carb:28,fat:3, satFat:1,sug:1,sod:105,fib:4},
-      {id:12,name:"Blueberries 1 cup",                         cal:85, pro:1, carb:21,fat:0, satFat:0,sug:15,sod:1, fib:4},
-      {id:13,name:"Slate Ultra Protein Chocolate (30g)",        cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1,sod:160,fib:0},
-      {id:14,name:"Turkey breast deli 4oz",                    cal:120,pro:26,carb:2, fat:1, satFat:0,sug:1,sod:680,fib:0},
-      {id:15,name:"Ezekiel bread 2 slices",                    cal:160,pro:8, carb:30,fat:1, satFat:0,sug:0,sod:160,fib:6},
-      {id:16,name:"Salmon 6oz baked",                          cal:355,pro:40,carb:0, fat:21,satFat:4,sug:0,sod:115,fib:0},
-      {id:17,name:"Sweet potato medium baked",                 cal:115,pro:2, carb:27,fat:0, satFat:0,sug:6,sod:75, fib:4},
-      {id:18,name:"Asparagus 1 cup roasted",                   cal:40, pro:4, carb:7, fat:0, satFat:0,sug:2,sod:25, fib:3},
-    ],
-    [daysAgo(4)]: [
-      {id:20,name:"Chick-fil-A Egg White Grill w/ Colby Jack", cal:345,pro:31,carb:29,fat:13,satFat:5,sug:2,sod:970,fib:1},
-      {id:21,name:"Slate Ultra Protein Chocolate (30g)",        cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1,sod:160,fib:0},
-      {id:22,name:"Ground beef 93/7 lean 6oz",                 cal:280,pro:40,carb:0, fat:13,satFat:5,sug:0,sod:95, fib:0},
-      {id:23,name:"Brown rice 1 cup cooked",                   cal:215,pro:5, carb:45,fat:2, satFat:0,sug:0,sod:10, fib:4},
-      {id:24,name:"Mixed greens salad 2 cups",                 cal:20, pro:2, carb:3, fat:0, satFat:0,sug:1,sod:50, fib:2},
-      {id:25,name:"Olive oil 1 tbsp",                          cal:120,pro:0, carb:0, fat:14,satFat:2,sug:0,sod:0,  fib:0},
-      {id:26,name:"Cottage cheese 1 cup 2%",                   cal:185,pro:25,carb:8, fat:5, satFat:3,sug:6,sod:700,fib:0},
-      {id:27,name:"Strawberries 1 cup",                        cal:50, pro:1, carb:12,fat:0, satFat:0,sug:7,sod:2,  fib:3},
-    ],
-    [daysAgo(3)]: [
-      {id:30,name:"Protein shake with 2 cups 2% milk",         cal:370,pro:42,carb:28,fat:10,satFat:5,sug:18,sod:310,fib:1},
-      {id:31,name:"Chicken breast 8oz grilled",                cal:370,pro:69,carb:0, fat:8, satFat:2,sug:0, sod:175,fib:0},
-      {id:32,name:"Pasta 2oz dry with marinara",               cal:310,pro:10,carb:60,fat:3, satFat:1,sug:8, sod:480,fib:4},
-      {id:33,name:"Slate Ultra Protein Chocolate (30g)",        cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1, sod:160,fib:0},
-      {id:34,name:"Apple medium",                              cal:95, pro:0, carb:25,fat:0, satFat:0,sug:19,sod:2,  fib:4},
-      {id:35,name:"Peanut butter 1 tbsp",                      cal:95, pro:4, carb:3, fat:8, satFat:2,sug:1, sod:75, fib:1},
-      {id:36,name:"Quest Bar chocolate chip cookie dough",      cal:190,pro:21,carb:21,fat:7, satFat:3,sug:1, sod:250,fib:14},
-    ],
-    [daysAgo(2)]: [
-      {id:40,name:"Chick-fil-A Egg White Grill w/ Colby Jack", cal:345,pro:31,carb:29,fat:13,satFat:5,sug:2,sod:970,fib:1},
-      {id:41,name:"Slate Ultra Protein Chocolate (30g)",        cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1,sod:160,fib:0},
-      {id:42,name:"Tuna can 5oz in water",                     cal:130,pro:28,carb:0, fat:1, satFat:0,sug:0,sod:310,fib:0},
-      {id:43,name:"Rice cakes 2 plain",                        cal:70, pro:2, carb:16,fat:0, satFat:0,sug:0,sod:60, fib:0},
-      {id:44,name:"Chicken thigh 6oz baked skinless",           cal:280,pro:38,carb:0, fat:14,satFat:4,sug:0,sod:130,fib:0},
-      {id:45,name:"Quinoa 1 cup cooked",                       cal:220,pro:8, carb:39,fat:4, satFat:0,sug:1,sod:13, fib:5},
-      {id:46,name:"Spinach 2 cups raw",                        cal:15, pro:2, carb:2, fat:0, satFat:0,sug:0,sod:50, fib:1},
-      {id:47,name:"Greek yogurt Chobani plain 5.3oz",           cal:90, pro:16,carb:6, fat:0, satFat:0,sug:4,sod:65, fib:0},
-    ],
-    [daysAgo(1)]: [
-      {id:50,name:"Eggs 4 whole + 2 whites scrambled",         cal:310,pro:30,carb:2, fat:19,satFat:6,sug:0,sod:280,fib:0},
-      {id:51,name:"Oatmeal 1 cup with honey",                  cal:200,pro:6, carb:36,fat:3, satFat:1,sug:12,sod:105,fib:4},
-      {id:52,name:"Slate Ultra Protein Chocolate (30g)",        cal:130,pro:30,carb:4, fat:1, satFat:0,sug:1, sod:160,fib:0},
-      {id:53,name:"Chicken breast 6oz grilled",                cal:280,pro:52,carb:0, fat:6, satFat:1,sug:0, sod:130,fib:0},
-      {id:54,name:"White rice 1 cup cooked",                   cal:205,pro:4, carb:45,fat:0, satFat:0,sug:0, sod:0,  fib:1},
-      {id:55,name:"Broccoli 1 cup steamed",                    cal:55, pro:4, carb:11,fat:1, satFat:0,sug:3, sod:65, fib:5},
-      {id:56,name:"Quest Bar chocolate chip cookie dough",      cal:190,pro:21,carb:21,fat:7, satFat:3,sug:1, sod:250,fib:14},
-      {id:57,name:"Cottage cheese 1 cup 2%",                   cal:185,pro:25,carb:8, fat:5, satFat:3,sug:6, sod:700,fib:0},
-    ],
-  };
-
-  const weights = {
-    [daysAgo(6)]: 183.0,
-    [daysAgo(5)]: 182.6,
-    [daysAgo(4)]: 182.8,
-    [daysAgo(3)]: 182.2,
-    [daysAgo(2)]: 181.9,
-    [daysAgo(1)]: 181.4,
-  };
-
-  saveAll(foods);
-  saveWeights(weights);
-  localStorage.setItem(`macroSeedVersion_${activeProfileId}`, SEED_VERSION);
-})();
 
 bootProfiles();
 </script>
