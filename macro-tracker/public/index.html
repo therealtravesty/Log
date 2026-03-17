@@ -184,6 +184,9 @@
   .settings-divider { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; margin-top: 4px; font-family: 'DM Mono', monospace; }
   .settings-result { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; padding-top: 1rem; border-top: 0.5px solid var(--border); }
   .settings-result-chip { font-size: 12px; padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border-med); background: var(--bg); color: var(--text-2); font-family: 'DM Mono', monospace; }
+  /* Streak */
+  .streak-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 20px; background: var(--amber); color: #fff; }
+
   @media (max-width: 600px) {
     .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
     .summary-grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -273,8 +276,24 @@
   .saved-meal-log-btn { height: 28px; padding: 0 10px; font-size: 12px; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: 6px; cursor: pointer; color: var(--text-2); white-space: nowrap; }
   .saved-meal-log-btn:hover { background: var(--surface); color: var(--text); }
 
-  /* Streak */
-  .streak-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 20px; background: var(--amber); color: #fff; }
+  /* Inline food edit */
+  .food-edit-form { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; padding: 8px 0 10px; border-top: 0.5px solid var(--border); margin-top: 4px; }
+  .food-edit-field { display: flex; flex-direction: column; gap: 3px; }
+  .food-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
+  .food-edit-input { height: 30px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
+  .food-edit-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
+  .food-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 2px; }
+  .food-edit-save { height: 30px; padding: 0 14px; font-size: 12px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; }
+  .food-edit-cancel { height: 30px; padding: 0 12px; font-size: 12px; background: none; border: none; cursor: pointer; color: var(--text-3); text-decoration: underline; text-underline-offset: 2px; }
+  .edit-btn { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 2px 5px; border-radius: 4px; }
+  .edit-btn:hover { background: var(--bg); color: var(--text-2); }
+
+  /* Editable result card macros */
+  .result-edit-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-bottom: 14px; }
+  .result-edit-field { display: flex; flex-direction: column; gap: 3px; }
+  .result-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
+  .result-edit-input { height: 32px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
+  .result-edit-input:focus { border-color: rgba(0,0,0,0.3); }
 
   @media (max-width: 600px) {
     .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -1060,15 +1079,15 @@ async function lookupFood() {
     resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${data.name}</div>
       <div class="result-note">${data.note||''}</div>
-      <div class="result-chips">
-        <span class="result-chip"><span class="macro-dot" style="background:var(--blue)"></span>${pendingFood.cal} kcal</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--green)"></span>${pendingFood.pro}g protein</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--amber)"></span>${pendingFood.carb}g carbs</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--pink)"></span>${pendingFood.fat}g fat</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--coral)"></span>${pendingFood.satFat}g sat fat</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--red)"></span>${pendingFood.sug}g sugar</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--blue)"></span>${pendingFood.sod}mg sodium</span>
-        <span class="result-chip"><span class="macro-dot" style="background:var(--green)"></span>${pendingFood.fib}g fiber</span>
+      <div class="result-edit-grid">
+        <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${pendingFood.cal}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input" id="re_pro" type="number" value="${pendingFood.pro}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Carbs (g)</label><input class="result-edit-input" id="re_carb" type="number" value="${pendingFood.carb}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fat (g)</label><input class="result-edit-input" id="re_fat" type="number" value="${pendingFood.fat}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sat Fat (g)</label><input class="result-edit-input" id="re_satFat" type="number" value="${pendingFood.satFat}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sugar (g)</label><input class="result-edit-input" id="re_sug" type="number" value="${pendingFood.sug}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sodium (mg)</label><input class="result-edit-input" id="re_sod" type="number" value="${pendingFood.sod}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fiber (g)</label><input class="result-edit-input" id="re_fib" type="number" value="${pendingFood.fib}" /></div>
       </div>
       <div class="result-actions">
         <button class="confirm-btn" onclick="confirmAdd()">+ Add to log</button>
@@ -1083,6 +1102,18 @@ async function lookupFood() {
 
 async function confirmAdd() {
   if (!pendingFood) return;
+  // Pick up any edits made to the result card inputs
+  const rCalEl = document.getElementById('re_cal');
+  if (rCalEl) {
+    pendingFood.cal    = Math.round(parseFloat(rCalEl.value)||0);
+    pendingFood.pro    = Math.round(parseFloat(document.getElementById('re_pro').value)||0);
+    pendingFood.carb   = Math.round(parseFloat(document.getElementById('re_carb').value)||0);
+    pendingFood.fat    = Math.round(parseFloat(document.getElementById('re_fat').value)||0);
+    pendingFood.satFat = Math.round(parseFloat(document.getElementById('re_satFat').value)||0);
+    pendingFood.sug    = Math.round(parseFloat(document.getElementById('re_sug').value)||0);
+    pendingFood.sod    = Math.round(parseFloat(document.getElementById('re_sod').value)||0);
+    pendingFood.fib    = Math.round(parseFloat(document.getElementById('re_fib').value)||0);
+  }
   const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
   const btn = document.querySelector('.confirm-btn');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
@@ -1103,7 +1134,32 @@ function discardResult() {
   document.getElementById('searchInput').focus();
 }
 
-async function delFood(foodId) {
+function toggleFoodEdit(foodId) {
+  const el = document.getElementById('food-edit-'+foodId);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveEditedFood(foodId) {
+  const food = getActiveFoods().find(f => f.id === foodId);
+  if (!food) return;
+  const updated = {
+    ...food,
+    cal:    Math.round(parseFloat(document.getElementById(`fe_cal_${foodId}`).value)||0),
+    pro:    Math.round(parseFloat(document.getElementById(`fe_pro_${foodId}`).value)||0),
+    carb:   Math.round(parseFloat(document.getElementById(`fe_carb_${foodId}`).value)||0),
+    fat:    Math.round(parseFloat(document.getElementById(`fe_fat_${foodId}`).value)||0),
+    satFat: Math.round(parseFloat(document.getElementById(`fe_satFat_${foodId}`).value)||0),
+    sug:    Math.round(parseFloat(document.getElementById(`fe_sug_${foodId}`).value)||0),
+    sod:    Math.round(parseFloat(document.getElementById(`fe_sod_${foodId}`).value)||0),
+    fib:    Math.round(parseFloat(document.getElementById(`fe_fib_${foodId}`).value)||0),
+  };
+  try {
+    // Delete old entry and re-insert with updated values
+    await removeFood(food);
+    await addFood(updated, food.meal);
+    renderToday(); showToast('Updated!');
+  } catch(e) { showToast('Could not save edit'); }
+}
   const food = getActiveFoods().find(f => f.id === foodId);
   if (!food) return;
   try {
@@ -1307,7 +1363,7 @@ function renderToday() {
             <span class="meal-kcal">${mf.length ? mt.cal+' kcal' : '—'}</span>
           </span>
         </div>
-        ${mf.length ? mf.map(f=>`<div class="food-item">
+        ${mf.length ? mf.map(f=>`<div class="food-item" id="food-item-${f.id}">
           <span class="food-name">${f.name}</span>
           <span class="food-macros">
             <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
@@ -1318,7 +1374,24 @@ function renderToday() {
             <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="food-kcal">${f.cal} kcal</span>
+          <button class="edit-btn" onclick="toggleFoodEdit(${f.id})" title="Edit macros">✎</button>
           <button class="del-btn" onclick="delFood(${f.id})">✕</button>
+        </div>
+        <div id="food-edit-${f.id}" style="display:none;">
+          <div class="food-edit-form">
+            <div class="food-edit-field"><label class="food-edit-label">Calories</label><input class="food-edit-input" id="fe_cal_${f.id}" type="number" value="${f.cal}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Protein (g)</label><input class="food-edit-input" id="fe_pro_${f.id}" type="number" value="${f.pro}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Carbs (g)</label><input class="food-edit-input" id="fe_carb_${f.id}" type="number" value="${f.carb}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Fat (g)</label><input class="food-edit-input" id="fe_fat_${f.id}" type="number" value="${f.fat}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Sat Fat (g)</label><input class="food-edit-input" id="fe_satFat_${f.id}" type="number" value="${f.satFat||0}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input" id="fe_sug_${f.id}" type="number" value="${f.sug||0}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input" id="fe_sod_${f.id}" type="number" value="${f.sod||0}" /></div>
+            <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input" id="fe_fib_${f.id}" type="number" value="${f.fib||0}" /></div>
+            <div class="food-edit-actions">
+              <button class="food-edit-save" onclick="saveEditedFood(${f.id})">Save</button>
+              <button class="food-edit-cancel" onclick="toggleFoodEdit(${f.id})">Cancel</button>
+            </div>
+          </div>
         </div>`).join('') : '<div class="meal-empty">Nothing logged yet</div>'}
       </div>`;
     }).join('');
