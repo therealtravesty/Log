@@ -485,12 +485,6 @@
         <div id="savedMealsList"></div>
       </div>
 
-      <!-- Recent foods -->
-      <div id="recentFoodsArea" style="display:none;margin-top:0.75rem;" class="recents-section">
-        <div class="section-title" style="margin-bottom:8px;">Recent foods</div>
-        <div class="recents-list" id="recentFoodsList"></div>
-      </div>
-
       <div class="search-area">
         <div class="section-title">Look up food</div>
         <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
@@ -508,6 +502,12 @@
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
         <div id="resultArea"></div>
+      </div>
+
+      <!-- Recent foods — below search -->
+      <div id="recentFoodsArea" style="display:none;margin-top:1rem;" class="recents-section">
+        <div class="section-title" style="margin-bottom:8px;">Recent foods</div>
+        <div class="recents-list" id="recentFoodsList"></div>
       </div>
     </div>
 
@@ -1490,8 +1490,9 @@ function renderSavedMeals() {
 }
 
 // ── Recent foods ─────────────────────────────────────────────────
+let _recentFoodsCache = [];
+
 function getRecentFoods(limit = 15) {
-  // Collect all foods across all days, sorted newest first, deduped by name
   const seen = new Set();
   const recents = [];
   const days = Object.keys(_allFoods).sort().reverse();
@@ -1511,21 +1512,21 @@ function getRecentFoods(limit = 15) {
 function renderRecentFoods() {
   const area = document.getElementById('recentFoodsArea');
   const list = document.getElementById('recentFoodsList');
-  // Exclude foods already logged today so the list stays fresh
-  const todayNames = new Set((getActiveFoods()).map(f => f.name.toLowerCase().trim()));
-  const recents = getRecentFoods(15).filter(f => !todayNames.has(f.name.toLowerCase().trim()));
-  if (!recents.length) { area.style.display = 'none'; return; }
+  const todayNames = new Set(getActiveFoods().map(f => f.name.toLowerCase().trim()));
+  _recentFoodsCache = getRecentFoods(15).filter(f => !todayNames.has(f.name.toLowerCase().trim()));
+  if (!_recentFoodsCache.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
-  list.innerHTML = recents.map(f => `
-    <div class="recent-item" onclick="logRecentFood(${JSON.stringify(JSON.stringify(f))})">
+  list.innerHTML = _recentFoodsCache.map((f, i) => `
+    <div class="recent-item" onclick="logRecentFood(${i})">
       <span class="recent-item-name">${f.name}</span>
       <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F</span>
       <span class="recent-item-add">+</span>
     </div>`).join('');
 }
 
-async function logRecentFood(fJson) {
-  const f = JSON.parse(fJson);
+async function logRecentFood(idx) {
+  const f = _recentFoodsCache[idx];
+  if (!f) return;
   const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
   try {
     await addFood({ ...f, id: Date.now() }, meal);
