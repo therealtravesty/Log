@@ -828,6 +828,7 @@
       <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val" id="statAvgPro">—</div><div class="stat-sub" id="statAvgProSub">goal: —</div></div>
       <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val" id="statWeight">—</div><div class="stat-sub">lbs</div></div>
       <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val" id="statStreak">0</div><div class="stat-sub" id="statStreakSub">days in a row</div></div>
+      <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val" id="statHabitStreak">—</div><div class="stat-sub" id="statHabitStreakSub">days all done</div></div>
     </div>
 
     <!-- Charts -->
@@ -843,6 +844,7 @@
         <button class="chart-tab" onclick="switchChart('sodium')">Sodium</button>
         <button class="chart-tab" onclick="switchChart('fiber')">Fiber</button>
         <button class="chart-tab" onclick="switchChart('macros')">Total Macros</button>
+        <button class="chart-tab" onclick="switchChart('habits')">Habits</button>
       </div>
       <div class="chart-card active" id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
@@ -883,6 +885,20 @@
       <div class="chart-card" id="chart-macros">
         <div class="chart-title">Total macros breakdown over time (kcal)</div>
         <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
+      </div>
+      <div class="chart-card" id="chart-habits">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="chart-title" style="margin-bottom:0;">Habit completions by month</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="habitChartSelect" class="settings-select" style="height:30px;font-size:12px;padding:0 8px;width:auto;" onchange="renderHabitChart()">
+              <option value="all">All habits</option>
+            </select>
+            <select id="habitChartYear" class="settings-select" style="height:30px;font-size:12px;padding:0 8px;width:auto;" onchange="renderHabitChart()">
+            </select>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="habitChart"></canvas></div>
+        <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
     </div>
 
@@ -2334,6 +2350,109 @@ function switchChart(name) {
   document.querySelectorAll('.chart-card').forEach(c=>c.classList.remove('active'));
   document.getElementById('chart-'+name).classList.add('active');
   event.target.classList.add('active');
+  if (name === 'habits') renderHabitChart();
+}
+
+function populateHabitChartControls() {
+  const sel = document.getElementById('habitChartSelect');
+  const yearSel = document.getElementById('habitChartYear');
+  if (!sel || !yearSel) return;
+
+  // Habit selector
+  sel.innerHTML = '<option value="all">All habits</option>' +
+    _habits.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
+
+  // Year selector from habit log dates
+  const allDates = Object.values(_habitLogs).flatMap(d => Object.keys(d));
+  const years = [...new Set(allDates.map(d => d.slice(0,4)))].sort().reverse();
+  if (!years.length) years.push(new Date().getFullYear().toString());
+  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+}
+
+function renderHabitChart() {
+  const sel = document.getElementById('habitChartSelect');
+  const yearSel = document.getElementById('habitChartYear');
+  const canvas = document.getElementById('habitChart');
+  const legend = document.getElementById('habitChartLegend');
+  if (!canvas || !sel || !yearSel) return;
+
+  const selectedId = sel.value;
+  const selectedYear = yearSel.value || new Date().getFullYear().toString();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Habits to show
+  const habitsToShow = selectedId === 'all' ? _habits : _habits.filter(h => String(h.id) === selectedId);
+
+  // Build datasets — one per habit
+  const datasets = habitsToShow.map(h => {
+    const data = months.map((_, mi) => {
+      const monthStr = `${selectedYear}-${String(mi+1).padStart(2,'0')}`;
+      const logs = _habitLogs[h.id] || {};
+      return Object.entries(logs).filter(([d]) => d.startsWith(monthStr)).filter(([,v]) => {
+        return h.target_type === 'quantity' ? v >= (h.target_value||1) : v >= 1;
+      }).length;
+    });
+    const [r,g,b] = hexToRgb(h.color);
+    return {
+      label: h.name,
+      data,
+      borderColor: h.color,
+      backgroundColor: `rgba(${r},${g},${b},0.1)`,
+      borderWidth: 2,
+      pointBackgroundColor: h.color,
+      pointRadius: 4,
+      tension: 0.3,
+      fill: habitsToShow.length === 1,
+    };
+  });
+
+  // Destroy old chart
+  if (chartInstances['habit']) { chartInstances['habit'].destroy(); delete chartInstances['habit']; }
+
+  if (!datasets.length) {
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    if (legend) legend.innerHTML = '<span style="font-size:12px;color:var(--text-3);">No habits to show</span>';
+    return;
+  }
+
+  const ctx = canvas.getContext('2d');
+  chartInstances['habit'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's' : ''} completed`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 31,
+          ticks: { stepSize: 5, color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
+          grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }
+        },
+        x: {
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+
+  // Custom legend
+  if (legend) {
+    legend.innerHTML = habitsToShow.map(h =>
+      `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);">
+        <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>
+        ${h.name}
+      </div>`
+    ).join('');
+  }
 }
 
 function renderHistory() {
@@ -2387,6 +2506,17 @@ function renderHistory() {
   document.getElementById('statWeight').textContent = latestWeight ? latestWeight+'' : '—';
 
   buildCharts(days, all, weights);
+  populateHabitChartControls();
+  renderHabitChart();
+
+  // Habit streak stat
+  const habitStreakEl = document.getElementById('statHabitStreak');
+  const habitStreakSub = document.getElementById('statHabitStreakSub');
+  if (habitStreakEl) {
+    const hs = calcHabitStreak();
+    habitStreakEl.textContent = hs > 0 ? hs : '—';
+    if (habitStreakSub) habitStreakSub.textContent = hs >= 7 ? '🔥 on fire!' : hs >= 3 ? '⚡ keep it up' : 'days all done';
+  }
 
   document.getElementById('historyList').innerHTML = daysRev.map(d => {
     const foods = all[d], t = totals(foods);
@@ -2560,29 +2690,81 @@ function dismissHsTip() {
 
 // ── Habits system ─────────────────────────────────────────────────
 
-const HABIT_ICON_KEYS = ['water','run','gym','book','food','sleep','bike','target','check','star','fire','music','write','pill','brain','veg','sun','swim','steps','camera'];
+const HABIT_ICON_KEYS = [
+  // Sports & Fitness
+  'run','walk','gym','bike','swim','hike','yoga','steps','sports','heart','soccer','tennis','basketball','ski','golf','climb',
+  // Health & Body  
+  'sleep','pill','brain','water','weight','pulse','lungs','tooth','eye','hand',
+  // Food & Nutrition
+  'food','veg','fruit','coffee','bottle','salad','cook','fast',
+  // Mind & Study
+  'book','write','music','study','target','star','bulb','medal',
+  // Life & Hobbies
+  'sun','camera','art','plant','home','dog','money','phone','travel','fire','check','clock',
+];
+
 const HABIT_ICONS_SVG = {
-  water:  '<polyline points="12 2 8 8 4 14 4 18 8 20 16 20 20 18 20 14 16 8 12 2"/><line x1="8" y1="14" x2="16" y2="14"/>',
-  run:    '<circle cx="13" cy="5" r="1.5"/><path d="M9 20l2-5 3 2 2-7"/><path d="M6 13l3-3 2 2 4-4"/>',
+  // Sports & Fitness
+  run:    '<circle cx="13" cy="4.5" r="1.5"/><path d="M10 20l2-5 3 3 2-8"/><path d="M5 13l4-2 3 2 3-4"/>',
+  walk:   '<circle cx="12" cy="4" r="1.5"/><path d="M9 20l1.5-5 2.5 2 2-7"/><path d="M7 14l2-1.5M15 9l2 2-3 2"/>',
   gym:    '<path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4M6 12h12"/>',
-  book:   '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
-  food:   '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  sleep:  '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
   bike:   '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5L9 11l3-3 4 3.5"/>',
-  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
-  check:  '<polyline points="20 6 9 17 4 12"/>',
-  star:   '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-  fire:   '<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/>',
-  music:  '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-  write:  '<line x1="17" y1="3" x2="21" y2="7"/><path d="M3 21l9.5-9.5M12.5 3.5l8 8-9.5 9.5L3 21z"/>',
-  pill:   '<rect x="2" y="10" width="9" height="14" rx="4.5"/><rect x="13" y="0" width="9" height="14" rx="4.5"/><line x1="7" y1="17" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="7"/>',
-  brain:  '<path d="M9.5 2A2.5 2.5 0 007 4.5v0A2.5 2.5 0 004.5 7v0A2.5 2.5 0 002 9.5v5A2.5 2.5 0 004.5 17v0A2.5 2.5 0 007 19.5v0A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7v0A2.5 2.5 0 0017 4.5v0A2.5 2.5 0 0014.5 2h-5z"/>',
-  veg:    '<path d="M2 22l10-10"/><path d="M16 4s-8 2-10 10c2-2 6-4 10-4s8 2 8 2-2 4-8 4"/>',
-  sun:    '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
   swim:   '<path d="M2 12h20M2 16c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><circle cx="12" cy="7" r="2"/><path d="M12 9v3"/>',
+  hike:   '<path d="M3 20l4-12 3 4 3-7 4 15"/><path d="M17 8l2-4M5 20h14"/>',
+  yoga:   '<circle cx="12" cy="3" r="1.5"/><path d="M12 5v5l-4 3M12 10l4 3M8 16l-2 5M16 16l2 5M10 15h4"/>',
   steps:  '<path d="M3 20h4l2-6h6l2 6h4"/><path d="M9 14V8l3-4 3 4v6"/>',
+  sports: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/>',
+  heart:  '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
+  soccer: '<circle cx="12" cy="12" r="10"/><path d="M12 2l3.09 9.26H5.91L9 11h6l3 1.26M5.91 11.26L3 19.74M18.09 11.26L21 19.74M9 22h6"/>',
+  tennis: '<circle cx="12" cy="12" r="10"/><path d="M6.3 6.3a9.9 9.9 0 0011.4 0M6.3 17.7a9.9 9.9 0 0111.4 0M2 12h20"/>',
+  basketball: '<circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.93 4.93a16 16 0 0114.14 14.14M19.07 4.93A16 16 0 004.93 19.07"/>',
+  ski:    '<path d="M20 16l-4-8-4 4-4-4-4 8"/><path d="M2 20h20"/><circle cx="8" cy="6" r="1.5"/>',
+  golf:   '<circle cx="12" cy="18" r="2"/><path d="M12 16V4l7 3-7 3"/>',
+  climb:  '<path d="M12 22V12M12 12l-3-4M12 12l3-4M7 22l5-10 5 10M4 18l3-6M20 18l-3-6"/><circle cx="12" cy="4" r="2"/>',
+  // Health & Body
+  sleep:  '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+  pill:   '<path d="M10.5 20H4a2 2 0 01-2-2V6a2 2 0 012-2h6.5M13.5 4H20a2 2 0 012 2v12a2 2 0 01-2 2h-6.5M12 4v16"/>',
+  brain:  '<path d="M9.5 2A2.5 2.5 0 007 4.5v0A2.5 2.5 0 004.5 7v0A2.5 2.5 0 002 9.5v5A2.5 2.5 0 004.5 17v0A2.5 2.5 0 007 19.5v0A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7v0A2.5 2.5 0 0017 4.5v0A2.5 2.5 0 0014.5 2h-5z"/>',
+  water:  '<polyline points="12 2 8 8 4 14 4 18 8 20 16 20 20 18 20 14 16 8 12 2"/><line x1="8" y1="14" x2="16" y2="14"/>',
+  weight: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>',
+  pulse:  '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  lungs:  '<path d="M6 12H4a2 2 0 00-2 2v4a2 2 0 002 2h2c0 2 .5 3 2 3s2-1.5 2-3V7c0-2-1-3-2-3s-2 1-2 3v5zM18 12h2a2 2 0 012 2v4a2 2 0 01-2 2h-2c0 2-.5 3-2 3s-2-1.5-2-3V7c0-2 1-3 2-3s2 1 2 3v5z"/>',
+  tooth:  '<path d="M12 2c-4 0-7 2-7 6 0 3 1 5 2 8s1.5 4 2 4c.5 0 1-.5 1.5-2S12 15 12 15s.5 3 1.5 5S15 22 15.5 22c.5 0 1-1 2-4s2-5 2-8c0-4-3-6-7.5-8z"/>',
+  eye:    '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  hand:   '<path d="M18 11V6a2 2 0 00-2-2v0a2 2 0 00-2 2v0M14 10V4a2 2 0 00-2-2v0a2 2 0 00-2 2v2M10 10.5V6a2 2 0 00-2-2v0a2 2 0 00-2 2v8l4 4h4a4 4 0 004-4v-2a2 2 0 00-2-2h-4z"/>',
+  // Food & Nutrition
+  food:   '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  veg:    '<path d="M2 22l10-10"/><path d="M16 4s-8 2-10 10c2-2 6-4 10-4s8 2 8 2-2 4-8 4"/>',
+  fruit:  '<path d="M12 22a8 8 0 100-16 8 8 0 000 16z"/><path d="M12 6C12 4 13 2 15 2"/>',
+  coffee: '<path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/>',
+  bottle: '<path d="M8 2h8M9 2v3l-2 2v13a2 2 0 002 2h6a2 2 0 002-2V7l-2-2V2M9 11h6M9 15h6"/>',
+  salad:  '<path d="M2 20a2 2 0 002 2h16a2 2 0 002-2v-2H2v2z"/><path d="M4 18c0-4 2-8 8-8s8 4 8 8"/><path d="M12 10V6M8 10l-2-4M16 10l2-4"/>',
+  cook:   '<path d="M3 11l4-8 4 4 4-4 4 8H3z"/><path d="M3 11v6a2 2 0 002 2h14a2 2 0 002-2v-6"/>',
+  fast:   '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  // Mind & Study
+  book:   '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
+  write:  '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  music:  '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  study:  '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  star:   '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  bulb:   '<line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14.77A6 6 0 106.91 14.77L5 18h14l-1.91-3.23z"/>',
+  medal:  '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>',
+  // Life & Hobbies
+  sun:    '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
   camera: '<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
+  art:    '<circle cx="13.5" cy="6.5" r="1.5"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.69 0 3-.5 3-2 0-.51-.19-.98-.49-1.37a.744.744 0 01.58-1.19H17c2.76 0 5-2.24 5-5 0-5.52-4.48-10-10-10z"/>',
+  plant:  '<path d="M12 22V12"/><path d="M12 12C12 8 9 4 4 4c0 5 4 8 8 8"/><path d="M12 12c0-4 3-8 8-8 0 5-4 8-8 8"/>',
+  home:   '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  dog:    '<path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .352-3.5 2-3.5 4 0 3 2 4.5 4.5 7 1.24 1.24 2.5 2.5 3.5 4 2.5-3 7-5 7-9 0-2-1.5-4-4-4-1 0-2 .5-3 1l-1 2"/><path d="M8 14v.01"/>',
+  money:  '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+  phone:  '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  travel: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>',
+  fire:   '<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/>',
+  check:  '<polyline points="20 6 9 17 4 12"/>',
+  clock:  '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
+
 
 function habitIconSvg(key, color, size=20) {
   const paths = HABIT_ICONS_SVG[key] || HABIT_ICONS_SVG.check;
@@ -2658,16 +2840,17 @@ function renderHabits() {
       const sqFade = `rgba(${r},${g},${b},0.12)`;
       const isToday = d === today;
 
-      if (isQty && isToday && !done) {
+      if (isQty) {
+        // Arc style for all quantity squares — consistent across days
         const radius = 14, circ = 2 * Math.PI * radius;
         const dash = pct * circ, gap = circ - dash;
+        if (done) {
+          // Completed — solid fill with white checkmark
+          return `<div class="habit-square" style="background:${h.color};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><polyline points="12,20 18,26 28,14" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+        }
         const textColor = `rgba(${r},${g},${b},1)`;
         const valLabel = val > 0 ? `<text x="20" y="24" text-anchor="middle" font-size="11" font-weight="700" font-family="DM Mono,monospace" fill="${textColor}">${val}</text>` : '';
-        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})" title="${val}/${target}${h.target_unit?' '+h.target_unit:''}"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20" cy="20" r="${radius}" fill="none" stroke="rgba(${r},${g},${b},0.2)" stroke-width="2.5"/><circle cx="20" cy="20" r="${radius}" fill="none" stroke="${h.color}" stroke-width="2.5" stroke-dasharray="${dash} ${gap}" stroke-linecap="round" transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
-      } else if (isQty) {
-        const textColor = done ? 'rgba(255,255,255,0.95)' : `rgba(${r},${g},${b},1)`;
-        const valLabel  = val > 0 ? `<span class="habit-square-val" style="color:${textColor};">${val}</span>` : '';
-        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"><div class="habit-square-fill" style="height:${pct*100}%;background:${h.color};transition:height 0.25s;"></div>${valLabel}</div>`;
+        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})" title="${val}/${target}${h.target_unit?' '+h.target_unit:''}"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20" cy="20" r="${radius}" fill="none" stroke="rgba(${r},${g},${b},0.18)" stroke-width="2.5"/><circle cx="20" cy="20" r="${radius}" fill="none" stroke="${h.color}" stroke-width="2.5" stroke-dasharray="${dash} ${gap}" stroke-linecap="round" transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
       } else {
         return `<div class="habit-square" style="background:${done?h.color:sqFade};" onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
       }
@@ -2789,15 +2972,33 @@ function toggleAddHabitForm() {
   if (!form.classList.contains('hidden')) initHabitForm();
 }
 
+const HABIT_ICON_GROUPS = [
+  { label: 'Sports & Fitness', keys: ['run','walk','gym','bike','swim','hike','yoga','steps','sports','heart','soccer','tennis','basketball','ski','golf','climb'] },
+  { label: 'Health & Body',    keys: ['sleep','pill','brain','water','weight','pulse','lungs','tooth','eye','hand'] },
+  { label: 'Food & Nutrition', keys: ['food','veg','fruit','coffee','bottle','salad','cook','fast'] },
+  { label: 'Mind & Study',     keys: ['book','write','music','study','target','star','bulb','medal'] },
+  { label: 'Life & Hobbies',   keys: ['sun','camera','art','plant','home','dog','money','phone','travel','fire','check','clock'] },
+];
+
+function renderIconPicker(containerId, selectedKey, onclickFn) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = HABIT_ICON_GROUPS.map(g =>
+    `<div style="margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">${g.label}</div>
+      <div class="habit-icon-picker">${g.keys.map(k =>
+        `<button class="habit-icon-btn${k===selectedKey?' selected':''}" data-icon="${k}" onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>`
+      ).join('')}</div>
+    </div>`
+  ).join('');
+}
+
 function initHabitForm() {
   const cp = document.getElementById('habitColorPicker');
   cp.innerHTML = HABIT_COLORS.map((c,i) =>
     `<div class="habit-color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectHabitColor(this)"></div>`
   ).join('');
-  const ip = document.getElementById('habitIconPicker');
-  ip.innerHTML = HABIT_ICON_KEYS.map((k,i) =>
-    `<button class="habit-icon-btn${i===0?' selected':''}" data-icon="${k}" onclick="selectHabitIcon(this)">${habitIconSvg(k,'currentColor',18)}</button>`
-  ).join('');
+  renderIconPicker('habitIconPicker', 'check', 'selectHabitIcon');
   toggleHabitQuantityFields();
 }
 
@@ -2807,7 +3008,12 @@ function selectHabitColor(el) {
 }
 
 function selectHabitIcon(el) {
-  document.querySelectorAll('.habit-icon-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#habitIconPicker .habit-icon-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectEditHabitIcon(el) {
+  document.querySelectorAll('#editHabitIconPicker .habit-icon-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
 }
 
@@ -2831,9 +3037,7 @@ function openHabitModal(habitId) {
     `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>`
   ).join('');
   const ip = document.getElementById('editHabitIconPicker');
-  ip.innerHTML = HABIT_ICON_KEYS.map(k =>
-    `<button class="habit-icon-btn${k===h.icon?' selected':''}" data-icon="${k}" onclick="selectEditHabitIcon(this)">${habitIconSvg(k,'currentColor',18)}</button>`
-  ).join('');
+  if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
   // Swipe down to dismiss
@@ -2875,11 +3079,6 @@ function closeHabitModal(e) {
 
 function selectEditHabitColor(el) {
   document.querySelectorAll('#editHabitColorPicker .habit-color-swatch').forEach(s => s.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-function selectEditHabitIcon(el) {
-  document.querySelectorAll('#editHabitIconPicker .habit-icon-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
 }
 
@@ -2929,6 +3128,7 @@ async function deleteHabitFromModal() {
 }
 
 async function saveNewHabit() {
+  const name = document.getElementById('habitName')?.value.trim();
   if (!name) { showToast('Enter a habit name'); return; }
   const color = document.querySelector('.habit-color-swatch.selected')?.dataset.color || HABIT_COLORS[0];
   const icon  = document.querySelector('.habit-icon-btn.selected')?.dataset.icon || 'check';
