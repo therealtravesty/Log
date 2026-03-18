@@ -362,7 +362,7 @@
   .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity 0.25s; }
   .loading-overlay.hidden { opacity: 0; pointer-events: none; }
   .loading-avatar { width: 48px; height: 48px; border-radius: 50%; }
-  .loading-name { font-size: 15px; font-weight: 500; color: var(--text); }
+  .loading-name { font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
   .loading-spinner { width: 20px; height: 20px; border: 2px solid var(--border-med); border-top-color: var(--text-2); border-radius: 50%; animation: spin 0.7s linear infinite; }
   /* Friendly date label */
   .date-friendly { font-size: 13px; color: var(--text-2); font-weight: 500; }
@@ -799,7 +799,7 @@ async function selectProfile(id, profileData) {
   const loadName = document.getElementById('loadingName');
   if (overlay) {
     loadAvatar.style.background = activeProfileData.color;
-    loadName.textContent = activeProfileData.name;
+    loadName.textContent = `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
