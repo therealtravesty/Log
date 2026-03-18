@@ -915,7 +915,128 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── API helpers — see offline-aware api() at bottom of script ────
+// ── API helpers ──────────────────────────────────────────────────
+// (offline-aware api() defined after PWA setup below)
+
+// ── PWA: Service Worker & Offline Queue ──────────────────────────
+let _isOnline = navigator.onLine;
+let _syncDB = null;
+
+// Register service worker — only on actual deployment, not preview environments
+if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
+  navigator.serviceWorker.register('/sw.js').then(() => {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'SYNC_COMPLETE') {
+        showOfflineBar('syncing', '✓ Back online — all changes synced');
+        setTimeout(hideOfflineBar, 3000);
+      }
+    });
+  }).catch(() => {});
+}
+
+window.addEventListener('online',  () => { _isOnline = true;  onConnectionRestored(); });
+window.addEventListener('offline', () => { _isOnline = false; showOfflineBar('offline'); });
+
+function showOfflineBar(mode, msg) {
+  const bar = document.getElementById('offlineBar');
+  if (!bar) return;
+  bar.textContent = msg || '📵 Offline — changes will sync when connection returns';
+  bar.className = `offline-bar visible${mode === 'syncing' ? ' syncing' : ''}`;
+}
+function hideOfflineBar() {
+  const bar = document.getElementById('offlineBar');
+  if (bar) bar.className = 'offline-bar';
+}
+
+async function onConnectionRestored() {
+  showOfflineBar('syncing', '↑ Back online — syncing changes...');
+  await flushOfflineQueue();
+  if (activeProfileId) {
+    await Promise.all([
+      loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(),
+      loadExerciseFromServer(), loadSavedMealsFromServer(),
+      loadHabitsFromServer(), loadHabitLogsFromServer()
+    ]);
+    renderToday();
+    if (document.getElementById('view-habits')?.classList.contains('active')) renderHabits();
+  }
+  showOfflineBar('syncing', '✓ All changes synced');
+  setTimeout(hideOfflineBar, 3000);
+}
+
+async function getQueueDB() {
+  if (_syncDB) return _syncDB;
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('macro-sync-queue', 1);
+    req.onupgradeneeded = e => {
+      if (!e.target.result.objectStoreNames.contains('queue'))
+        e.target.result.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = e => { _syncDB = e.target.result; resolve(_syncDB); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function enqueueRequest(url, method, body) {
+  const db = await getQueueDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('queue', 'readwrite');
+    const req = tx.objectStore('queue').add({ url, method, body, created_at: Date.now() });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function flushOfflineQueue() {
+  const db = await getQueueDB();
+  const queue = await new Promise((resolve, reject) => {
+    const tx = db.transaction('queue', 'readonly');
+    const req = tx.objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+  for (const item of queue) {
+    try {
+      const res = await fetch(item.url, {
+        method: item.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: item.body ? JSON.stringify(item.body) : undefined,
+      });
+      if (res.ok) {
+        const tx = db.transaction('queue', 'readwrite');
+        tx.objectStore('queue').delete(item.id);
+      }
+    } catch(e) {}
+  }
+}
+
+async function api(path, options = {}) {
+  const method = options.method || 'GET';
+  const isWrite = method !== 'GET';
+  const doFetch = () => fetch('/api/' + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  }).then(res => {
+    if (!res.ok) throw new Error('API error ' + res.status);
+    return res.json();
+  });
+
+  if (!_isOnline && isWrite) {
+    await enqueueRequest('/api/' + path, method, options.body || null);
+    return options.body ? { ...options.body, offline: true } : { offline: true };
+  }
+  try {
+    return await doFetch();
+  } catch(e) {
+    if (isWrite) {
+      await enqueueRequest('/api/' + path, method, options.body || null);
+      return options.body ? { ...options.body, offline: true } : { offline: true };
+    }
+    throw e;
+  }
+}
+// ── End PWA / API ─────────────────────────────────────────────────
 
 // ── Profile system ──────────────────────────────────────────────
 const LS_LAST        = 'macroLastProfile';
@@ -2618,150 +2739,6 @@ async function deleteHabit(id) {
   } catch(e) { showToast('Could not delete'); }
 }
 // ── End habits ─────────────────────────────────────────────────────
-
-// ── PWA: Service Worker & Offline Queue ──────────────────────────
-let _isOnline = navigator.onLine;
-let _syncDB = null;
-
-// Register service worker — only on actual deployment, not preview environments
-if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
-  navigator.serviceWorker.register('/sw.js').then(reg => {
-    navigator.serviceWorker.addEventListener('message', e => {
-      if (e.data?.type === 'SYNC_COMPLETE') {
-        showOfflineBar('syncing', '✓ Back online — all changes synced');
-        setTimeout(hideOfflineBar, 3000);
-      }
-    });
-  }).catch(err => console.warn('SW registration failed:', err));
-}
-
-// Online/offline detection
-window.addEventListener('online',  () => { _isOnline = true;  onConnectionRestored(); });
-window.addEventListener('offline', () => { _isOnline = false; showOfflineBar('offline'); });
-
-function showOfflineBar(mode, msg) {
-  const bar = document.getElementById('offlineBar');
-  if (!bar) return;
-  bar.textContent = msg || '📵 Offline — changes will sync when connection returns';
-  bar.className = `offline-bar visible${mode === 'syncing' ? ' syncing' : ''}`;
-}
-function hideOfflineBar() {
-  const bar = document.getElementById('offlineBar');
-  if (bar) bar.className = 'offline-bar';
-}
-
-async function onConnectionRestored() {
-  showOfflineBar('syncing', '↑ Back online — syncing changes...');
-  await flushOfflineQueue();
-  // Reload all data fresh from server to reconcile any offline writes
-  if (activeProfileId) {
-    await Promise.all([
-      loadAllFromServer(),
-      loadWeightsFromServer(),
-      loadWaterFromServer(),
-      loadExerciseFromServer(),
-      loadSavedMealsFromServer(),
-      loadHabitsFromServer(),
-      loadHabitLogsFromServer()
-    ]);
-    renderToday();
-    if (document.getElementById('view-habits')?.classList.contains('active')) renderHabits();
-  }
-  showOfflineBar('syncing', '✓ All changes synced');
-  setTimeout(hideOfflineBar, 3000);
-}
-
-// ── IndexedDB queue ───────────────────────────────────────────────
-async function getQueueDB() {
-  if (_syncDB) return _syncDB;
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('macro-sync-queue', 1);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('queue')) {
-        db.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
-      }
-    };
-    req.onsuccess = e => { _syncDB = e.target.result; resolve(_syncDB); };
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function enqueueRequest(url, method, body) {
-  const db = await getQueueDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('queue', 'readwrite');
-    const req = tx.objectStore('queue').add({ url, method, body, created_at: Date.now() });
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function flushOfflineQueue() {
-  const db = await getQueueDB();
-  const queue = await new Promise((resolve, reject) => {
-    const tx = db.transaction('queue', 'readonly');
-    const req = tx.objectStore('queue').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
-  if (!queue.length) return;
-  for (const item of queue) {
-    try {
-      const res = await fetch(item.url, {
-        method: item.method,
-        headers: { 'Content-Type': 'application/json' },
-        body: item.body ? JSON.stringify(item.body) : undefined,
-      });
-      if (res.ok) {
-        const delTx = db.transaction('queue', 'readwrite');
-        delTx.objectStore('queue').delete(item.id);
-      }
-    } catch(e) { /* still offline, leave in queue */ }
-  }
-  // Trigger background sync via SW if available
-  if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-    const reg = await navigator.serviceWorker.ready;
-    reg.sync.register('macro-sync').catch(() => {});
-  }
-}
-
-// ── Offline-aware API wrapper ─────────────────────────────────────
-const _apiBase = async (path, options = {}) => {
-  const res = await fetch('/api/' + path, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) throw new Error('API error ' + res.status);
-  return res.json();
-};
-
-async function api(path, options = {}) {
-  const method = options.method || 'GET';
-  const isWrite = method !== 'GET';
-
-  if (!_isOnline && isWrite) {
-    // Queue the write for later, return optimistic response
-    const url = '/api/' + path;
-    await enqueueRequest(url, method, options.body || null);
-    // Return minimal optimistic result — callers handle missing IDs gracefully
-    return options.body ? { ...options.body, offline: true } : { offline: true };
-  }
-
-  try {
-    return await _apiBase(path, options);
-  } catch(e) {
-    // Network failure on a write — queue it
-    if (isWrite) {
-      const url = '/api/' + path;
-      await enqueueRequest(url, method, options.body || null);
-      return options.body ? { ...options.body, offline: true } : { offline: true };
-    }
-    throw e;
-  }
-}
-// ── End PWA ───────────────────────────────────────────────────────
 
 initWelcome();
 // For returning users, bootProfiles is called inside initWelcome via showApp path
