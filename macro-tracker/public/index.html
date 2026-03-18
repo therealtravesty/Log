@@ -420,7 +420,44 @@
     <button class="welcome-btn" onclick="dismissWelcome()">Let's go! →</button>
   </div>
 </div>
-<!-- Profile screen -->
+<!-- Goals explainer overlay — shown once for new profiles -->
+<div class="welcome-overlay hidden" id="goalsOverlay">
+  <div class="welcome-box">
+    <div class="welcome-title" style="margin-bottom:6px;">Set your goals</div>
+    <div class="welcome-sub">These settings calculate your personalized calorie and macro targets. Here's what each field means:</div>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="welcome-step-num s1" style="font-size:16px;">♂♀</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Sex, Age, Height & Weight</div>
+          <div class="welcome-step-desc">Used to calculate your BMR (basal metabolic rate) — the calories your body burns at rest — using the Mifflin-St Jeor equation, the gold standard used by dietitians.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s2" style="font-size:16px;">⚡</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Activity level</div>
+          <div class="welcome-step-desc">Multiplies your BMR to get your TDEE — total daily energy expenditure. Be honest here; most people overestimate their activity level.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s3" style="font-size:16px;">🎯</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Goal & weekly rate</div>
+          <div class="welcome-step-desc">Losing 0.5–1 lb/week is sustainable and recommended by most dietitians. 1.5 lbs/week is aggressive — only for short-term cuts. Gaining is set conservatively to minimize fat gain.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s4" style="font-size:16px;">🥩</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Macro split</div>
+          <div class="welcome-step-desc">How your calories are divided between protein, carbs, and fat. High protein (40/30/30) is ideal for body recomposition. Your targets update automatically as you change any field.</div>
+        </div>
+      </div>
+    </div>
+    <button class="welcome-btn" onclick="dismissGoalsOverlay()">Got it — let me set my goals</button>
+  </div>
+</div>
 <div class="profile-screen hidden" id="profileScreen">
   <div class="profile-box">
     <div class="profile-box-title">Macro Tracker</div>
@@ -447,9 +484,9 @@
 <div class="container">
   <div class="tabs" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
     <div style="display:flex;gap:4px;padding:4px;">
-      <button class="tab active" id="tab-today" onclick="showView('today')">Log</button>
+      <button class="tab active" id="tab-goals" onclick="showView('goals')">Goals</button>
+      <button class="tab" id="tab-today" onclick="showView('today')">Log</button>
       <button class="tab" id="tab-history" onclick="showView('history')">History</button>
-      <button class="tab" id="tab-goals" onclick="showView('goals')">Goals</button>
     </div>
     <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile" style="margin-right:4px;">
       <div class="profile-chip-avatar" id="profileChipAvatar"></div>
@@ -727,9 +764,18 @@
         <div class="settings-field">
           <label class="settings-label">Goal</label>
           <select class="settings-select" id="sGoal" onchange="recalcGoals()">
-            <option value="cut">Fat loss (–500 kcal)</option>
-            <option value="maintain">Maintenance</option>
-            <option value="gain">Muscle gain (+300 kcal)</option>
+            <option value="cut">Lose weight</option>
+            <option value="maintain">Maintain weight</option>
+            <option value="gain">Gain muscle</option>
+          </select>
+        </div>
+        <div class="settings-field" id="rateField">
+          <label class="settings-label">Weekly rate</label>
+          <select class="settings-select" id="sRate" onchange="recalcGoals()">
+            <option value="0.25">0.25 lbs/week (slow)</option>
+            <option value="0.5">0.5 lbs/week</option>
+            <option value="1" selected>1 lb/week (moderate)</option>
+            <option value="1.5">1.5 lbs/week (aggressive)</option>
           </select>
         </div>
       </div>
@@ -799,12 +845,17 @@ async function selectProfile(id, profileData) {
   const loadName = document.getElementById('loadingName');
   if (overlay) {
     loadAvatar.style.background = activeProfileData.color;
-    loadName.textContent = `Welcome back, ${activeProfileData.name}!`;
+    // "Welcome" for new profiles (no data yet), "Welcome back" for returning
+    const isNew = !_allFoods || Object.keys(_allFoods).length === 0;
+    loadName.textContent = isNew
+      ? `Welcome, ${activeProfileData.name}!`
+      : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
   await initSettings();
   setDate(todayStr());
+  showView('today'); // always land on Log for returning users
   // Hide loading overlay
   if (overlay) overlay.classList.add('hidden');
 }
@@ -863,7 +914,7 @@ async function createProfile() {
     await selectProfile(id, data);
     // New profile — send straight to Goals to set up targets
     showView('goals');
-    showToast('Welcome! Set your goals to get started.');
+    setTimeout(maybeShowGoalsOverlay, 400); // slight delay so the view transition completes
   } catch(e) {
     showToast('Could not create profile');
   }
@@ -1092,7 +1143,12 @@ function calcGoals(s) {
     ? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
     : 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
   const tdee = Math.round(bmr * parseFloat(s.activity));
-  const adj = s.goal === 'cut' ? -500 : s.goal === 'gain' ? 300 : 0;
+  // Weekly rate → daily deficit/surplus (3,500 kcal per lb)
+  const rate = parseFloat(s.rate) || 1;
+  const dailyAdj = Math.round((rate * 3500) / 7);
+  let adj = 0;
+  if (s.goal === 'cut') adj = -dailyAdj;
+  else if (s.goal === 'gain') adj = Math.round(dailyAdj * 0.5); // smaller surplus for lean gain
   const cal = Math.max(1200, tdee + adj);
 
   // Macro split (protein%, carb%, fat%)
@@ -1119,6 +1175,7 @@ function calcGoals(s) {
 
 async function recalcGoals() {
   const s = readSettingsFromForm();
+  updateRateFieldVisibility(s.goal);
   await saveSettings(s);
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
@@ -1142,6 +1199,7 @@ function readSettingsFromForm() {
     weight:   document.getElementById('sWeight').value,
     activity: document.getElementById('sActivity').value,
     goal:     document.getElementById('sGoal').value,
+    rate:     document.getElementById('sRate')?.value || '1',
     split:    document.getElementById('sSplit').value,
     units:    document.getElementById('sUnits').value,
   };
@@ -1155,12 +1213,24 @@ function populateSettingsForm(s) {
   document.getElementById('sWeight').value   = s.weight;
   document.getElementById('sActivity').value = s.activity;
   document.getElementById('sGoal').value     = s.goal;
+  if (document.getElementById('sRate')) document.getElementById('sRate').value = s.rate || '1';
   document.getElementById('sSplit').value    = s.split;
   document.getElementById('sUnits').value    = s.units;
+  updateRateFieldVisibility(s.goal);
+}
+
+function updateRateFieldVisibility(goal) {
+  const rateField = document.getElementById('rateField');
+  if (rateField) rateField.style.display = goal === 'maintain' ? 'none' : '';
 }
 
 function updateSettingsSummary(s, g) {
-  const goalLabel = s.goal==='cut'?'Fat loss cut':s.goal==='gain'?'Muscle gain':'Maintenance';
+  const rate = parseFloat(s.rate) || 1;
+  const goalLabel = s.goal === 'cut'
+    ? `Lose ${rate} lb/week`
+    : s.goal === 'gain'
+    ? `Gain ${(rate*0.5).toFixed(2).replace(/\.?0+$/,'')} lb/week`
+    : 'Maintenance';
   const summary = `${goalLabel} · ${g.cal.toLocaleString()} kcal · TDEE ${g.tdee.toLocaleString()}`;
   document.getElementById('headerMeta').textContent  = `${goalLabel} · ${g.cal.toLocaleString()} kcal`;
   const goalsHeader = document.getElementById('headerMetaGoals');
@@ -2062,6 +2132,17 @@ function initWelcome() {
   if (isIOS && !isStandalone && !tipDismissed) {
     document.getElementById('hsTip').classList.remove('hidden');
   }
+}
+
+function dismissGoalsOverlay() {
+  localStorage.setItem('macroGoalsOverlaySeen_' + activeProfileId, '1');
+  document.getElementById('goalsOverlay').classList.add('hidden');
+}
+
+function maybeShowGoalsOverlay() {
+  if (!activeProfileId) return;
+  if (localStorage.getItem('macroGoalsOverlaySeen_' + activeProfileId)) return;
+  document.getElementById('goalsOverlay').classList.remove('hidden');
 }
 
 function dismissWelcome() {
