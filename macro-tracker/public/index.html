@@ -233,11 +233,20 @@
   /* Meal sections */
   .meal-section { margin-bottom: 0.5rem; }
   .meal-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; }
-  .meal-title { font-size: 11px; font-weight: 500; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; font-family: 'DM Mono', monospace; }
+  .meal-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.1px; }
   .meal-kcal { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .meal-save-btn { font-size: 11px; color: var(--text-3); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
   .meal-save-btn:hover { background: var(--bg); color: var(--text-2); }
-  .meal-select { height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; }
+  /* Meal picker tabs */
+  .meal-tabs { display: flex; gap: 4px; margin-bottom: 10px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 3px; width: 100%; }
+  .meal-tab { flex: 1; font-size: 12px; font-weight: 500; padding: 6px 4px; border-radius: 6px; border: none; background: none; cursor: pointer; color: var(--text-2); font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+  .meal-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 0.5px 2px rgba(0,0,0,0.1); }
+  .meal-tab:not(.active):hover { color: var(--text); }
+  /* Recents toggle */
+  .recents-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px 0; user-select: none; }
+  .recents-toggle-label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .recents-toggle-chevron { font-size: 11px; color: var(--text-3); transition: transform 0.2s; }
+  .recents-toggle-chevron.open { transform: rotate(180deg); }
   .meal-empty { font-size: 12px; color: var(--text-3); padding: 6px 0 4px; font-style: italic; }
 
   /* Water tracker */
@@ -487,14 +496,12 @@
 
       <div class="search-area">
         <div class="section-title">Look up food</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
-          <label style="font-size:12px;color:var(--text-3);white-space:nowrap;">Add to</label>
-          <select class="meal-select" id="mealSelect">
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="dinner">Dinner</option>
-            <option value="snacks">Snacks</option>
-          </select>
+        <!-- Meal picker tabs -->
+        <div class="meal-tabs" id="mealTabs">
+          <button class="meal-tab active" data-meal="breakfast" onclick="selectMealTab(this)">Breakfast</button>
+          <button class="meal-tab" data-meal="lunch" onclick="selectMealTab(this)">Lunch</button>
+          <button class="meal-tab" data-meal="dinner" onclick="selectMealTab(this)">Dinner</button>
+          <button class="meal-tab" data-meal="snacks" onclick="selectMealTab(this)">Snacks</button>
         </div>
         <div class="search-wrap">
           <textarea id="searchInput" class="search-textarea" placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
@@ -504,10 +511,13 @@
         <div id="resultArea"></div>
       </div>
 
-      <!-- Recent foods — below search -->
-      <div id="recentFoodsArea" style="display:none;margin-top:1rem;" class="recents-section">
-        <div class="section-title" style="margin-bottom:8px;">Recent foods</div>
-        <div class="recents-list" id="recentFoodsList"></div>
+      <!-- Recent foods — collapsible, below search -->
+      <div id="recentFoodsArea" style="display:none;margin-top:0.75rem;" class="recents-section">
+        <div class="recents-toggle" onclick="toggleRecents()">
+          <span class="recents-toggle-label">Recent foods</span>
+          <span class="recents-toggle-chevron" id="recentChevron">▾</span>
+        </div>
+        <div id="recentFoodsList" class="recents-list" style="display:none;margin-top:6px;"></div>
       </div>
     </div>
 
@@ -1288,7 +1298,7 @@ async function confirmAdd() {
     pendingFood.sod    = Math.round(parseFloat(document.getElementById('re_sod').value)||0);
     pendingFood.fib    = Math.round(parseFloat(document.getElementById('re_fib').value)||0);
   }
-  const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
+  const meal = getActiveMealTab() || 'uncategorized';
   const btn = document.querySelector('.confirm-btn');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
@@ -1452,7 +1462,7 @@ async function saveMeal(mealName) {
 async function logSavedMeal(id) {
   const meal = _savedMeals.find(m => m.id === id);
   if (!meal) return;
-  const targetMeal = document.getElementById('mealSelect')?.value || 'uncategorized';
+  const targetMeal = getActiveMealTab() || 'uncategorized';
   try {
     for (const f of meal.foods) {
       await addFood({ ...f, id: Date.now() + Math.random() }, targetMeal);
@@ -1487,6 +1497,24 @@ function renderSavedMeals() {
       <button class="del-btn" onclick="deleteSavedMeal(${m.id})">✕</button>
     </div>`;
   }).join('');
+}
+
+function selectMealTab(el) {
+  document.querySelectorAll('.meal-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function getActiveMealTab() {
+  const active = document.querySelector('.meal-tab.active');
+  return active ? active.dataset.meal : 'breakfast';
+}
+
+function toggleRecents() {
+  const list = document.getElementById('recentFoodsList');
+  const chev = document.getElementById('recentChevron');
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  chev.classList.toggle('open', !open);
 }
 
 // ── Recent foods ─────────────────────────────────────────────────
@@ -1527,7 +1555,7 @@ function renderRecentFoods() {
 async function logRecentFood(idx) {
   const f = _recentFoodsCache[idx];
   if (!f) return;
-  const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
+  const meal = getActiveMealTab() || 'uncategorized';
   try {
     await addFood({ ...f, id: Date.now() }, meal);
     renderToday();
