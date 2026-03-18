@@ -281,7 +281,18 @@
   .exercise-burned { font-size: 13px; font-weight: 500; color: var(--green); font-family: 'DM Mono', monospace; }
   .exercise-add-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
   .exercise-input { flex: 1; min-width: 120px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .exercise-input:focus { font-size: 16px; }
   .exercise-kcal-input { width: 80px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
+  .exercise-kcal-input:focus { font-size: 16px; }
+  /* Exercise lookup */
+  .exercise-result { margin-top: 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); padding: 12px 14px; background: var(--bg); animation: fadeIn 0.2s ease; }
+  .exercise-result-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .exercise-result-note { font-size: 12px; color: var(--text-3); margin-bottom: 10px; font-style: italic; }
+  .exercise-result-kcal { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .exercise-result-kcal-label { font-size: 12px; color: var(--text-2); }
+  .exercise-result-kcal-input { width: 90px; height: 32px; font-size: 14px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
+  .exercise-result-kcal-input:focus { font-size: 16px; border-color: rgba(0,0,0,0.3); }
+  .exercise-result-actions { display: flex; gap: 8px; }
   .exercise-add-btn { height: 34px; padding: 0 12px; font-size: 13px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: var(--radius); cursor: pointer; color: var(--text-2); white-space: nowrap; }
   .exercise-add-btn:hover { background: var(--bg); color: var(--text); }
 
@@ -379,6 +390,32 @@
   .recent-item-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
   .recent-item-add { font-size: 16px; color: var(--text-3); flex-shrink: 0; line-height: 1; }
+  /* Habits tab */
+  .habits-grid-header { display: flex; align-items: center; margin-bottom: 12px; }
+  .habits-grid-days { display: flex; gap: 0; margin-left: auto; }
+  .habits-day-label { width: 44px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); }
+  .habits-day-label.today { color: var(--text); font-weight: 600; }
+  .habit-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .habit-row:last-child { border-bottom: none; }
+  .habit-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .habit-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; }
+  .habit-square { width: 40px; height: 40px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: 'DM Mono', monospace; transition: transform 0.1s; position: relative; overflow: hidden; }
+  .habit-square:active { transform: scale(0.92); }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; transition: height 0.3s ease; }
+  .habit-square-label { position: relative; z-index: 1; color: rgba(255,255,255,0.9); }
+  /* Add habit form */
+  .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
+  .add-habit-form.hidden { display: none; }
+  .habit-color-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .habit-color-swatch { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+  .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.15); }
+  .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .habit-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 0.5px solid var(--border-med); background: var(--surface); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .habit-icon-btn.selected { border-color: var(--text); background: var(--bg); }
+  /* Quantity input in square */
+  .habit-qty-input { width: 38px; height: 38px; font-size: 13px; text-align: center; border: none; background: transparent; color: rgba(255,255,255,0.95); font-family: 'DM Mono', monospace; font-weight: 600; outline: none; position: relative; z-index: 2; }
+  .habit-qty-input:focus { font-size: 16px; }
 </style>
 </head>
 <body>
@@ -488,6 +525,7 @@
     <div style="display:flex;gap:4px;padding:4px;">
       <button class="tab active" id="tab-goals" onclick="showView('goals')">Goals</button>
       <button class="tab" id="tab-today" onclick="showView('today')">Log</button>
+      <button class="tab" id="tab-habits" onclick="showView('habits')">Habits</button>
       <button class="tab" id="tab-history" onclick="showView('history')">History</button>
     </div>
     <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile" style="margin-right:4px;">
@@ -593,31 +631,15 @@
     <div class="card" style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
       <div id="exerciseItems"><div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div></div>
-      <div class="exercise-add-row">
-        <input class="exercise-input" id="exerciseName" placeholder="e.g. Morning run, weight training..." />
-        <input class="exercise-kcal-input" id="exerciseKcal" type="number" min="0" placeholder="kcal" />
-        <button class="exercise-add-btn" onclick="addExercise()">+ Add</button>
-      </div>
-    </div>
-
-    <!-- Water tracker — bottom of log -->
-    <div class="water-card">
-      <div class="section-title">Water intake</div>
-      <div class="water-row">
-        <div class="water-label">Today</div>
-        <div>
-          <div class="water-amount" id="waterAmount">0 oz</div>
-          <div class="water-goal-lbl" id="waterGoalLbl">of 128 oz goal</div>
+      <div style="margin-top:1rem;border-top:0.5px solid var(--border);padding-top:1rem;">
+        <div class="section-title">Log exercise</div>
+        <div class="exercise-add-row">
+          <input class="exercise-input" id="exerciseName" placeholder="e.g. 30 min run, 1hr weight training, 45 min cycling..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lookupExercise()}" />
+          <button class="exercise-add-btn" id="exerciseLookupBtn" onclick="lookupExercise()">Look up</button>
         </div>
-        <div class="water-btns">
-          <button class="water-btn" onclick="addWater(8)">+8 oz</button>
-          <button class="water-btn" onclick="addWater(16)">+16 oz</button>
-          <button class="water-btn" onclick="addWater(32)">+32 oz</button>
-          <button class="water-btn" onclick="addWater(40)">+40 oz</button>
-          <button class="water-btn" onclick="fillWater()" style="font-weight:500;">Fill goal</button>
-        </div>
+        <div class="search-hint" style="margin-top:6px;">Include duration and intensity for best accuracy. Press Enter to look up.</div>
+        <div id="exerciseResultArea"></div>
       </div>
-      <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
     </div>
 
     <!-- Home screen tip — iOS only, dismissible -->
@@ -642,7 +664,81 @@
     </div>
   </div>
 
+  <!-- HABITS -->
+  <div class="view" id="view-habits">
+    <div class="history-header">
+      <div>
+        <div class="history-title">Habits</div>
+        <div class="history-sub" id="habitsSub">Track your daily habits</div>
+      </div>
+      <button class="ghost-btn" onclick="toggleAddHabitForm()">+ New habit</button>
+    </div>
+
+    <!-- Add habit form -->
+    <div class="add-habit-form hidden" id="addHabitForm">
+      <div class="settings-grid-2" style="margin-bottom:10px;">
+        <div class="settings-field">
+          <label class="settings-label">Habit name</label>
+          <input class="settings-input" id="habitName" placeholder="e.g. Drink water, Gym, Read..." maxlength="40" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">Type</label>
+          <select class="settings-select" id="habitType" onchange="toggleHabitQuantityFields()">
+            <option value="boolean">Simple (done / not done)</option>
+            <option value="quantity">Quantity (e.g. 8 glasses)</option>
+          </select>
+        </div>
+        <div class="settings-field hidden" id="habitTargetField">
+          <label class="settings-label">Target amount</label>
+          <input class="settings-input" id="habitTarget" type="number" min="1" placeholder="e.g. 8" />
+        </div>
+        <div class="settings-field hidden" id="habitUnitField">
+          <label class="settings-label">Unit</label>
+          <input class="settings-input" id="habitUnit" placeholder="e.g. glasses, pages, miles" />
+        </div>
+      </div>
+      <div class="settings-label" style="margin-bottom:6px;">Color</div>
+      <div class="habit-color-picker" id="habitColorPicker"></div>
+      <div class="settings-label" style="margin-top:12px;margin-bottom:6px;">Icon</div>
+      <div class="habit-icon-picker" id="habitIconPicker"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="confirm-btn" onclick="saveNewHabit()">Save habit</button>
+        <button class="discard-btn" onclick="toggleAddHabitForm()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Rolling 5-day grid -->
+    <div class="card" style="padding:1rem 1.25rem;">
+      <div class="habits-grid-header">
+        <div style="flex:1;font-size:12px;color:var(--text-3);">Last 5 days</div>
+        <div class="habits-grid-days" id="habitsDayHeaders"></div>
+      </div>
+      <div id="habitsGrid"><div class="empty-msg" style="padding:1rem 0;">No habits yet — add your first habit above!</div></div>
+    </div>
+
+    <!-- Water tracker -->
+    <div class="water-card">
+      <div class="section-title">Water intake</div>
+      <div class="water-row">
+        <div class="water-label">Today</div>
+        <div>
+          <div class="water-amount" id="waterAmount">0 oz</div>
+          <div class="water-goal-lbl" id="waterGoalLbl">of 128 oz goal</div>
+        </div>
+        <div class="water-btns">
+          <button class="water-btn" onclick="addWater(8)">+8 oz</button>
+          <button class="water-btn" onclick="addWater(16)">+16 oz</button>
+          <button class="water-btn" onclick="addWater(32)">+32 oz</button>
+          <button class="water-btn" onclick="addWater(40)">+40 oz</button>
+          <button class="water-btn" onclick="fillWater()" style="font-weight:500;">Fill goal</button>
+        </div>
+      </div>
+      <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
   <!-- HISTORY -->
+
   <div class="view" id="view-history">
     <div class="history-header">
       <div>
@@ -852,7 +948,7 @@ async function selectProfile(id, profileData, isNew = false) {
       : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
-  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
   await initSettings();
   setDate(todayStr());
   showView('today'); // always land on Log for returning users
@@ -1076,7 +1172,17 @@ async function addFood(food, meal) {
     profile_id: activeProfileId, date: activeDate, food_id: food.id,
     name: food.name, cal: food.cal, pro: food.pro, carb: food.carb,
     fat: food.fat, sat_fat: food.satFat||0, sug: food.sug, sod: food.sod||0, fib: food.fib||0,
-    meal: mealVal
+    meal: mealVal,
+    serving_mult:  food.servingMult  || 1,
+    serving_label: food.servingLabel || '1 serving',
+    base_cal:     food.baseCal     || food.cal,
+    base_pro:     food.basePro     || food.pro,
+    base_carb:    food.baseCarb    || food.carb,
+    base_fat:     food.baseFat     || food.fat,
+    base_sat_fat: food.baseSatFat  || food.satFat||0,
+    base_sug:     food.baseSug     || food.sug||0,
+    base_sod:     food.baseSod     || food.sod||0,
+    base_fib:     food.baseFib     || food.fib||0,
   };
   const result = await api('foods', { method: 'POST', body: row });
   const saved = Array.isArray(result) ? result[0] : result;
@@ -1297,6 +1403,7 @@ function showView(name) {
   const tabEl = document.getElementById('tab-'+name);
   if (tabEl) tabEl.classList.add('active');
   if (name === 'history') renderHistory();
+  if (name === 'habits') renderHabits();
 }
 
 // Weight
@@ -1554,10 +1661,51 @@ function renderWater() {
 }
 
 // ── Exercise ─────────────────────────────────────────────────────
-async function addExercise() {
-  const name = document.getElementById('exerciseName').value.trim();
-  const kcal = parseInt(document.getElementById('exerciseKcal').value) || 0;
-  if (!name || !kcal) { showToast('Enter exercise name and calories burned'); return; }
+// ── Exercise lookup ───────────────────────────────────────────────
+async function lookupExercise() {
+  const query = document.getElementById('exerciseName').value.trim();
+  if (!query) { document.getElementById('exerciseName').focus(); return; }
+  const btn = document.getElementById('exerciseLookupBtn');
+  const resultArea = document.getElementById('exerciseResultArea');
+  btn.disabled = true;
+  btn.textContent = '...';
+  resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Estimating calories burned...</div>';
+  try {
+    const res = await fetch('/api/exercise-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    const data = await res.json();
+    resultArea.innerHTML = `<div class="exercise-result">
+      <div class="exercise-result-name">${data.name}</div>
+      <div class="exercise-result-note">📊 ${data.note || 'MET-based estimate'}</div>
+      <div class="exercise-result-kcal">
+        <span class="exercise-result-kcal-label">Calories burned</span>
+        <input class="exercise-result-kcal-input" id="exerciseKcalResult" type="number" value="${data.calories_burned}" />
+        <span style="font-size:12px;color:var(--text-3);">kcal</span>
+      </div>
+      <div class="exercise-result-actions">
+        <button class="confirm-btn" onclick="confirmExercise('${data.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
+        <button class="discard-btn" onclick="discardExercise()">Discard</button>
+      </div>
+    </div>`;
+  } catch(e) {
+    resultArea.innerHTML = '<div class="err-msg">Lookup failed — you can still log manually below.</div>';
+    resultArea.innerHTML += `<div class="exercise-add-row" style="margin-top:8px;">
+      <input class="exercise-kcal-input" id="exerciseKcalManual" type="number" min="0" placeholder="kcal burned" />
+      <button class="exercise-add-btn" onclick="addExerciseManual()">+ Add</button>
+    </div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Look up';
+}
+
+async function confirmExercise(name) {
+  const kcalEl = document.getElementById('exerciseKcalResult');
+  const kcal = parseInt(kcalEl?.value) || 0;
+  if (!kcal) { showToast('Enter calories burned'); return; }
   try {
     const result = await api('exercise', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, name, calories_burned: kcal } });
     const saved = Array.isArray(result) ? result[0] : result;
@@ -1565,9 +1713,26 @@ async function addExercise() {
     _exercise[activeDate].push({ id: saved?.id, name, calories_burned: kcal });
     cacheSet('exercise', _exercise);
     document.getElementById('exerciseName').value = '';
-    document.getElementById('exerciseKcal').value = '';
+    document.getElementById('exerciseResultArea').innerHTML = '';
     renderExercise(); renderNetBanner(); showToast('Exercise logged!');
   } catch(e) { showToast('Could not save exercise'); }
+}
+
+function discardExercise() {
+  document.getElementById('exerciseResultArea').innerHTML = '';
+  document.getElementById('exerciseName').focus();
+}
+
+async function addExerciseManual() {
+  const name = document.getElementById('exerciseName').value.trim() || 'Exercise';
+  const kcal = parseInt(document.getElementById('exerciseKcalManual')?.value) || 0;
+  if (!kcal) { showToast('Enter calories burned'); return; }
+  await confirmExercise(name);
+}
+
+async function addExercise() {
+  // Legacy — kept for any direct calls, redirects to lookup
+  lookupExercise();
 }
 
 async function removeExercise(id) {
@@ -2157,7 +2322,251 @@ function dismissHsTip() {
 }
 // ── End welcome ──────────────────────────────────────────────────
 
-bootProfiles();
+// ── Habits system ─────────────────────────────────────────────────
+let _habits = [];
+let _habitLogs = {}; // { habit_id: { date: value } }
+
+const HABIT_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#F59E0B','#10B981','#EC4899','#6366F1','#14B8A6'];
+const HABIT_ICONS  = ['💧','🏋️','🏃','📖','🥗','😴','🧘','🚴','🎯','✅','⭐','🔥','🎵','📝','💊','🧠','🥦','☀️','🏊','🎾'];
+
+async function loadHabitsFromServer() {
+  try {
+    _habits = await api(`habits?profile_id=${activeProfileId}`);
+    cacheSet('habits', _habits);
+  } catch(e) {
+    const cached = cacheGet('habits');
+    if (cached) _habits = cached;
+  }
+}
+
+async function loadHabitLogsFromServer() {
+  // Load last 30 days of logs
+  const from = new Date(); from.setDate(from.getDate() - 30);
+  const fromStr = from.toISOString().slice(0,10);
+  try {
+    const rows = await api(`habit-logs?profile_id=${activeProfileId}&date_from=${fromStr}`);
+    _habitLogs = {};
+    rows.forEach(r => {
+      if (!_habitLogs[r.habit_id]) _habitLogs[r.habit_id] = {};
+      _habitLogs[r.habit_id][r.date] = r.value;
+    });
+    cacheSet('habitLogs', _habitLogs);
+  } catch(e) {
+    const cached = cacheGet('habitLogs');
+    if (cached) _habitLogs = cached;
+  }
+}
+
+function getLast5Days() {
+  const days = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  return days;
+}
+
+function renderHabits() {
+  const days = getLast5Days();
+  const today = todayStr();
+
+  // Day headers
+  const headers = document.getElementById('habitsDayHeaders');
+  if (headers) {
+    headers.innerHTML = days.map(d => {
+      const dt = new Date(d + 'T12:00:00');
+      const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2);
+      const dayNum  = dt.getDate();
+      const isToday = d === today;
+      return `<div class="habits-day-label${isToday ? ' today' : ''}">${dayName}<br>${dayNum}</div>`;
+    }).join('');
+  }
+
+  const grid = document.getElementById('habitsGrid');
+  if (!_habits.length) {
+    grid.innerHTML = '<div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div>';
+    return;
+  }
+
+  grid.innerHTML = _habits.map(h => {
+    const isQty = h.target_type === 'quantity';
+    const target = parseFloat(h.target_value) || 1;
+    const bgAlpha = '22'; // hex alpha for faint tint
+
+    const squares = days.map(d => {
+      const val = (_habitLogs[h.id] || {})[d] || 0;
+      const done = isQty ? val >= target : val >= 1;
+      const pct  = isQty ? Math.min(val / target, 1) : (done ? 1 : 0);
+      const isToday = d === today;
+
+      // Color from hex
+      const hex = h.color || '#378ADD';
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      const fadeBg = `rgba(${r},${g},${b},0.12)`;
+      const fullBg = h.color;
+
+      if (isQty && isToday) {
+        // Quantity input for today
+        return `<div class="habit-square" style="background:${fadeBg};" title="${val}/${target} ${h.target_unit||''}">
+          <div class="habit-square-fill" style="height:${pct*100}%;background:${fullBg};opacity:0.85;"></div>
+          <input class="habit-qty-input" type="number" min="0" step="1"
+            value="${val||''}" placeholder="0"
+            style="color:${done?'#fff':hex};"
+            onchange="setHabitQty(${h.id},'${d}',this.value)"
+            onclick="event.stopPropagation()" />
+        </div>`;
+      } else if (isQty) {
+        // Quantity past days — show fill bar + value
+        return `<div class="habit-square" style="background:${fadeBg};" onclick="cycleHabitQty(${h.id},'${d}',${target})" title="${val}/${target}">
+          <div class="habit-square-fill" style="height:${pct*100}%;background:${fullBg};opacity:0.85;"></div>
+          <span class="habit-square-label" style="color:${done?'#fff':hex};font-size:10px;">${val||''}</span>
+        </div>`;
+      } else {
+        // Boolean
+        return `<div class="habit-square" style="background:${done?fullBg:fadeBg};" onclick="toggleHabit(${h.id},'${d}')">
+        </div>`;
+      }
+    }).join('');
+
+    return `<div class="habit-row">
+      <div class="habit-icon" style="background:${h.color}22;">${h.icon}</div>
+      <span class="habit-name">${h.name}</span>
+      <div class="habit-squares">${squares}</div>
+      <button onclick="deleteHabit(${h.id})" class="del-btn" style="margin-left:4px;">✕</button>
+    </div>`;
+  }).join('');
+
+  // Update sub
+  const streak = calcHabitStreak();
+  const sub = document.getElementById('habitsSub');
+  if (sub) sub.textContent = streak > 1 ? `${_habits.length} habits · ${streak} day streak 🔥` : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
+}
+
+function calcHabitStreak() {
+  if (!_habits.length) return 0;
+  let streak = 0;
+  const check = new Date();
+  while (true) {
+    const d = check.toISOString().slice(0,10);
+    const allDone = _habits.every(h => {
+      const val = (_habitLogs[h.id]||{})[d] || 0;
+      return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    });
+    if (allDone) { streak++; check.setDate(check.getDate()-1); } else break;
+  }
+  return streak;
+}
+
+async function toggleHabit(habitId, date) {
+  const current = (_habitLogs[habitId]||{})[date] || 0;
+  const newVal = current >= 1 ? 0 : 1;
+  await writeHabitLog(habitId, date, newVal);
+}
+
+async function setHabitQty(habitId, date, val) {
+  await writeHabitLog(habitId, date, Math.max(0, parseFloat(val)||0));
+}
+
+async function cycleHabitQty(habitId, date, target) {
+  const current = (_habitLogs[habitId]||{})[date] || 0;
+  // Tap cycles: 0 → target → 0
+  const newVal = current >= target ? 0 : target;
+  await writeHabitLog(habitId, date, newVal);
+}
+
+async function writeHabitLog(habitId, date, value) {
+  if (!_habitLogs[habitId]) _habitLogs[habitId] = {};
+  if (value <= 0) {
+    delete _habitLogs[habitId][date];
+    cacheSet('habitLogs', _habitLogs);
+    try { await api(`habit-logs?habit_id=${habitId}&date=${date}`, { method: 'DELETE' }); } catch(e) {}
+  } else {
+    _habitLogs[habitId][date] = value;
+    cacheSet('habitLogs', _habitLogs);
+    try {
+      await api('habit-logs', { method: 'POST', body: { habit_id: habitId, profile_id: activeProfileId, date, value } });
+    } catch(e) {}
+  }
+  renderHabits();
+}
+
+function toggleAddHabitForm() {
+  const form = document.getElementById('addHabitForm');
+  form.classList.toggle('hidden');
+  if (!form.classList.contains('hidden')) initHabitForm();
+}
+
+function initHabitForm() {
+  // Color picker
+  const cp = document.getElementById('habitColorPicker');
+  cp.innerHTML = HABIT_COLORS.map((c,i) =>
+    `<div class="habit-color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectHabitColor(this)"></div>`
+  ).join('');
+  // Icon picker
+  const ip = document.getElementById('habitIconPicker');
+  ip.innerHTML = HABIT_ICONS.map((ic,i) =>
+    `<button class="habit-icon-btn${i===0?' selected':''}" data-icon="${ic}" onclick="selectHabitIcon(this)">${ic}</button>`
+  ).join('');
+  toggleHabitQuantityFields();
+}
+
+function selectHabitColor(el) {
+  document.querySelectorAll('.habit-color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectHabitIcon(el) {
+  document.querySelectorAll('.habit-icon-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleHabitQuantityFields() {
+  const isQty = document.getElementById('habitType')?.value === 'quantity';
+  document.getElementById('habitTargetField')?.classList.toggle('hidden', !isQty);
+  document.getElementById('habitUnitField')?.classList.toggle('hidden', !isQty);
+}
+
+async function saveNewHabit() {
+  const name = document.getElementById('habitName')?.value.trim();
+  if (!name) { showToast('Enter a habit name'); return; }
+  const color = document.querySelector('.habit-color-swatch.selected')?.dataset.color || HABIT_COLORS[0];
+  const icon  = document.querySelector('.habit-icon-btn.selected')?.dataset.icon || '✅';
+  const type  = document.getElementById('habitType')?.value || 'boolean';
+  const target = parseFloat(document.getElementById('habitTarget')?.value) || 1;
+  const unit   = document.getElementById('habitUnit')?.value.trim() || '';
+  try {
+    const result = await api('habits', { method: 'POST', body: {
+      profile_id: activeProfileId, name, color, icon,
+      category: 'general', target_type: type,
+      target_value: type === 'quantity' ? target : 1,
+      target_unit: unit, sort_order: _habits.length
+    }});
+    const saved = Array.isArray(result) ? result[0] : result;
+    _habits.push(saved);
+    cacheSet('habits', _habits);
+    document.getElementById('habitName').value = '';
+    document.getElementById('addHabitForm').classList.add('hidden');
+    renderHabits();
+    showToast('Habit added!');
+  } catch(e) { showToast('Could not save habit'); }
+}
+
+async function deleteHabit(id) {
+  if (!confirm('Delete this habit and all its history?')) return;
+  try {
+    await api(`habits?id=${id}`, { method: 'DELETE' });
+    _habits = _habits.filter(h => h.id !== id);
+    delete _habitLogs[id];
+    cacheSet('habits', _habits);
+    cacheSet('habitLogs', _habitLogs);
+    renderHabits();
+    showToast('Habit deleted');
+  } catch(e) { showToast('Could not delete'); }
+}
+// ── End habits ─────────────────────────────────────────────────────
 initWelcome();
 </script>
 </body>
