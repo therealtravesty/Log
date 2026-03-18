@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Macro Tracker</title>
+<link rel="apple-touch-icon" sizes="512x512" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Macros">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -1016,7 +1020,13 @@ async function initSettings() {
   updateSettingsSummary(s, g);
 }
 
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 function setDate(d) {
   activeDate = d;
@@ -1554,10 +1564,12 @@ function renderHistory() {
 
   // Streak calculation
   let streak = 0;
-  const today = todayStr();
-  const check = new Date(today+'T12:00:00');
+  const check = new Date();
   while (true) {
-    const ds = check.toISOString().slice(0,10);
+    const y = check.getFullYear();
+    const m = String(check.getMonth()+1).padStart(2,'0');
+    const day = String(check.getDate()).padStart(2,'0');
+    const ds = `${y}-${m}-${day}`;
     if (all[ds]) { streak++; check.setDate(check.getDate()-1); } else break;
   }
   const streakEl = document.getElementById('statStreak');
