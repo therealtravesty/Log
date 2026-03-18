@@ -358,7 +358,14 @@
   .hs-tip-step { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 4px; }
   .hs-tip-arrow { font-size: 11px; color: var(--text-3); }
   .hs-tip-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 4px; flex-shrink: 0; }
-  /* Recent foods */
+  /* Profile loading overlay */
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity 0.25s; }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-avatar { width: 48px; height: 48px; border-radius: 50%; }
+  .loading-name { font-size: 15px; font-weight: 500; color: var(--text); }
+  .loading-spinner { width: 20px; height: 20px; border: 2px solid var(--border-med); border-top-color: var(--text-2); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  /* Friendly date label */
+  .date-friendly { font-size: 13px; color: var(--text-2); font-weight: 500; }
   .recents-section { margin-bottom: 0.75rem; }
   .recents-list { display: flex; flex-direction: column; gap: 4px; }
   .recent-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background 0.15s; }
@@ -430,6 +437,13 @@
   </div>
 </div>
 
+<!-- Loading overlay — shown while switching profiles -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="loading-avatar" id="loadingAvatar"></div>
+  <div class="loading-name" id="loadingName"></div>
+  <div class="loading-spinner"></div>
+</div>
+
 <div class="container">
   <div class="tabs">
     <button class="tab active" id="tab-today" onclick="showView('today')">Log</button>
@@ -450,10 +464,13 @@
           <div class="header-meta" id="headerMeta">2,850 kcal cut</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-        <input type="date" id="datePicker" style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;" onchange="onDateChange()" />
-        <button onclick="setDate(todayStr())" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
-        <span id="pastDayBadge" style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+        <div class="date-friendly" id="dateFriendly"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="date" id="datePicker" style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;" onchange="onDateChange()" />
+          <button onclick="setDate(todayStr())" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
+          <span id="pastDayBadge" style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
+        </div>
       </div>
     </div>
 
@@ -524,7 +541,6 @@
       <div id="recentFoodsArea" style="display:none;margin-top:0.5rem;" class="recents-section">
         <div class="recents-toggle" onclick="toggleRecents()">
           <div class="recents-toggle-left">
-            <span class="recents-toggle-icon">🕐</span>
             <span class="recents-toggle-label">Recent foods</span>
             <span class="recents-toggle-count" id="recentCount"></span>
           </div>
@@ -599,10 +615,10 @@
 
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Days logged</div><div class="stat-val" id="statDays">0</div><div class="stat-sub">total entries</div></div>
-      <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val" id="statAvgCal">—</div><div class="stat-sub">goal: 2,850</div></div>
-      <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val" id="statAvgPro">—</div><div class="stat-sub">goal: 200g</div></div>
+      <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val" id="statAvgCal">—</div><div class="stat-sub" id="statAvgCalSub">goal: —</div></div>
+      <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val" id="statAvgPro">—</div><div class="stat-sub" id="statAvgProSub">goal: —</div></div>
       <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val" id="statWeight">—</div><div class="stat-sub">lbs</div></div>
-      <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val" id="statStreak">0</div><div class="stat-sub">days in a row</div></div>
+      <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val" id="statStreak">0</div><div class="stat-sub" id="statStreakSub">days in a row</div></div>
     </div>
 
     <!-- Charts -->
@@ -739,6 +755,7 @@
       </div>
 
       <div class="settings-result" id="settingsResult" style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="goalsSavedMsg" style="display:none;font-size:12px;color:var(--green-text);margin-top:10px;font-family:'DM Mono',monospace;">✓ Goals saved</div>
     </div>
   </div>
 
@@ -773,13 +790,23 @@ async function selectProfile(id, profileData) {
   activeProfileId = id;
   localStorage.setItem(LS_LAST, id);
   activeProfileData = profileData || JSON.parse(localStorage.getItem(`profileData_${id}`) || 'null') || { id, name: '', color: PROFILE_COLORS[0] };
-  // Always write with explicit key so bootProfiles can read it next time
   localStorage.setItem(`profileData_${id}`, JSON.stringify(activeProfileData));
   updateProfileChip();
   document.getElementById('profileScreen').classList.add('hidden');
+  // Show loading overlay while fetching data
+  const overlay = document.getElementById('loadingOverlay');
+  const loadAvatar = document.getElementById('loadingAvatar');
+  const loadName = document.getElementById('loadingName');
+  if (overlay) {
+    loadAvatar.style.background = activeProfileData.color;
+    loadName.textContent = activeProfileData.name;
+    overlay.classList.remove('hidden');
+  }
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer()]);
   await initSettings();
   setDate(todayStr());
+  // Hide loading overlay
+  if (overlay) overlay.classList.add('hidden');
 }
 
 function updateProfileChip() {
@@ -1083,6 +1110,13 @@ async function recalcGoals() {
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
   updateSettingsSummary(s, g);
   renderToday();
+  // Flash saved confirmation
+  const msg = document.getElementById('goalsSavedMsg');
+  if (msg) {
+    msg.style.display = 'block';
+    clearTimeout(msg._hideTimer);
+    msg._hideTimer = setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  }
 }
 
 function readSettingsFromForm() {
@@ -1156,7 +1190,11 @@ function setDate(d) {
   document.getElementById('datePicker').value = d;
   const isToday = d === todayStr();
   document.getElementById('pastDayBadge').style.display = isToday ? 'none' : 'inline';
-  const friendly = new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const dateObj = new Date(d + 'T12:00:00');
+  const friendly = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const todayFriendly = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const friendlyEl = document.getElementById('dateFriendly');
+  if (friendlyEl) friendlyEl.textContent = isToday ? 'Today — ' + friendly : friendly;
   document.getElementById('weightSectionTitle').textContent = isToday ? "Today's weight" : "Weight for " + friendly;
   loadActiveWeight();
   renderToday();
@@ -1799,7 +1837,12 @@ function renderHistory() {
 
   if (!days.length) {
     ['statDays','statAvgCal','statAvgPro','statWeight'].forEach(id => document.getElementById(id).textContent = '—');
-    document.getElementById('historyList').innerHTML = '<div class="empty-msg" style="padding:2rem 0;">No history yet — start logging today!</div>';
+    document.getElementById('historyList').innerHTML = `<div style="text-align:center;padding:3rem 1rem;">
+      <div style="font-size:32px;margin-bottom:12px;">📋</div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:6px;">No history yet</div>
+      <div style="font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.5;">Start logging meals on the Log tab and your history will appear here.</div>
+      <button onclick="showView('today')" style="height:36px;padding:0 20px;font-size:13px;font-weight:500;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Go to Log →</button>
+    </div>`;
     return;
   }
 
@@ -1807,6 +1850,11 @@ function renderHistory() {
   document.getElementById('statDays').textContent = days.length;
   document.getElementById('statAvgCal').textContent = Math.round(allTotals.reduce((a,t)=>a+t.cal,0)/allTotals.length).toLocaleString();
   document.getElementById('statAvgPro').textContent = Math.round(allTotals.reduce((a,t)=>a+t.pro,0)/allTotals.length)+'g';
+  // Update sub labels with current profile's goals
+  const calSub = document.getElementById('statAvgCalSub');
+  const proSub = document.getElementById('statAvgProSub');
+  if (calSub) calSub.textContent = `goal: ${GOALS.cal.toLocaleString()}`;
+  if (proSub) proSub.textContent = `goal: ${GOALS.pro}g`;
 
   // Streak calculation
   let streak = 0;
