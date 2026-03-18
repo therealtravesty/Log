@@ -310,13 +310,83 @@
     .day-food-macros { display: none; }
     .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
   }
-  /* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
+  /* Welcome modal */
+  .welcome-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
+  .welcome-overlay.hidden { display: none; }
+  .welcome-box { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 440px; }
+  .welcome-logo { width: 64px; height: 64px; border-radius: 16px; margin-bottom: 1.25rem; }
+  .welcome-title { font-size: 22px; font-weight: 500; letter-spacing: -0.3px; margin-bottom: 6px; }
+  .welcome-sub { font-size: 14px; color: var(--text-2); margin-bottom: 1.75rem; line-height: 1.5; }
+  .welcome-steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 1.75rem; }
+  .welcome-step { display: flex; align-items: flex-start; gap: 14px; }
+  .welcome-step-num { width: 32px; height: 32px; border-radius: 50%; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
+  .welcome-step-num.s1 { background: var(--green); }
+  .welcome-step-num.s2 { background: var(--blue); }
+  .welcome-step-num.s3 { background: var(--amber); }
+  .welcome-step-num.s4 { background: var(--pink); }
+  .welcome-step-text { flex: 1; }
+  .welcome-step-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .welcome-step-desc { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .welcome-btn { width: 100%; height: 44px; font-size: 15px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; transition: opacity 0.15s; }
+  .welcome-btn:hover { opacity: 0.85; }
+
+  /* Home screen tip banner */
+  .hs-tip { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 1rem; }
+  .hs-tip.hidden { display: none; }
+  .hs-tip-icon { font-size: 28px; flex-shrink: 0; }
+  .hs-tip-body { flex: 1; }
+  .hs-tip-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .hs-tip-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .hs-tip-step { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 4px; }
+  .hs-tip-arrow { font-size: 11px; color: var(--text-3); }
+  .hs-tip-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 4px; flex-shrink: 0; }
+  /* Prevent iOS Safari auto-zoom on input focus */
   @supports (-webkit-touch-callout: none) {
     input, textarea, select { font-size: 16px !important; }
   }
 </style>
 </head>
 <body>
+
+<!-- Welcome modal -->
+<div class="welcome-overlay hidden" id="welcomeOverlay">
+  <div class="welcome-box">
+    <img class="welcome-logo" src="/apple-touch-icon.png" alt="Macro Tracker" onerror="this.style.display='none'" />
+    <div class="welcome-title">Welcome to Macro Tracker!</div>
+    <div class="welcome-sub">Your personal AI-powered nutrition tracker. Hit your goals one meal at a time. Here's how to get started:</div>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="welcome-step-num s1">1</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Create your profile</div>
+          <div class="welcome-step-desc">Pick a name and color — each profile gets its own private log, goals, and history.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s2">2</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Set your goals</div>
+          <div class="welcome-step-desc">Head to the Goals tab and enter your stats. The app calculates your TDEE (total daily energy expenditure) and macro targets automatically.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s3">3</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Log food with AI lookup</div>
+          <div class="welcome-step-desc">Type any food — brand, restaurant, or home-cooked — and the AI fills in all 8 macros instantly.</div>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num s4">4</div>
+        <div class="welcome-step-text">
+          <div class="welcome-step-title">Add to your home screen</div>
+          <div class="welcome-step-desc">In Safari, tap Share → Add to Home Screen for a native app experience on your iPhone.</div>
+        </div>
+      </div>
+    </div>
+    <button class="welcome-btn" onclick="dismissWelcome()">Let's go! →</button>
+  </div>
+</div>
 <!-- Profile screen -->
 <div class="profile-screen hidden" id="profileScreen">
   <div class="profile-box">
@@ -456,6 +526,22 @@
         </div>
       </div>
       <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Home screen tip — iOS only, dismissible -->
+    <div class="hs-tip hidden" id="hsTip">
+      <div class="hs-tip-icon">📱</div>
+      <div class="hs-tip-body">
+        <div class="hs-tip-title">Add to your iPhone home screen</div>
+        <div class="hs-tip-steps">
+          <span class="hs-tip-step">Open in Safari</span>
+          <span class="hs-tip-arrow">→</span>
+          <span class="hs-tip-step">Tap <strong>Share</strong> ⬆️</span>
+          <span class="hs-tip-arrow">→</span>
+          <span class="hs-tip-step">Tap <strong>Add to Home Screen</strong></span>
+        </div>
+      </div>
+      <button class="hs-tip-close" onclick="dismissHsTip()" title="Dismiss">×</button>
     </div>
 
     <div class="footer-actions">
@@ -996,7 +1082,7 @@ function updateSettingsSummary(s, g) {
   if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
-    ['TDEE',     `${g.tdee.toLocaleString()} kcal`],
+    ['TDEE (total daily energy expenditure)', `${g.tdee.toLocaleString()} kcal`],
     ['Protein',  `${g.pro}g`],
     ['Carbs',    `${g.carb}g`],
     ['Fat',      `${g.fat}g`],
@@ -1709,7 +1795,34 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
 });
 
+// ── Welcome modal & home screen tip ─────────────────────────────
+function initWelcome() {
+  // Show welcome modal on very first visit
+  if (!localStorage.getItem('macroWelcomeSeen')) {
+    document.getElementById('welcomeOverlay').classList.remove('hidden');
+  }
+  // Show home screen tip on iOS if not dismissed and not already installed
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const tipDismissed = localStorage.getItem('macroHsTipDismissed');
+  if (isIOS && !isStandalone && !tipDismissed) {
+    document.getElementById('hsTip').classList.remove('hidden');
+  }
+}
+
+function dismissWelcome() {
+  localStorage.setItem('macroWelcomeSeen', '1');
+  document.getElementById('welcomeOverlay').classList.add('hidden');
+}
+
+function dismissHsTip() {
+  localStorage.setItem('macroHsTipDismissed', '1');
+  document.getElementById('hsTip').classList.add('hidden');
+}
+// ── End welcome ──────────────────────────────────────────────────
+
 bootProfiles();
+initWelcome();
 </script>
 </body>
 </html>
