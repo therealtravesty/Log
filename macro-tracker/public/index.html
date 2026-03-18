@@ -397,17 +397,37 @@
   .offline-bar.visible { transform: translateY(0); }
   .offline-bar.syncing { background: var(--green); }
   /* Habits tab */
-  .habit-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
-  .habit-icon-wrap { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .habit-icon-svg { width: 20px; height: 20px; stroke-width: 1.8; fill: none; }
-  .habit-name-pill { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .habit-squares { display: flex; gap: 6px; flex-shrink: 0; }
-  .habit-square { width: 46px; height: 46px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .habits-header-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .habits-header-spacer { flex: 1; font-size: 12px; color: var(--text-3); }
+  .habits-header-days { display: flex; gap: 6px; flex-shrink: 0; width: calc(5 * 44px + 4 * 6px); }
+  .habit-day-header { width: 44px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; }
+  .habit-day-header.today { color: var(--text); font-weight: 700; }
+  .habit-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; }
+  .habit-card:hover { background: var(--bg); }
+  .habit-icon-wrap { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .habit-squares { display: flex; gap: 6px; flex-shrink: 0; width: calc(5 * 44px + 4 * 6px); }
+  .habit-square { width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
   .habit-square:active { transform: scale(0.88); }
   .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 10px 10px; }
   .habit-square-val { position: relative; z-index: 1; }
-  .habit-day-header { width: 46px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; }
-  .habit-day-header.today { color: var(--text); font-weight: 700; }
+  /* Habit edit modal */
+  .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+  .habit-modal-overlay.hidden { display: none; }
+  .habit-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom,16px); width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+  .habit-modal-handle { width: 36px; height: 4px; background: var(--border-med); border-radius: 2px; margin: 12px auto 0; }
+  .habit-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); }
+  .habit-modal-title { font-size: 16px; font-weight: 600; }
+  .habit-modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-3); padding: 4px; }
+  .habit-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .habit-modal-field { display: flex; flex-direction: column; gap: 6px; }
+  .habit-modal-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; }
+  .habit-modal-input { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .habit-modal-input:focus { font-size: 16px; border-color: rgba(0,0,0,0.3); }
+  .habit-modal-select { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
+  .habit-modal-save { height: 48px; width: 100%; font-size: 15px; font-weight: 600; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; margin-top: 4px; }
+  .habit-modal-delete { height: 44px; width: 100%; font-size: 14px; font-weight: 500; background: none; color: var(--red-text); border: 0.5px solid var(--red-text); border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; }
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
@@ -715,13 +735,56 @@
 
     <!-- Rolling 5-day grid -->
     <div style="margin-top:0.5rem;">
-      <!-- Day header row -->
-      <div style="display:flex;align-items:center;padding:0 0 8px 0;">
-        <div style="font-size:12px;color:var(--text-3);flex:1;">Last 5 days</div>
-        <div id="habitsDayHeaders" style="display:flex;gap:6px;"></div>
+      <div class="habits-header-row">
+        <div class="habits-header-spacer">Last 5 days</div>
+        <div class="habits-header-days" id="habitsDayHeaders"></div>
       </div>
-      <!-- Habit cards -->
       <div id="habitsGrid"><div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div></div>
+    </div>
+
+    <!-- Habit edit modal -->
+    <div class="habit-modal-overlay hidden" id="habitEditOverlay" onclick="closeHabitModal(event)">
+      <div class="habit-modal" id="habitEditModal">
+        <div class="habit-modal-handle"></div>
+        <div class="habit-modal-header">
+          <span class="habit-modal-title">Edit habit</span>
+          <button class="habit-modal-close" onclick="closeHabitModal()">×</button>
+        </div>
+        <div class="habit-modal-body">
+          <input type="hidden" id="editHabitId" />
+          <div class="habit-modal-field">
+            <label class="habit-modal-label">Name</label>
+            <input class="habit-modal-input" id="editHabitName" type="text" maxlength="40" />
+          </div>
+          <div class="habit-modal-field">
+            <label class="habit-modal-label">Type</label>
+            <select class="habit-modal-select" id="editHabitType" onchange="toggleEditQuantityFields()">
+              <option value="boolean">Simple (done / not done)</option>
+              <option value="quantity">Quantity (tap to increment)</option>
+            </select>
+          </div>
+          <div id="editQuantityFields" style="display:none;display:flex;flex-direction:column;gap:12px;">
+            <div class="habit-modal-field">
+              <label class="habit-modal-label">Daily target</label>
+              <input class="habit-modal-input" id="editHabitTarget" type="number" min="1" placeholder="e.g. 8" />
+            </div>
+            <div class="habit-modal-field">
+              <label class="habit-modal-label">Unit</label>
+              <input class="habit-modal-input" id="editHabitUnit" type="text" placeholder="e.g. glasses, pages, miles" />
+            </div>
+          </div>
+          <div class="habit-modal-field">
+            <label class="habit-modal-label">Color</label>
+            <div class="habit-color-picker" id="editHabitColorPicker"></div>
+          </div>
+          <div class="habit-modal-field">
+            <label class="habit-modal-label">Icon</label>
+            <div class="habit-icon-picker" id="editHabitIconPicker"></div>
+          </div>
+          <button class="habit-modal-save" onclick="saveEditedHabit()">Save changes</button>
+          <button class="habit-modal-delete" onclick="deleteHabitFromModal()">Delete habit</button>
+        </div>
+      </div>
     </div>
 
     <!-- Water tracker -->
@@ -1011,26 +1074,28 @@ async function flushOfflineQueue() {
 }
 
 async function api(path, options = {}) {
-  const method = options.method || 'GET';
+  const method = (options.method || 'GET').toUpperCase();
   const isWrite = method !== 'GET';
+
   const doFetch = () => fetch('/api/' + path, {
-    ...options,
+    method,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  }).then(res => {
+    body: options.body != null ? JSON.stringify(options.body) : undefined,
+  }).then(async res => {
     if (!res.ok) throw new Error('API error ' + res.status);
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   });
 
   if (!_isOnline && isWrite) {
-    await enqueueRequest('/api/' + path, method, options.body || null);
+    await enqueueRequest('/api/' + path, method, options.body ?? null);
     return options.body ? { ...options.body, offline: true } : { offline: true };
   }
   try {
     return await doFetch();
   } catch(e) {
     if (isWrite) {
-      await enqueueRequest('/api/' + path, method, options.body || null);
+      await enqueueRequest('/api/' + path, method, options.body ?? null);
       return options.body ? { ...options.body, offline: true } : { offline: true };
     }
     throw e;
@@ -1201,7 +1266,6 @@ let _savedMeals = [];
 let _habits = [];
 let _habitLogs = {};
 const HABIT_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#F59E0B','#10B981','#EC4899','#6366F1','#14B8A6'];
-const HABIT_ICONS  = ['💧','🏋️','🏃','📖','🥗','😴','🧘','🚴','🎯','✅','⭐','🔥','🎵','📝','💊','🧠','🥦','☀️','🏊','🎾'];
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -1212,13 +1276,19 @@ const DEFAULT_SETTINGS = {
 async function loadAllFromServer() {
   try {
     const rows = await api(`foods?profile_id=${activeProfileId}`);
+    if (!Array.isArray(rows)) {
+      console.warn('[loadAllFromServer] unexpected response:', rows);
+      throw new Error('bad response');
+    }
     _allFoods = {};
     rows.forEach(r => {
       if (!_allFoods[r.date]) _allFoods[r.date] = [];
       _allFoods[r.date].push(dbRowToFood(r));
     });
+    console.log(`[loadAllFromServer] loaded ${rows.length} rows from server`);
     cacheSet('allFoods', _allFoods);
   } catch(e) {
+    console.warn('[loadAllFromServer] falling back to cache:', e.message);
     const cached = cacheGet('allFoods');
     if (cached) _allFoods = cached;
   }
@@ -2543,14 +2613,14 @@ function renderHabits() {
         const textColor = done ? 'rgba(255,255,255,0.95)' : `rgba(${r},${g},${b},1)`;
         const valLabel  = val > 0 ? `<span class="habit-square-val" style="color:${textColor};">${val}</span>` : '';
         return `<div class="habit-square" style="background:${sqFade};"
-          onclick="incrementHabitQty(${h.id},'${d}',${target})"
+          onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"
           title="${val}/${target}${h.target_unit?' '+h.target_unit:''}">
           <div class="habit-square-fill" style="height:${pct*100}%;background:${h.color};transition:height 0.25s;"></div>
           ${valLabel}
         </div>`;
       } else {
         return `<div class="habit-square" style="background:${done?h.color:sqFade};"
-          onclick="toggleHabit(${h.id},'${d}')"></div>`;
+          onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
       }
     }).join('');
 
@@ -2558,9 +2628,9 @@ function renderHabits() {
       ? `<span style="font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;">${streak}d streak</span>`
       : '';
 
-    return `<div class="habit-card" oncontextmenu="deleteHabit(${h.id});return false;">
+    return `<div class="habit-card" onclick="openHabitModal(${h.id})">
       <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 20)}</div>
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+      <div class="habit-name-section">
         <span class="habit-name-pill" style="background:${fadeBg};color:${h.color};">${h.name}</span>
         ${streakLabel}
       </div>
@@ -2701,11 +2771,92 @@ function toggleHabitQuantityFields() {
   document.getElementById('habitUnitField')?.classList.toggle('hidden', !isQty);
 }
 
+function openHabitModal(habitId) {
+  const h = _habits.find(h => h.id === habitId);
+  if (!h) return;
+  document.getElementById('editHabitId').value = habitId;
+  document.getElementById('editHabitName').value = h.name;
+  document.getElementById('editHabitType').value = h.target_type || 'boolean';
+  document.getElementById('editHabitTarget').value = h.target_value || 1;
+  document.getElementById('editHabitUnit').value = h.target_unit || '';
+  toggleEditQuantityFields();
+  // Color picker
+  const cp = document.getElementById('editHabitColorPicker');
+  cp.innerHTML = HABIT_COLORS.map(c =>
+    `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>`
+  ).join('');
+  // Icon picker
+  const ip = document.getElementById('editHabitIconPicker');
+  ip.innerHTML = HABIT_ICON_KEYS.map(k =>
+    `<button class="habit-icon-btn${k===h.icon?' selected':''}" data-icon="${k}" onclick="selectEditHabitIcon(this)">${habitIconSvg(k,'currentColor',18)}</button>`
+  ).join('');
+  document.getElementById('habitEditOverlay').classList.remove('hidden');
+}
+
+function closeHabitModal(e) {
+  if (e && e.target !== document.getElementById('habitEditOverlay')) return;
+  document.getElementById('habitEditOverlay').classList.add('hidden');
+}
+
+function selectEditHabitColor(el) {
+  document.querySelectorAll('#editHabitColorPicker .habit-color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectEditHabitIcon(el) {
+  document.querySelectorAll('#editHabitIconPicker .habit-icon-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleEditQuantityFields() {
+  const isQty = document.getElementById('editHabitType')?.value === 'quantity';
+  const fields = document.getElementById('editQuantityFields');
+  if (fields) fields.style.display = isQty ? 'flex' : 'none';
+}
+
+async function saveEditedHabit() {
+  const id = parseInt(document.getElementById('editHabitId').value);
+  const name = document.getElementById('editHabitName').value.trim();
+  if (!name) { showToast('Enter a habit name'); return; }
+  const color  = document.querySelector('#editHabitColorPicker .habit-color-swatch.selected')?.dataset.color || HABIT_COLORS[0];
+  const icon   = document.querySelector('#editHabitIconPicker .habit-icon-btn.selected')?.dataset.icon || 'check';
+  const type   = document.getElementById('editHabitType').value;
+  const target = parseFloat(document.getElementById('editHabitTarget').value) || 1;
+  const unit   = document.getElementById('editHabitUnit').value.trim();
+  try {
+    await api(`habits?id=${id}`, { method: 'PATCH', body: {
+      name, color, icon, target_type: type,
+      target_value: type === 'quantity' ? target : 1,
+      target_unit: unit,
+    }});
+    const idx = _habits.findIndex(h => h.id === id);
+    if (idx > -1) _habits[idx] = { ..._habits[idx], name, color, icon, target_type: type, target_value: type==='quantity'?target:1, target_unit: unit };
+    cacheSet('habits', _habits);
+    document.getElementById('habitEditOverlay').classList.add('hidden');
+    renderHabits();
+    showToast('Habit updated!');
+  } catch(e) { showToast('Could not save changes'); }
+}
+
+async function deleteHabitFromModal() {
+  const id = parseInt(document.getElementById('editHabitId').value);
+  if (!confirm('Delete this habit and all its history?')) return;
+  try {
+    await api(`habits?id=${id}`, { method: 'DELETE' });
+    _habits = _habits.filter(h => h.id !== id);
+    delete _habitLogs[id];
+    cacheSet('habits', _habits);
+    cacheSet('habitLogs', _habitLogs);
+    document.getElementById('habitEditOverlay').classList.add('hidden');
+    renderHabits();
+    showToast('Habit deleted');
+  } catch(e) { showToast('Could not delete'); }
+}
+
 async function saveNewHabit() {
-  const name = document.getElementById('habitName')?.value.trim();
   if (!name) { showToast('Enter a habit name'); return; }
   const color = document.querySelector('.habit-color-swatch.selected')?.dataset.color || HABIT_COLORS[0];
-  const icon  = document.querySelector('.habit-icon-btn.selected')?.dataset.icon || '✅';
+  const icon  = document.querySelector('.habit-icon-btn.selected')?.dataset.icon || 'check';
   const type  = document.getElementById('habitType')?.value || 'boolean';
   const target = parseFloat(document.getElementById('habitTarget')?.value) || 1;
   const unit   = document.getElementById('habitUnit')?.value.trim() || '';
