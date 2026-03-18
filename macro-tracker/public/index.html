@@ -1184,12 +1184,16 @@ async function lookupFood(excludeSource = null) {
     });
     if (!res.ok) throw new Error('Server error ' + res.status);
     const data = await res.json();
+    // Store base macros at 1x serving for scaling
     pendingFood = { id: Date.now(), name: data.name,
       cal: Math.round(data.calories), pro: Math.round(data.protein_g),
       carb: Math.round(data.carbs_g), fat: Math.round(data.fat_g),
       satFat: Math.round(data.sat_fat_g||0), sug: Math.round(data.sugar_g),
       sod: Math.round(data.sodium_mg||0), fib: Math.round(data.fiber_g||0) };
+    // Save base values for proportion scaling
+    window._baseMacros = { ...pendingFood };
     const sourceText = data.note || 'USDA estimate';
+    const servingLabel = data.serving_size || '1 serving';
     resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${data.name}</div>
       <div class="result-source">
@@ -1197,6 +1201,13 @@ async function lookupFood(excludeSource = null) {
           <span class="result-source-badge">📊 ${sourceText}</span>
           <button class="result-retry" onclick="lookupFood(${JSON.stringify(sourceText)})">Try different source</button>
         </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
+        <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
+        <input id="re_servings" type="number" min="0.25" step="0.25" value="1"
+          style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
+          oninput="scaleServings(this.value)" />
+        <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
       </div>
       <div class="result-edit-grid">
         <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${pendingFood.cal}" /></div>
@@ -1217,6 +1228,20 @@ async function lookupFood(excludeSource = null) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed: ' + e.message + '</div>';
   }
   btn.disabled = false;
+}
+
+function scaleServings(val) {
+  const mult = parseFloat(val);
+  if (!mult || mult <= 0 || !window._baseMacros) return;
+  const b = window._baseMacros;
+  document.getElementById('re_cal').value    = Math.round(b.cal    * mult);
+  document.getElementById('re_pro').value    = Math.round(b.pro    * mult);
+  document.getElementById('re_carb').value   = Math.round(b.carb   * mult);
+  document.getElementById('re_fat').value    = Math.round(b.fat    * mult);
+  document.getElementById('re_satFat').value = Math.round(b.satFat * mult);
+  document.getElementById('re_sug').value    = Math.round(b.sug    * mult);
+  document.getElementById('re_sod').value    = Math.round(b.sod    * mult);
+  document.getElementById('re_fib').value    = Math.round(b.fib    * mult);
 }
 
 async function confirmAdd() {
