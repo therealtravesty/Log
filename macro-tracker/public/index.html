@@ -1075,9 +1075,13 @@ let chartInstances = {};
 let activeDate = '';
 let _allFoods  = {};
 let _weights   = {};
-let _water     = {};   // { date: oz }
-let _exercise  = {};   // { date: [{id,name,calories_burned},...] }
-let _savedMeals = [];  // [{id,name,foods}]
+let _water     = {};
+let _exercise  = {};
+let _savedMeals = [];
+let _habits = [];
+let _habitLogs = {};
+const HABIT_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#F59E0B','#10B981','#EC4899','#6366F1','#14B8A6'];
+const HABIT_ICONS  = ['💧','🏋️','🏃','📖','🥗','😴','🧘','🚴','🎯','✅','⭐','🔥','🎵','📝','💊','🧠','🥦','☀️','🏊','🎾'];
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -2323,11 +2327,6 @@ function dismissHsTip() {
 // ── End welcome ──────────────────────────────────────────────────
 
 // ── Habits system ─────────────────────────────────────────────────
-let _habits = [];
-let _habitLogs = {}; // { habit_id: { date: value } }
-
-const HABIT_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#F59E0B','#10B981','#EC4899','#6366F1','#14B8A6'];
-const HABIT_ICONS  = ['💧','🏋️','🏃','📖','🥗','😴','🧘','🚴','🎯','✅','⭐','🔥','🎵','📝','💊','🧠','🥦','☀️','🏊','🎾'];
 
 async function loadHabitsFromServer() {
   try {
@@ -2567,7 +2566,8 @@ async function deleteHabit(id) {
   } catch(e) { showToast('Could not delete'); }
 }
 // ── End habits ─────────────────────────────────────────────────────
-initWelcome();
+
+bootProfiles().then(() => initWelcome());
 </script>
 </body>
 </html>
