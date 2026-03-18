@@ -310,19 +310,21 @@
   .food-edit-field { display: flex; flex-direction: column; gap: 3px; }
   .food-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
   .food-edit-input { height: 30px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
-  .food-edit-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
+  .food-edit-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .food-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 2px; }
   .food-edit-save { height: 30px; padding: 0 14px; font-size: 12px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; }
   .food-edit-cancel { height: 30px; padding: 0 12px; font-size: 12px; background: none; border: none; cursor: pointer; color: var(--text-3); text-decoration: underline; text-underline-offset: 2px; }
   .edit-btn { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 2px 5px; border-radius: 4px; }
   .edit-btn:hover { background: var(--bg); color: var(--text-2); }
+  .serving-input { font-size: 13px; }
+  .serving-input:focus { font-size: 16px; }
 
   /* Editable result card macros */
   .result-edit-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-bottom: 14px; }
   .result-edit-field { display: flex; flex-direction: column; gap: 3px; }
   .result-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
   .result-edit-input { height: 32px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
-  .result-edit-input:focus { border-color: rgba(0,0,0,0.3); }
+  .result-edit-input:focus { border-color: rgba(0,0,0,0.3); font-size: 16px; }
 
   @media (max-width: 600px) {
     .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -1362,7 +1364,7 @@ async function lookupFood(excludeSource = null) {
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
         <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-        <input id="re_servings" type="number" min="0.25" step="0.25" value="1"
+        <input id="re_servings" type="number" min="0.25" step="0.25" value="1" class="serving-input"
           style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
           oninput="scaleServings(this.value)" />
         <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
@@ -1803,7 +1805,7 @@ function renderToday() {
             <!-- Serving multiplier -->
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
               <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="${f.servingMult || 1}"
+              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="${f.servingMult || 1}" class="serving-input"
                 style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
                 oninput="scaleEditServings(${f.id}, this.value)" />
               <span style="font-size:12px;color:var(--text-3);">× ${f.servingLabel || '1 serving'}</span>
