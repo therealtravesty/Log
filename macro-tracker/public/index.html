@@ -243,10 +243,21 @@
   .meal-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 0.5px 2px rgba(0,0,0,0.1); }
   .meal-tab:not(.active):hover { color: var(--text); }
   /* Recents toggle */
-  .recents-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px 0; user-select: none; }
-  .recents-toggle-label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+  .recents-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px 14px; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius); user-select: none; transition: background 0.15s; }
+  .recents-toggle:hover { background: var(--surface); }
+  .recents-toggle-left { display: flex; align-items: center; gap: 8px; }
+  .recents-toggle-icon { font-size: 15px; }
+  .recents-toggle-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .recents-toggle-count { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .recents-toggle-chevron { font-size: 11px; color: var(--text-3); transition: transform 0.2s; }
   .recents-toggle-chevron.open { transform: rotate(180deg); }
+  .recents-body { border: 0.5px solid var(--border-med); border-top: none; border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; }
+  .recent-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 0.5px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item:hover { background: var(--bg); }
+  .recent-item-name { flex: 1; font-size: 13px; color: var(--text); }
+  .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .recent-item-add { width: 26px; height: 26px; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 300; line-height: 1; }
   .meal-empty { font-size: 12px; color: var(--text-3); padding: 6px 0 4px; font-style: italic; }
 
   /* Water tracker */
@@ -514,10 +525,14 @@
       <!-- Recent foods — collapsible, below search -->
       <div id="recentFoodsArea" style="display:none;margin-top:0.75rem;" class="recents-section">
         <div class="recents-toggle" onclick="toggleRecents()">
-          <span class="recents-toggle-label">Recent foods</span>
+          <div class="recents-toggle-left">
+            <span class="recents-toggle-icon">🕐</span>
+            <span class="recents-toggle-label">Recent foods</span>
+            <span class="recents-toggle-count" id="recentCount"></span>
+          </div>
           <span class="recents-toggle-chevron" id="recentChevron">▾</span>
         </div>
-        <div id="recentFoodsList" class="recents-list" style="display:none;margin-top:6px;"></div>
+        <div id="recentFoodsList" class="recents-body" style="display:none;"></div>
       </div>
     </div>
 
@@ -1540,10 +1555,12 @@ function getRecentFoods(limit = 15) {
 function renderRecentFoods() {
   const area = document.getElementById('recentFoodsArea');
   const list = document.getElementById('recentFoodsList');
+  const countEl = document.getElementById('recentCount');
   const todayNames = new Set(getActiveFoods().map(f => f.name.toLowerCase().trim()));
   _recentFoodsCache = getRecentFoods(15).filter(f => !todayNames.has(f.name.toLowerCase().trim()));
   if (!_recentFoodsCache.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
+  if (countEl) countEl.textContent = `${_recentFoodsCache.length} items`;
   list.innerHTML = _recentFoodsCache.map((f, i) => `
     <div class="recent-item" onclick="logRecentFood(${i})">
       <span class="recent-item-name">${f.name}</span>
