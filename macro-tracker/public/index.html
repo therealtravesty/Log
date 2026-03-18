@@ -37,7 +37,7 @@
   body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
   .container { max-width: 700px; margin: 0 auto; }
 
-  .tabs { display: flex; gap: 4px; margin-bottom: 1.75rem; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+  .tabs { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); width: 100%; }
   .tab { font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 7px; border: none; background: none; cursor: pointer; color: var(--text-2); font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; }
   .tab.active { background: var(--text); color: var(--bg); }
   .tab:not(.active):hover { background: var(--bg); color: var(--text); }
@@ -87,8 +87,12 @@
   .search-area { margin-top: 1.25rem; border-top: 0.5px solid var(--border); padding-top: 1.25rem; }
   .search-wrap { display: flex; gap: 8px; align-items: flex-start; }
   .search-textarea { flex: 1; min-height: 72px; font-size: 14px; padding: 10px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; resize: vertical; line-height: 1.5; transition: border-color 0.15s, background 0.15s; }
-  .search-textarea:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
+  .search-textarea:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .search-textarea::placeholder { color: var(--text-3); }
+  @media (max-width: 600px) {
+    .search-textarea { font-size: 13px; }
+    .search-textarea:focus { font-size: 16px; }
+  }
   .lookup-btn { height: 40px; padding: 0 18px; font-size: 13px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
   .lookup-btn:hover { opacity: 0.82; }
   .lookup-btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -185,9 +189,9 @@
   .settings-field { display: flex; flex-direction: column; gap: 5px; }
   .settings-label { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
   .settings-input { height: 36px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; transition: border-color 0.15s; width: 100%; }
-  .settings-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
+  .settings-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .settings-select { height: 36px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; width: 100%; }
-  .settings-select:focus { border-color: rgba(0,0,0,0.3); }
+  .settings-select:focus { border-color: rgba(0,0,0,0.3); font-size: 16px; }
   .settings-divider { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; margin-top: 4px; font-family: 'DM Mono', monospace; }
   .settings-result { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; padding-top: 1rem; border-top: 0.5px solid var(--border); }
   .settings-result-chip { font-size: 12px; padding: 4px 11px; border-radius: 20px; border: 0.5px solid var(--border-med); background: var(--bg); color: var(--text-2); font-family: 'DM Mono', monospace; }
@@ -373,10 +377,6 @@
   .recent-item-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
   .recent-item-add { font-size: 16px; color: var(--text-3); flex-shrink: 0; line-height: 1; }
-  /* Prevent iOS Safari auto-zoom on input focus */
-  @supports (-webkit-touch-callout: none) {
-    input, textarea, select { font-size: 16px !important; }
-  }
 </style>
 </head>
 <body>
@@ -445,10 +445,16 @@
 </div>
 
 <div class="container">
-  <div class="tabs">
-    <button class="tab active" id="tab-today" onclick="showView('today')">Log</button>
-    <button class="tab" id="tab-history" onclick="showView('history')">History</button>
-    <button class="tab" id="tab-goals" onclick="showView('goals')">Goals</button>
+  <div class="tabs" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+    <div style="display:flex;gap:4px;padding:4px;">
+      <button class="tab active" id="tab-today" onclick="showView('today')">Log</button>
+      <button class="tab" id="tab-history" onclick="showView('history')">History</button>
+      <button class="tab" id="tab-goals" onclick="showView('goals')">Goals</button>
+    </div>
+    <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile" style="margin-right:4px;">
+      <div class="profile-chip-avatar" id="profileChipAvatar"></div>
+      <span class="profile-chip-name" id="profileChipName"></span>
+    </div>
   </div>
 
   <!-- TODAY -->
@@ -456,13 +462,7 @@
     <div class="header">
       <div class="header-top">
         <div class="app-title">Macro Tracker</div>
-        <div class="profile-switcher">
-          <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile">
-            <div class="profile-chip-avatar" id="profileChipAvatar"></div>
-            <span class="profile-chip-name" id="profileChipName"></span>
-          </div>
-          <div class="header-meta" id="headerMeta">2,850 kcal cut</div>
-        </div>
+        <div class="header-meta" id="headerMeta">2,850 kcal cut</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
         <div class="date-friendly" id="dateFriendly"></div>
@@ -861,6 +861,9 @@ async function createProfile() {
     const data = { id, name, color };
     localStorage.setItem(`profileData_${id}`, JSON.stringify(data));
     await selectProfile(id, data);
+    // New profile — send straight to Goals to set up targets
+    showView('goals');
+    showToast('Welcome! Set your goals to get started.');
   } catch(e) {
     showToast('Could not create profile');
   }
@@ -1000,7 +1003,18 @@ async function loadSavedMealsFromServer() {
 }
 
 function dbRowToFood(r) {
-  return { id: r.food_id, dbId: r.id, name: r.name, cal: r.cal, pro: r.pro, carb: r.carb, fat: r.fat, satFat: r.sat_fat, sug: r.sug, sod: r.sod, fib: r.fib, meal: r.meal || 'uncategorized' };
+  return {
+    id: r.food_id, dbId: r.id, name: r.name,
+    cal: r.cal, pro: r.pro, carb: r.carb, fat: r.fat,
+    satFat: r.sat_fat, sug: r.sug, sod: r.sod, fib: r.fib,
+    meal: r.meal || 'uncategorized',
+    servingMult: r.serving_mult || 1,
+    servingLabel: r.serving_label || '1 serving',
+    baseCal: r.base_cal || r.cal, basePro: r.base_pro || r.pro,
+    baseCarb: r.base_carb || r.carb, baseFat: r.base_fat || r.fat,
+    baseSatFat: r.base_sat_fat || r.sat_fat, baseSug: r.base_sug || r.sug,
+    baseSod: r.base_sod || r.sod, baseFib: r.base_fib || r.fib,
+  };
 }
 
 function getActiveFoods() { return _allFoods[activeDate] || []; }
@@ -1322,17 +1336,27 @@ function scaleServings(val) {
 function scaleEditServings(foodId, val) {
   const mult = parseFloat(val);
   if (!mult || mult <= 0) return;
-  // Use the originally logged values (from the rendered inputs' data attributes via the food object)
   const food = getActiveFoods().find(f => f.id === foodId);
   if (!food) return;
-  document.getElementById(`fe_cal_${foodId}`).value    = Math.round(food.cal    * mult);
-  document.getElementById(`fe_pro_${foodId}`).value    = Math.round(food.pro    * mult);
-  document.getElementById(`fe_carb_${foodId}`).value   = Math.round(food.carb   * mult);
-  document.getElementById(`fe_fat_${foodId}`).value    = Math.round(food.fat    * mult);
-  document.getElementById(`fe_satFat_${foodId}`).value = Math.round((food.satFat||0) * mult);
-  document.getElementById(`fe_sug_${foodId}`).value    = Math.round((food.sug||0)    * mult);
-  document.getElementById(`fe_sod_${foodId}`).value    = Math.round((food.sod||0)    * mult);
-  document.getElementById(`fe_fib_${foodId}`).value    = Math.round((food.fib||0)    * mult);
+  // Use stored per-unit base macros if available, else fall back to logged values
+  const b = {
+    cal:    food.baseCal    ?? food.cal,
+    pro:    food.basePro    ?? food.pro,
+    carb:   food.baseCarb   ?? food.carb,
+    fat:    food.baseFat    ?? food.fat,
+    satFat: food.baseSatFat ?? (food.satFat||0),
+    sug:    food.baseSug    ?? (food.sug||0),
+    sod:    food.baseSod    ?? (food.sod||0),
+    fib:    food.baseFib    ?? (food.fib||0),
+  };
+  document.getElementById(`fe_cal_${foodId}`).value    = Math.round(b.cal    * mult);
+  document.getElementById(`fe_pro_${foodId}`).value    = Math.round(b.pro    * mult);
+  document.getElementById(`fe_carb_${foodId}`).value   = Math.round(b.carb   * mult);
+  document.getElementById(`fe_fat_${foodId}`).value    = Math.round(b.fat    * mult);
+  document.getElementById(`fe_satFat_${foodId}`).value = Math.round(b.satFat * mult);
+  document.getElementById(`fe_sug_${foodId}`).value    = Math.round(b.sug    * mult);
+  document.getElementById(`fe_sod_${foodId}`).value    = Math.round(b.sod    * mult);
+  document.getElementById(`fe_fib_${foodId}`).value    = Math.round(b.fib    * mult);
 }
 
 async function confirmAdd() {
@@ -1348,6 +1372,23 @@ async function confirmAdd() {
     pendingFood.sug    = Math.round(parseFloat(document.getElementById('re_sug').value)||0);
     pendingFood.sod    = Math.round(parseFloat(document.getElementById('re_sod').value)||0);
     pendingFood.fib    = Math.round(parseFloat(document.getElementById('re_fib').value)||0);
+    // Store serving info so recents can show it and edit scaler works correctly
+    const servingsEl = document.getElementById('re_servings');
+    const mult = servingsEl ? (parseFloat(servingsEl.value) || 1) : 1;
+    const servingLabel = servingsEl ? servingsEl.closest('div')?.querySelector('span:last-child')?.textContent?.replace('× ','') : '1 serving';
+    pendingFood.servingMult  = mult;
+    pendingFood.servingLabel = servingLabel || '1 serving';
+    // Store per-unit base macros so edit scaler always has a clean 1x reference
+    if (window._baseMacros) {
+      pendingFood.baseCal    = window._baseMacros.cal;
+      pendingFood.basePro    = window._baseMacros.pro;
+      pendingFood.baseCarb   = window._baseMacros.carb;
+      pendingFood.baseFat    = window._baseMacros.fat;
+      pendingFood.baseSatFat = window._baseMacros.satFat;
+      pendingFood.baseSug    = window._baseMacros.sug;
+      pendingFood.baseSod    = window._baseMacros.sod;
+      pendingFood.baseFib    = window._baseMacros.fib;
+    }
   }
   const meal = getActiveMealTab() || 'uncategorized';
   const btn = document.querySelector('.confirm-btn');
@@ -1597,12 +1638,17 @@ function renderRecentFoods() {
   if (!_recentFoodsCache.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
   if (countEl) countEl.textContent = `${_recentFoodsCache.length} items`;
-  list.innerHTML = _recentFoodsCache.map((f, i) => `
+  list.innerHTML = _recentFoodsCache.map((f, i) => {
+    const servingInfo = f.servingMult && f.servingMult !== 1
+      ? ` · ${f.servingMult}× ${f.servingLabel || 'serving'}`
+      : (f.servingLabel && f.servingLabel !== '1 serving' ? ` · ${f.servingLabel}` : '');
+    return `
     <div class="recent-item" onclick="logRecentFood(${i})">
       <span class="recent-item-name">${f.name}</span>
-      <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F</span>
+      <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${servingInfo}</span>
       <span class="recent-item-add">+</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function logRecentFood(idx) {
@@ -1683,15 +1729,15 @@ function renderToday() {
           <div class="food-edit-form" style="display:block;padding:10px 0 12px;">
             <!-- Original values reference -->
             <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-bottom:8px;padding:6px 8px;background:var(--bg);border-radius:6px;">
-              Originally logged: ${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F
+              Originally logged: ${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${f.servingMult && f.servingMult !== 1 ? ` · ${f.servingMult}× ${f.servingLabel||'serving'}` : ''}
             </div>
             <!-- Serving multiplier -->
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
               <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="1"
+              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="${f.servingMult || 1}"
                 style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
                 oninput="scaleEditServings(${f.id}, this.value)" />
-              <span style="font-size:12px;color:var(--text-3);">× original</span>
+              <span style="font-size:12px;color:var(--text-3);">× ${f.servingLabel || '1 serving'}</span>
             </div>
             <!-- Macro inputs -->
             <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
