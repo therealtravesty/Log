@@ -915,16 +915,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── API helpers ──────────────────────────────────────────────────
-async function api(path, options = {}) {
-  const res = await fetch('/api/' + path, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) throw new Error('API error ' + res.status);
-  return res.json();
-}
+// ── API helpers — see offline-aware api() at bottom of script ────
 
 // ── Profile system ──────────────────────────────────────────────
 const LS_LAST        = 'macroLastProfile';
@@ -2632,10 +2623,9 @@ async function deleteHabit(id) {
 let _isOnline = navigator.onLine;
 let _syncDB = null;
 
-// Register service worker
-if ('serviceWorker' in navigator) {
+// Register service worker — only on actual deployment, not preview environments
+if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
-    // Listen for sync complete messages from SW
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data?.type === 'SYNC_COMPLETE') {
         showOfflineBar('syncing', '✓ Back online — all changes synced');
@@ -2663,9 +2653,17 @@ function hideOfflineBar() {
 async function onConnectionRestored() {
   showOfflineBar('syncing', '↑ Back online — syncing changes...');
   await flushOfflineQueue();
-  // Reload data from server to pick up any changes
+  // Reload all data fresh from server to reconcile any offline writes
   if (activeProfileId) {
-    await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
+    await Promise.all([
+      loadAllFromServer(),
+      loadWeightsFromServer(),
+      loadWaterFromServer(),
+      loadExerciseFromServer(),
+      loadSavedMealsFromServer(),
+      loadHabitsFromServer(),
+      loadHabitLogsFromServer()
+    ]);
     renderToday();
     if (document.getElementById('view-habits')?.classList.contains('active')) renderHabits();
   }
@@ -2729,26 +2727,36 @@ async function flushOfflineQueue() {
 }
 
 // ── Offline-aware API wrapper ─────────────────────────────────────
-// Override the existing api() function to queue writes when offline
-const _originalApi = api;
+const _apiBase = async (path, options = {}) => {
+  const res = await fetch('/api/' + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (!res.ok) throw new Error('API error ' + res.status);
+  return res.json();
+};
+
 async function api(path, options = {}) {
   const method = options.method || 'GET';
   const isWrite = method !== 'GET';
+
   if (!_isOnline && isWrite) {
-    // Queue the write for later
+    // Queue the write for later, return optimistic response
     const url = '/api/' + path;
     await enqueueRequest(url, method, options.body || null);
-    // Return a fake success so the UI updates optimistically
-    return options.body ? [{ ...options.body, id: Date.now(), offline: true }] : { offline: true };
+    // Return minimal optimistic result — callers handle missing IDs gracefully
+    return options.body ? { ...options.body, offline: true } : { offline: true };
   }
+
   try {
-    return await _originalApi(path, options);
+    return await _apiBase(path, options);
   } catch(e) {
-    // If network error on a write, queue it
+    // Network failure on a write — queue it
     if (isWrite) {
       const url = '/api/' + path;
       await enqueueRequest(url, method, options.body || null);
-      return options.body ? [{ ...options.body, id: Date.now(), offline: true }] : { offline: true };
+      return options.body ? { ...options.body, offline: true } : { offline: true };
     }
     throw e;
   }
