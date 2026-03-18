@@ -391,23 +391,17 @@
   .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
   .recent-item-add { font-size: 16px; color: var(--text-3); flex-shrink: 0; line-height: 1; }
   /* Habits tab */
-  .habits-grid-header { display: flex; align-items: center; margin-bottom: 8px; }
-  .habits-grid-days { display: flex; margin-left: auto; }
-  .habits-day-col { width: 36px; text-align: center; }
-  .habits-day-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.4; }
-  .habits-day-label.today { color: var(--text); font-weight: 700; }
-  .habit-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
-  .habit-row:last-child { border-bottom: none; }
-  .habit-icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .habit-name-pill { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; padding: 5px 8px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .habit-squares { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
-  .habit-square { width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+  .habit-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .habit-icon-wrap { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .habit-icon-svg { width: 20px; height: 20px; stroke-width: 1.8; fill: none; }
+  .habit-name-pill { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .habit-squares { display: flex; gap: 6px; flex-shrink: 0; }
+  .habit-square { width: 46px; height: 46px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
   .habit-square:active { transform: scale(0.88); }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; transition: height 0.25s ease; border-radius: 0 0 8px 8px; }
-  .habit-square-val { position: relative; z-index: 1; font-size: 11px; font-weight: 700; }
-  .habit-streak { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; padding-left: 2px; }
-  .habit-menu-btn { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 16px; padding: 4px; border-radius: 4px; flex-shrink: 0; opacity: 0.5; }
-  .habit-menu-btn:hover { opacity: 1; color: var(--red-text); }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 10px 10px; }
+  .habit-square-val { position: relative; z-index: 1; }
+  .habit-day-header { width: 46px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; }
+  .habit-day-header.today { color: var(--text); font-weight: 700; }
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
@@ -415,8 +409,10 @@
   .habit-color-swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.2); }
   .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .habit-icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 0.5px solid var(--border-med); background: var(--surface); cursor: pointer; font-size: 17px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .habit-icon-btn { width: 38px; height: 38px; border-radius: 8px; border: 0.5px solid var(--border-med); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .habit-icon-btn svg { width: 18px; height: 18px; stroke-width: 1.8; fill: none; stroke: var(--text-2); }
   .habit-icon-btn.selected { border-color: var(--text); background: var(--bg); }
+  .habit-icon-btn.selected svg { stroke: var(--text); }
 </style>
 </head>
 <body>
@@ -709,12 +705,14 @@
     </div>
 
     <!-- Rolling 5-day grid -->
-    <div class="card" style="padding:1rem 1.25rem;">
-      <div class="habits-grid-header">
-        <div style="flex:1;font-size:12px;color:var(--text-3);">Last 5 days</div>
-        <div class="habits-grid-days" id="habitsDayHeaders"></div>
+    <div style="margin-top:0.5rem;">
+      <!-- Day header row -->
+      <div style="display:flex;align-items:center;padding:0 0 8px 0;">
+        <div style="font-size:12px;color:var(--text-3);flex:1;">Last 5 days</div>
+        <div id="habitsDayHeaders" style="display:flex;gap:6px;"></div>
       </div>
-      <div id="habitsGrid"><div class="empty-msg" style="padding:1rem 0;">No habits yet — add your first habit above!</div></div>
+      <!-- Habit cards -->
+      <div id="habitsGrid"><div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div></div>
     </div>
 
     <!-- Water tracker -->
@@ -2338,6 +2336,136 @@ function dismissHsTip() {
 
 // ── Habits system ─────────────────────────────────────────────────
 
+const HABIT_ICON_KEYS = ['water','run','gym','book','food','sleep','bike','target','check','star','fire','music','write','pill','brain','veg','sun','swim','steps','camera'];
+const HABIT_ICONS_SVG = {
+  water:  '<polyline points="12 2 8 8 4 14 4 18 8 20 16 20 20 18 20 14 16 8 12 2"/><line x1="8" y1="14" x2="16" y2="14"/>',
+  run:    '<circle cx="13" cy="5" r="1.5"/><path d="M9 20l2-5 3 2 2-7"/><path d="M6 13l3-3 2 2 4-4"/>',
+  gym:    '<path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4M6 12h12"/>',
+  book:   '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
+  food:   '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  sleep:  '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+  bike:   '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5L9 11l3-3 4 3.5"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  check:  '<polyline points="20 6 9 17 4 12"/>',
+  star:   '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  fire:   '<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/>',
+  music:  '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  write:  '<line x1="17" y1="3" x2="21" y2="7"/><path d="M3 21l9.5-9.5M12.5 3.5l8 8-9.5 9.5L3 21z"/>',
+  pill:   '<rect x="2" y="10" width="9" height="14" rx="4.5"/><rect x="13" y="0" width="9" height="14" rx="4.5"/><line x1="7" y1="17" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="7"/>',
+  brain:  '<path d="M9.5 2A2.5 2.5 0 007 4.5v0A2.5 2.5 0 004.5 7v0A2.5 2.5 0 002 9.5v5A2.5 2.5 0 004.5 17v0A2.5 2.5 0 007 19.5v0A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7v0A2.5 2.5 0 0017 4.5v0A2.5 2.5 0 0014.5 2h-5z"/>',
+  veg:    '<path d="M2 22l10-10"/><path d="M16 4s-8 2-10 10c2-2 6-4 10-4s8 2 8 2-2 4-8 4"/>',
+  sun:    '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+  swim:   '<path d="M2 12h20M2 16c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><circle cx="12" cy="7" r="2"/><path d="M12 9v3"/>',
+  steps:  '<path d="M3 20h4l2-6h6l2 6h4"/><path d="M9 14V8l3-4 3 4v6"/>',
+  camera: '<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
+};
+
+function habitIconSvg(key, color, size=20) {
+  const paths = HABIT_ICONS_SVG[key] || HABIT_ICONS_SVG.check;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+
+function hexToRgb(hex) {
+  const h = (hex||'#378ADD').replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function habitStreak(h) {
+  let streak = 0;
+  const check = new Date();
+  check.setDate(check.getDate() - 1);
+  while (streak < 365) {
+    const y = check.getFullYear(), m = String(check.getMonth()+1).padStart(2,'0'), day = String(check.getDate()).padStart(2,'0');
+    const d = `${y}-${m}-${day}`;
+    const val = (_habitLogs[h.id]||{})[d] || 0;
+    const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    if (done) { streak++; check.setDate(check.getDate()-1); } else break;
+  }
+  return streak;
+}
+
+function renderHabits() {
+  const days = getLast5Days();
+  const today = todayStr();
+  const headers = document.getElementById('habitsDayHeaders');
+  if (headers) {
+    headers.innerHTML = days.map(d => {
+      const dt = new Date(d + 'T12:00:00');
+      const dn = dt.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2);
+      const dd = dt.getDate();
+      const isToday = d === today;
+      return `<div class="habit-day-header${isToday?' today':''}"><span>${dn}</span><br><span>${dd}</span></div>`;
+    }).join('');
+  }
+
+  const grid = document.getElementById('habitsGrid');
+  if (!_habits.length) {
+    grid.innerHTML = '<div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div>';
+    updateHabitsSub(); return;
+  }
+
+  grid.innerHTML = _habits.map(h => {
+    const isQty   = h.target_type === 'quantity';
+    const target  = parseFloat(h.target_value) || 1;
+    const [r,g,b] = hexToRgb(h.color);
+    const fadeBg  = `rgba(${r},${g},${b},0.13)`;
+    const streak  = habitStreak(h);
+    const iconKey = h.icon || 'check';
+
+    const squares = days.map(d => {
+      const val    = (_habitLogs[h.id]||{})[d] || 0;
+      const done   = isQty ? val >= target : val >= 1;
+      const pct    = isQty ? Math.min(val/target,1) : (done?1:0);
+      const sqFade = `rgba(${r},${g},${b},0.12)`;
+
+      if (isQty) {
+        const textColor = done ? 'rgba(255,255,255,0.95)' : `rgba(${r},${g},${b},1)`;
+        const valLabel  = val > 0 ? `<span class="habit-square-val" style="color:${textColor};">${val}</span>` : '';
+        return `<div class="habit-square" style="background:${sqFade};"
+          onclick="incrementHabitQty(${h.id},'${d}',${target})"
+          title="${val}/${target}${h.target_unit?' '+h.target_unit:''}">
+          <div class="habit-square-fill" style="height:${pct*100}%;background:${h.color};transition:height 0.25s;"></div>
+          ${valLabel}
+        </div>`;
+      } else {
+        return `<div class="habit-square" style="background:${done?h.color:sqFade};"
+          onclick="toggleHabit(${h.id},'${d}')"></div>`;
+      }
+    }).join('');
+
+    const streakLabel = streak > 0
+      ? `<span style="font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;">${streak}d streak</span>`
+      : '';
+
+    return `<div class="habit-card" oncontextmenu="deleteHabit(${h.id});return false;">
+      <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 20)}</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+        <span class="habit-name-pill" style="background:${fadeBg};color:${h.color};">${h.name}</span>
+        ${streakLabel}
+      </div>
+      <div class="habit-squares">${squares}</div>
+    </div>`;
+  }).join('');
+
+  updateHabitsSub();
+}
+
+function updateHabitsSub() {
+  const streak = calcHabitStreak();
+  const sub = document.getElementById('habitsSub');
+  if (!sub) return;
+  if (!_habits.length) { sub.textContent = 'Track your daily habits'; return; }
+  sub.textContent = streak > 1
+    ? `${_habits.length} habit${_habits.length===1?'':'s'} · ${streak} day streak 🔥`
+    : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
+}
+
+async function incrementHabitQty(habitId, date, target) {
+  const current = (_habitLogs[habitId]||{})[date] || 0;
+  const newVal = current >= target ? 0 : current + 1;
+  await writeHabitLog(habitId, date, newVal);
+}
+
 async function loadHabitsFromServer() {
   try {
     _habits = await api(`habits?profile_id=${activeProfileId}`);
@@ -2378,115 +2506,6 @@ function getLast5Days() {
     days.push(`${y}-${m}-${day}`);
   }
   return days;
-}
-
-function hexToRgb(hex) {
-  const h = (hex||'#378ADD').replace('#','');
-  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
-}
-
-function habitStreak(h) {
-  let streak = 0;
-  const check = new Date();
-  // Don't penalise for today not being done yet
-  check.setDate(check.getDate() - 1);
-  while (streak < 365) {
-    const d = check.toISOString().slice(0,10);
-    const val = (_habitLogs[h.id]||{})[d] || 0;
-    const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
-    if (done) { streak++; check.setDate(check.getDate()-1); } else break;
-  }
-  return streak;
-}
-
-function renderHabits() {
-  const days = getLast5Days();
-  const today = todayStr();
-
-  // Day headers — aligned over squares
-  const headers = document.getElementById('habitsDayHeaders');
-  if (headers) {
-    headers.innerHTML = days.map(d => {
-      const dt = new Date(d + 'T12:00:00');
-      const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2);
-      const dayNum  = dt.getDate();
-      const isToday = d === today;
-      return `<div class="habits-day-col">
-        <div class="habits-day-label${isToday ? ' today' : ''}">${dayName}<br>${dayNum}</div>
-      </div>`;
-    }).join('');
-  }
-
-  const grid = document.getElementById('habitsGrid');
-  if (!_habits.length) {
-    grid.innerHTML = '<div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div>';
-    updateHabitsSub();
-    return;
-  }
-
-  grid.innerHTML = _habits.map(h => {
-    const isQty    = h.target_type === 'quantity';
-    const target   = parseFloat(h.target_value) || 1;
-    const [r,g,b]  = hexToRgb(h.color);
-    const fadeBg   = `rgba(${r},${g},${b},0.13)`;
-    const pillBg   = `rgba(${r},${g},${b},0.13)`;
-    const pillColor= h.color;
-    const streak   = habitStreak(h);
-    const streakTxt = streak > 0 ? `🔥${streak}` : '';
-
-    const squares = days.map(d => {
-      const val    = (_habitLogs[h.id] || {})[d] || 0;
-      const done   = isQty ? val >= target : val >= 1;
-      const pct    = isQty ? Math.min(val / target, 1) : (done ? 1 : 0);
-      const isToday = d === today;
-      const fullBg = h.color;
-
-      if (isQty) {
-        // All quantity days: fill bar + tap to increment, show value when > 0
-        const valLabel = val > 0 ? `<span class="habit-square-val" style="color:${done?'rgba(255,255,255,0.95)':'rgba('+r+','+g+','+b+',0.9)'};">${val}</span>` : '';
-        return `<div class="habit-square" style="background:${fadeBg};"
-          onclick="incrementHabitQty(${h.id},'${d}',${target})"
-          title="${val}/${target}${h.target_unit?' '+h.target_unit:''}">
-          <div class="habit-square-fill" style="height:${pct*100}%;background:${fullBg};opacity:0.9;"></div>
-          ${valLabel}
-        </div>`;
-      } else {
-        // Boolean: solid color when done, faint tint when not
-        return `<div class="habit-square" style="background:${done?fullBg:fadeBg};"
-          onclick="toggleHabit(${h.id},'${d}')">
-        </div>`;
-      }
-    }).join('');
-
-    return `<div class="habit-row">
-      <div class="habit-icon-wrap" style="background:${fadeBg};">${h.icon}</div>
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
-        <span class="habit-name-pill" style="background:${pillBg};color:${pillColor};">${h.name}</span>
-        ${streakTxt ? `<span class="habit-streak">${streakTxt} day streak</span>` : ''}
-      </div>
-      <div class="habit-squares">${squares}</div>
-      <button onclick="deleteHabit(${h.id})" class="habit-menu-btn" title="Delete habit">·</button>
-    </div>`;
-  }).join('');
-
-  updateHabitsSub();
-}
-
-function updateHabitsSub() {
-  const streak = calcHabitStreak();
-  const sub = document.getElementById('habitsSub');
-  if (!sub) return;
-  if (!_habits.length) { sub.textContent = 'Track your daily habits'; return; }
-  sub.textContent = streak > 1
-    ? `${_habits.length} habit${_habits.length===1?'':'s'} · ${streak} day streak 🔥`
-    : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
-}
-
-async function incrementHabitQty(habitId, date, target) {
-  const current = (_habitLogs[habitId]||{})[date] || 0;
-  // Tap increments by 1 up to target, then wraps to 0
-  const newVal = current >= target ? 0 : current + 1;
-  await writeHabitLog(habitId, date, newVal);
 }
 
 function calcHabitStreak() {
@@ -2534,15 +2553,13 @@ function toggleAddHabitForm() {
 }
 
 function initHabitForm() {
-  // Color picker
   const cp = document.getElementById('habitColorPicker');
   cp.innerHTML = HABIT_COLORS.map((c,i) =>
     `<div class="habit-color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectHabitColor(this)"></div>`
   ).join('');
-  // Icon picker
   const ip = document.getElementById('habitIconPicker');
-  ip.innerHTML = HABIT_ICONS.map((ic,i) =>
-    `<button class="habit-icon-btn${i===0?' selected':''}" data-icon="${ic}" onclick="selectHabitIcon(this)">${ic}</button>`
+  ip.innerHTML = HABIT_ICON_KEYS.map((k,i) =>
+    `<button class="habit-icon-btn${i===0?' selected':''}" data-icon="${k}" onclick="selectHabitIcon(this)">${habitIconSvg(k,'currentColor',18)}</button>`
   ).join('');
   toggleHabitQuantityFields();
 }
