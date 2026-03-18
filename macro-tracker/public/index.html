@@ -397,35 +397,49 @@
   .offline-bar.visible { transform: translateY(0); }
   .offline-bar.syncing { background: var(--green); }
   /* Habits tab */
-  .habits-header-row { display: flex; align-items: center; margin-bottom: 8px; }
-  .habits-header-spacer { flex: 1; font-size: 12px; color: var(--text-3); }
-  .habits-header-days { display: flex; gap: 6px; flex-shrink: 0; width: calc(5 * 44px + 4 * 6px); }
-  .habit-day-header { width: 44px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; }
+  .habits-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .habits-last5-badge { font-size: 12px; font-weight: 500; color: var(--text-2); background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 20px; padding: 4px 12px; }
+  .habit-cats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .habit-cat-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border-med); background: var(--surface); color: var(--text-2); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; display: flex; align-items: center; gap: 5px; }
+  .habit-cat-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  /* Header row — spacer must match card left section exactly */
+  .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 4px; padding: 0 12px; }
+  .habits-header-spacer { flex: 1; }
+  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 220px; }
+  .habit-day-header { width: 40px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .habit-day-header.today { color: var(--text); font-weight: 700; }
-  .habit-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; }
+  .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
+  .habit-day-header.today .habit-day-tick { background: var(--text); }
+  /* Cards — no border, just subtle separator */
+  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
+  .habit-card:last-child { border-bottom: none; margin-bottom: 0; }
   .habit-card:hover { background: var(--bg); }
-  .habit-icon-wrap { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .habits-cards-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
+  .habit-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
-  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .habit-squares { display: flex; gap: 6px; flex-shrink: 0; width: calc(5 * 44px + 4 * 6px); }
-  .habit-square { width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
+  .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
+  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 220px; align-items: center; }
+  .habit-square { width: 40px; height: 40px; border-radius: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
   .habit-square:active { transform: scale(0.88); }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 10px 10px; }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 9px 9px; }
   .habit-square-val { position: relative; z-index: 1; }
+  .habit-square-arc { position: absolute; inset: 0; z-index: 1; }
   /* Habit edit modal */
-  .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+  .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); touch-action: none; }
   .habit-modal-overlay.hidden { display: none; }
-  .habit-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom,16px); width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
-  .habit-modal-handle { width: 36px; height: 4px; background: var(--border-med); border-radius: 2px; margin: 12px auto 0; }
-  .habit-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); }
+  .habit-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom,16px); width: 100%; max-width: 700px; max-height: 85vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .habit-modal-handle { width: 36px; height: 4px; background: var(--border-med); border-radius: 2px; margin: 12px auto 0; cursor: grab; }
+  .habit-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
   .habit-modal-title { font-size: 16px; font-weight: 600; }
-  .habit-modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-3); padding: 4px; }
+  .habit-modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-3); padding: 4px 8px; line-height: 1; }
   .habit-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .habit-modal-field { display: flex; flex-direction: column; gap: 6px; }
   .habit-modal-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; }
-  .habit-modal-input { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .habit-modal-input { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
   .habit-modal-input:focus { font-size: 16px; border-color: rgba(0,0,0,0.3); }
   .habit-modal-select { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
+  .habit-modal-select:focus { font-size: 16px; }
   .habit-modal-save { height: 48px; width: 100%; font-size: 15px; font-weight: 600; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; margin-top: 4px; }
   .habit-modal-delete { height: 44px; width: 100%; font-size: 14px; font-weight: 500; background: none; color: var(--red-text); border: 0.5px solid var(--red-text); border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; }
   /* Add habit form */
@@ -439,6 +453,8 @@
   .habit-icon-btn svg { width: 18px; height: 18px; stroke-width: 1.8; fill: none; stroke: var(--text-2); }
   .habit-icon-btn.selected { border-color: var(--text); background: var(--bg); }
   .habit-icon-btn.selected svg { stroke: var(--text); }
+  /* Swipe indicator */
+  body.modal-open { overflow: hidden; }
 </style>
 </head>
 <body>
@@ -733,17 +749,23 @@
       </div>
     </div>
 
+    <!-- Category filter chips -->
+    <div class="habit-cats" id="habitCats"></div>
+
     <!-- Rolling 5-day grid -->
-    <div style="margin-top:0.5rem;">
+    <div style="margin-top:0.25rem;">
       <div class="habits-header-row">
-        <div class="habits-header-spacer">Last 5 days</div>
+        <div class="habits-header-spacer">
+          <span class="habits-last5-badge">Last 5 days</span>
+        </div>
         <div class="habits-header-days" id="habitsDayHeaders"></div>
       </div>
-      <div id="habitsGrid"><div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div></div>
+      <div class="habits-cards-wrap">
+        <div id="habitsGrid"><div class="empty-msg" style="padding:1.25rem;">No habits yet — tap "+ New habit" to get started!</div></div>
+      </div>
     </div>
 
-    <!-- Habit edit modal -->
-    <div class="habit-modal-overlay hidden" id="habitEditOverlay" onclick="closeHabitModal(event)">
+    <!-- Habit edit modal -->    <div class="habit-modal-overlay hidden" id="habitEditOverlay" onclick="closeHabitModal(event)">
       <div class="habit-modal" id="habitEditModal">
         <div class="habit-modal-handle"></div>
         <div class="habit-modal-header">
@@ -763,7 +785,7 @@
               <option value="quantity">Quantity (tap to increment)</option>
             </select>
           </div>
-          <div id="editQuantityFields" style="display:none;display:flex;flex-direction:column;gap:12px;">
+          <div id="editQuantityFields" style="display:none;flex-direction:column;gap:12px;">
             <div class="habit-modal-field">
               <label class="habit-modal-label">Daily target</label>
               <input class="habit-modal-input" id="editHabitTarget" type="number" min="1" placeholder="e.g. 8" />
@@ -787,25 +809,6 @@
       </div>
     </div>
 
-    <!-- Water tracker -->
-    <div class="water-card">
-      <div class="section-title">Water intake</div>
-      <div class="water-row">
-        <div class="water-label">Today</div>
-        <div>
-          <div class="water-amount" id="waterAmount">0 oz</div>
-          <div class="water-goal-lbl" id="waterGoalLbl">of 128 oz goal</div>
-        </div>
-        <div class="water-btns">
-          <button class="water-btn" onclick="addWater(8)">+8 oz</button>
-          <button class="water-btn" onclick="addWater(16)">+16 oz</button>
-          <button class="water-btn" onclick="addWater(32)">+32 oz</button>
-          <button class="water-btn" onclick="addWater(40)">+40 oz</button>
-          <button class="water-btn" onclick="fillWater()" style="font-weight:500;">Fill goal</button>
-        </div>
-      </div>
-      <div class="water-bar"><div class="water-fill" id="waterFill" style="width:0%"></div></div>
-    </div>
   </div>
 
   <!-- HISTORY -->
@@ -1600,6 +1603,34 @@ function showView(name) {
   if (name === 'habits') renderHabits();
 }
 
+// ── Swipe between tabs ────────────────────────────────────────────
+const TAB_ORDER = ['goals', 'today', 'habits', 'history'];
+let _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false;
+
+document.addEventListener('touchstart', e => {
+  // Don't intercept if modal is open or touch is inside modal
+  if (document.body.classList.contains('modal-open')) return;
+  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen')) return;
+  _swipeStartX = e.touches[0].clientX;
+  _swipeStartY = e.touches[0].clientY;
+  _swipeActive = true;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!_swipeActive || document.body.classList.contains('modal-open')) return;
+  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen')) return;
+  const dx = e.changedTouches[0].clientX - _swipeStartX;
+  const dy = e.changedTouches[0].clientY - _swipeStartY;
+  _swipeActive = false;
+  // Only trigger if horizontal swipe > 60px and more horizontal than vertical
+  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
+  const idx = TAB_ORDER.indexOf(currentTab);
+  if (idx === -1) return;
+  if (dx < 0 && idx < TAB_ORDER.length - 1) showView(TAB_ORDER[idx + 1]); // swipe left → next
+  if (dx > 0 && idx > 0) showView(TAB_ORDER[idx - 1]);                     // swipe right → prev
+}, { passive: true });
+
 // Weight
 async function saveWeight() {
   const val = parseFloat(document.getElementById('weightInput').value);
@@ -1848,10 +1879,12 @@ function renderWater() {
   const oz = _water[activeDate] || 0;
   const goal = GOALS.water || 128;
   const pct = Math.min((oz / goal) * 100, 100);
-  document.getElementById('waterAmount').textContent = oz + ' oz';
-  document.getElementById('waterGoalLbl').textContent = `of ${goal} oz goal`;
-  document.getElementById('waterFill').style.width = pct + '%';
-  document.getElementById('waterFill').style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)';
+  const amountEl = document.getElementById('waterAmount');
+  const goalEl   = document.getElementById('waterGoalLbl');
+  const fillEl   = document.getElementById('waterFill');
+  if (amountEl) amountEl.textContent = oz + ' oz';
+  if (goalEl)   goalEl.textContent   = `of ${goal} oz goal`;
+  if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)'; }
 }
 
 // ── Exercise ─────────────────────────────────────────────────────
@@ -2578,6 +2611,18 @@ function habitStreak(h) {
 function renderHabits() {
   const days = getLast5Days();
   const today = todayStr();
+
+  // Category chips
+  const cats = [...new Set(_habits.map(h => h.category || 'general'))];
+  const catsEl = document.getElementById('habitCats');
+  if (catsEl && cats.length > 1) {
+    const catIcons = { fitness:'🏃', study:'📖', nutrition:'🥗', general:'•', health:'💊', mindfulness:'🧘' };
+    catsEl.innerHTML = ['all', ...cats].map(c =>
+      `<button class="habit-cat-btn${c==='all'?' active':''}" data-cat="${c}" onclick="filterHabits(this)">${c !== 'all' ? (catIcons[c]||'•') + ' ' : ''}${c.charAt(0).toUpperCase()+c.slice(1)}</button>`
+    ).join('');
+  } else if (catsEl) { catsEl.innerHTML = ''; }
+
+  // Day headers with tick dots
   const headers = document.getElementById('habitsDayHeaders');
   if (headers) {
     headers.innerHTML = days.map(d => {
@@ -2585,17 +2630,20 @@ function renderHabits() {
       const dn = dt.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2);
       const dd = dt.getDate();
       const isToday = d === today;
-      return `<div class="habit-day-header${isToday?' today':''}"><span>${dn}</span><br><span>${dd}</span></div>`;
+      return `<div class="habit-day-header${isToday?' today':''}"><span>${dn}</span><span>${dd}</span><div class="habit-day-tick"></div></div>`;
     }).join('');
   }
 
   const grid = document.getElementById('habitsGrid');
-  if (!_habits.length) {
-    grid.innerHTML = '<div class="empty-msg" style="padding:1rem 0;">No habits yet — tap "+ New habit" to get started!</div>';
+  const activeCat = document.querySelector('.habit-cat-btn.active')?.dataset.cat || 'all';
+  const visibleHabits = activeCat === 'all' ? _habits : _habits.filter(h => (h.category||'general') === activeCat);
+
+  if (!visibleHabits.length) {
+    grid.innerHTML = '<div class="empty-msg" style="padding:1.25rem;">No habits yet — tap "+ New habit" to get started!</div>';
     updateHabitsSub(); return;
   }
 
-  grid.innerHTML = _habits.map(h => {
+  grid.innerHTML = visibleHabits.map(h => {
     const isQty   = h.target_type === 'quantity';
     const target  = parseFloat(h.target_value) || 1;
     const [r,g,b] = hexToRgb(h.color);
@@ -2608,37 +2656,35 @@ function renderHabits() {
       const done   = isQty ? val >= target : val >= 1;
       const pct    = isQty ? Math.min(val/target,1) : (done?1:0);
       const sqFade = `rgba(${r},${g},${b},0.12)`;
+      const isToday = d === today;
 
-      if (isQty) {
+      if (isQty && isToday && !done) {
+        const radius = 14, circ = 2 * Math.PI * radius;
+        const dash = pct * circ, gap = circ - dash;
+        const textColor = `rgba(${r},${g},${b},1)`;
+        const valLabel = val > 0 ? `<text x="20" y="24" text-anchor="middle" font-size="11" font-weight="700" font-family="DM Mono,monospace" fill="${textColor}">${val}</text>` : '';
+        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})" title="${val}/${target}${h.target_unit?' '+h.target_unit:''}"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20" cy="20" r="${radius}" fill="none" stroke="rgba(${r},${g},${b},0.2)" stroke-width="2.5"/><circle cx="20" cy="20" r="${radius}" fill="none" stroke="${h.color}" stroke-width="2.5" stroke-dasharray="${dash} ${gap}" stroke-linecap="round" transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
+      } else if (isQty) {
         const textColor = done ? 'rgba(255,255,255,0.95)' : `rgba(${r},${g},${b},1)`;
         const valLabel  = val > 0 ? `<span class="habit-square-val" style="color:${textColor};">${val}</span>` : '';
-        return `<div class="habit-square" style="background:${sqFade};"
-          onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"
-          title="${val}/${target}${h.target_unit?' '+h.target_unit:''}">
-          <div class="habit-square-fill" style="height:${pct*100}%;background:${h.color};transition:height 0.25s;"></div>
-          ${valLabel}
-        </div>`;
+        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"><div class="habit-square-fill" style="height:${pct*100}%;background:${h.color};transition:height 0.25s;"></div>${valLabel}</div>`;
       } else {
-        return `<div class="habit-square" style="background:${done?h.color:sqFade};"
-          onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
+        return `<div class="habit-square" style="background:${done?h.color:sqFade};" onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
       }
     }).join('');
 
-    const streakLabel = streak > 0
-      ? `<span style="font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;">${streak}d streak</span>`
-      : '';
+    const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
 
-    return `<div class="habit-card" onclick="openHabitModal(${h.id})">
-      <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 20)}</div>
-      <div class="habit-name-section">
-        <span class="habit-name-pill" style="background:${fadeBg};color:${h.color};">${h.name}</span>
-        ${streakLabel}
-      </div>
-      <div class="habit-squares">${squares}</div>
-    </div>`;
+    return `<div class="habit-card" onclick="openHabitModal(${h.id})"><div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div><div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div><div class="habit-squares">${squares}</div></div>`;
   }).join('');
 
   updateHabitsSub();
+}
+
+function filterHabits(btn) {
+  document.querySelectorAll('.habit-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHabits();
 }
 
 function updateHabitsSub() {
@@ -2780,22 +2826,51 @@ function openHabitModal(habitId) {
   document.getElementById('editHabitTarget').value = h.target_value || 1;
   document.getElementById('editHabitUnit').value = h.target_unit || '';
   toggleEditQuantityFields();
-  // Color picker
   const cp = document.getElementById('editHabitColorPicker');
   cp.innerHTML = HABIT_COLORS.map(c =>
     `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>`
   ).join('');
-  // Icon picker
   const ip = document.getElementById('editHabitIconPicker');
   ip.innerHTML = HABIT_ICON_KEYS.map(k =>
     `<button class="habit-icon-btn${k===h.icon?' selected':''}" data-icon="${k}" onclick="selectEditHabitIcon(this)">${habitIconSvg(k,'currentColor',18)}</button>`
   ).join('');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  // Swipe down to dismiss
+  const modal = document.getElementById('habitEditModal');
+  let startY = 0, isDragging = false;
+  modal._touchStart = e => { startY = e.touches[0].clientY; isDragging = true; };
+  modal._touchMove = e => {
+    if (!isDragging) return;
+    const delta = e.touches[0].clientY - startY;
+    if (delta > 0 && modal.scrollTop === 0) {
+      modal.style.transform = `translateY(${delta}px)`;
+      e.preventDefault();
+    }
+  };
+  modal._touchEnd = e => {
+    isDragging = false;
+    const delta = e.changedTouches[0].clientY - startY;
+    if (delta > 120) {
+      closeHabitModal();
+    } else {
+      modal.style.transform = '';
+    }
+  };
+  modal.addEventListener('touchstart', modal._touchStart, { passive: true });
+  modal.addEventListener('touchmove', modal._touchMove, { passive: false });
+  modal.addEventListener('touchend', modal._touchEnd, { passive: true });
 }
 
 function closeHabitModal(e) {
   if (e && e.target !== document.getElementById('habitEditOverlay')) return;
+  const modal = document.getElementById('habitEditModal');
+  modal.style.transform = '';
+  if (modal._touchStart) modal.removeEventListener('touchstart', modal._touchStart);
+  if (modal._touchMove) modal.removeEventListener('touchmove', modal._touchMove);
+  if (modal._touchEnd)  modal.removeEventListener('touchend', modal._touchEnd);
   document.getElementById('habitEditOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
 }
 
 function selectEditHabitColor(el) {
@@ -2832,7 +2907,7 @@ async function saveEditedHabit() {
     const idx = _habits.findIndex(h => h.id === id);
     if (idx > -1) _habits[idx] = { ..._habits[idx], name, color, icon, target_type: type, target_value: type==='quantity'?target:1, target_unit: unit };
     cacheSet('habits', _habits);
-    document.getElementById('habitEditOverlay').classList.add('hidden');
+    closeHabitModal();
     renderHabits();
     showToast('Habit updated!');
   } catch(e) { showToast('Could not save changes'); }
