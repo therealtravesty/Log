@@ -832,7 +832,7 @@ function lsKey(k) { return `${k}_${activeProfileId}`; }
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(lsKey(k))||'null'); } catch(e) { return null; } }
 function cacheSet(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
 
-async function selectProfile(id, profileData) {
+async function selectProfile(id, profileData, isNew = false) {
   activeProfileId = id;
   localStorage.setItem(LS_LAST, id);
   activeProfileData = profileData || JSON.parse(localStorage.getItem(`profileData_${id}`) || 'null') || { id, name: '', color: PROFILE_COLORS[0] };
@@ -845,8 +845,6 @@ async function selectProfile(id, profileData) {
   const loadName = document.getElementById('loadingName');
   if (overlay) {
     loadAvatar.style.background = activeProfileData.color;
-    // "Welcome" for new profiles (no data yet), "Welcome back" for returning
-    const isNew = !_allFoods || Object.keys(_allFoods).length === 0;
     loadName.textContent = isNew
       ? `Welcome, ${activeProfileData.name}!`
       : `Welcome back, ${activeProfileData.name}!`;
@@ -895,7 +893,7 @@ async function renderProfileList() {
 async function selectProfileFromList(id, name, color) {
   const data = { id, name, color };
   localStorage.setItem(`profileData_${id}`, JSON.stringify(data));
-  await selectProfile(id, data);
+  await selectProfile(id, data, false);
 }
 
 async function createProfile() {
@@ -911,10 +909,10 @@ async function createProfile() {
     document.getElementById('newProfileName').value = '';
     const data = { id, name, color };
     localStorage.setItem(`profileData_${id}`, JSON.stringify(data));
-    await selectProfile(id, data);
+    await selectProfile(id, data, true); // isNew = true
     // New profile — send straight to Goals to set up targets
     showView('goals');
-    setTimeout(maybeShowGoalsOverlay, 400); // slight delay so the view transition completes
+    setTimeout(maybeShowGoalsOverlay, 400);
   } catch(e) {
     showToast('Could not create profile');
   }
@@ -952,7 +950,7 @@ async function bootProfiles() {
     const cached = JSON.parse(localStorage.getItem(`profileData_${lastId}`) || 'null');
     if (cached) {
       activeProfileData = cached;
-      await selectProfile(lastId, cached);
+      await selectProfile(lastId, cached, false);
       return;
     }
     // Not in cache — fetch from Supabase
@@ -961,7 +959,7 @@ async function bootProfiles() {
       const found = profiles.find(p => p.id === lastId);
       if (found) {
         localStorage.setItem(`profileData_${lastId}`, JSON.stringify(found));
-        await selectProfile(lastId, found);
+        await selectProfile(lastId, found, false);
         return;
       }
     } catch(e) {}
@@ -985,7 +983,7 @@ let _savedMeals = [];  // [{id,name,foods}]
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
-  activity: '1.725', goal: 'cut', split: 'highprotein', units: 'imperial'
+  activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial'
 };
 
 // ── Server data loaders ──────────────────────────────────────────
@@ -1256,6 +1254,7 @@ function updateMetricSubLabels() {
 async function initSettings() {
   const s = await loadSettings();
   populateSettingsForm(s);
+  updateRateFieldVisibility(s.goal);
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
   updateSettingsSummary(s, g);
