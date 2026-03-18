@@ -340,6 +340,14 @@
   .hs-tip-step { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 4px; }
   .hs-tip-arrow { font-size: 11px; color: var(--text-3); }
   .hs-tip-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 4px; flex-shrink: 0; }
+  /* Recent foods */
+  .recents-section { margin-bottom: 0.75rem; }
+  .recents-list { display: flex; flex-direction: column; gap: 4px; }
+  .recent-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background 0.15s; }
+  .recent-item:hover { background: var(--surface); border-color: var(--border-med); }
+  .recent-item-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .recent-item-add { font-size: 16px; color: var(--text-3); flex-shrink: 0; line-height: 1; }
   /* Prevent iOS Safari auto-zoom on input focus */
   @supports (-webkit-touch-callout: none) {
     input, textarea, select { font-size: 16px !important; }
@@ -475,6 +483,12 @@
       <div id="savedMealsArea" style="display:none;margin-top:0.75rem;">
         <div class="section-title" style="margin-bottom:8px;">Saved meals</div>
         <div id="savedMealsList"></div>
+      </div>
+
+      <!-- Recent foods -->
+      <div id="recentFoodsArea" style="display:none;margin-top:0.75rem;" class="recents-section">
+        <div class="section-title" style="margin-bottom:8px;">Recent foods</div>
+        <div class="recents-list" id="recentFoodsList"></div>
       </div>
 
       <div class="search-area">
@@ -1244,6 +1258,22 @@ function scaleServings(val) {
   document.getElementById('re_fib').value    = Math.round(b.fib    * mult);
 }
 
+function scaleEditServings(foodId, val) {
+  const mult = parseFloat(val);
+  if (!mult || mult <= 0) return;
+  // Use the originally logged values (from the rendered inputs' data attributes via the food object)
+  const food = getActiveFoods().find(f => f.id === foodId);
+  if (!food) return;
+  document.getElementById(`fe_cal_${foodId}`).value    = Math.round(food.cal    * mult);
+  document.getElementById(`fe_pro_${foodId}`).value    = Math.round(food.pro    * mult);
+  document.getElementById(`fe_carb_${foodId}`).value   = Math.round(food.carb   * mult);
+  document.getElementById(`fe_fat_${foodId}`).value    = Math.round(food.fat    * mult);
+  document.getElementById(`fe_satFat_${foodId}`).value = Math.round((food.satFat||0) * mult);
+  document.getElementById(`fe_sug_${foodId}`).value    = Math.round((food.sug||0)    * mult);
+  document.getElementById(`fe_sod_${foodId}`).value    = Math.round((food.sod||0)    * mult);
+  document.getElementById(`fe_fib_${foodId}`).value    = Math.round((food.fib||0)    * mult);
+}
+
 async function confirmAdd() {
   if (!pendingFood) return;
   // Pick up any edits made to the result card inputs
@@ -1459,6 +1489,51 @@ function renderSavedMeals() {
   }).join('');
 }
 
+// ── Recent foods ─────────────────────────────────────────────────
+function getRecentFoods(limit = 15) {
+  // Collect all foods across all days, sorted newest first, deduped by name
+  const seen = new Set();
+  const recents = [];
+  const days = Object.keys(_allFoods).sort().reverse();
+  for (const day of days) {
+    for (const f of [...(_allFoods[day] || [])].reverse()) {
+      const key = f.name.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        recents.push(f);
+        if (recents.length >= limit) return recents;
+      }
+    }
+  }
+  return recents;
+}
+
+function renderRecentFoods() {
+  const area = document.getElementById('recentFoodsArea');
+  const list = document.getElementById('recentFoodsList');
+  // Exclude foods already logged today so the list stays fresh
+  const todayNames = new Set((getActiveFoods()).map(f => f.name.toLowerCase().trim()));
+  const recents = getRecentFoods(15).filter(f => !todayNames.has(f.name.toLowerCase().trim()));
+  if (!recents.length) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+  list.innerHTML = recents.map(f => `
+    <div class="recent-item" onclick="logRecentFood(${JSON.stringify(JSON.stringify(f))})">
+      <span class="recent-item-name">${f.name}</span>
+      <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F</span>
+      <span class="recent-item-add">+</span>
+    </div>`).join('');
+}
+
+async function logRecentFood(fJson) {
+  const f = JSON.parse(fJson);
+  const meal = document.getElementById('mealSelect')?.value || 'uncategorized';
+  try {
+    await addFood({ ...f, id: Date.now() }, meal);
+    renderToday();
+    showToast('Added: ' + f.name);
+  } catch(e) { showToast('Could not add — try again'); }
+}
+
 function barColor(pct) {
   if(pct>=100) return 'var(--red)';
   if(pct>=85) return 'var(--amber)';
@@ -1523,17 +1598,32 @@ function renderToday() {
           <button class="del-btn" onclick="delFood(${f.id})">✕</button>
         </div>
         <div id="food-edit-${f.id}" style="display:none;">
-          <div class="food-edit-form">
-            <div class="food-edit-field"><label class="food-edit-label">Calories</label><input class="food-edit-input" id="fe_cal_${f.id}" type="number" value="${f.cal}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Protein (g)</label><input class="food-edit-input" id="fe_pro_${f.id}" type="number" value="${f.pro}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Carbs (g)</label><input class="food-edit-input" id="fe_carb_${f.id}" type="number" value="${f.carb}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Fat (g)</label><input class="food-edit-input" id="fe_fat_${f.id}" type="number" value="${f.fat}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Sat Fat (g)</label><input class="food-edit-input" id="fe_satFat_${f.id}" type="number" value="${f.satFat||0}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input" id="fe_sug_${f.id}" type="number" value="${f.sug||0}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input" id="fe_sod_${f.id}" type="number" value="${f.sod||0}" /></div>
-            <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input" id="fe_fib_${f.id}" type="number" value="${f.fib||0}" /></div>
+          <div class="food-edit-form" style="display:block;padding:10px 0 12px;">
+            <!-- Original values reference -->
+            <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-bottom:8px;padding:6px 8px;background:var(--bg);border-radius:6px;">
+              Originally logged: ${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F
+            </div>
+            <!-- Serving multiplier -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
+              <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
+              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="1"
+                style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
+                oninput="scaleEditServings(${f.id}, this.value)" />
+              <span style="font-size:12px;color:var(--text-3);">× original</span>
+            </div>
+            <!-- Macro inputs -->
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
+              <div class="food-edit-field"><label class="food-edit-label">Calories</label><input class="food-edit-input" id="fe_cal_${f.id}" type="number" value="${f.cal}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Protein (g)</label><input class="food-edit-input" id="fe_pro_${f.id}" type="number" value="${f.pro}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Carbs (g)</label><input class="food-edit-input" id="fe_carb_${f.id}" type="number" value="${f.carb}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Fat (g)</label><input class="food-edit-input" id="fe_fat_${f.id}" type="number" value="${f.fat}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sat Fat (g)</label><input class="food-edit-input" id="fe_satFat_${f.id}" type="number" value="${f.satFat||0}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input" id="fe_sug_${f.id}" type="number" value="${f.sug||0}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input" id="fe_sod_${f.id}" type="number" value="${f.sod||0}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input" id="fe_fib_${f.id}" type="number" value="${f.fib||0}" /></div>
+            </div>
             <div class="food-edit-actions">
-              <button class="food-edit-save" onclick="saveEditedFood(${f.id})">Save</button>
+              <button class="food-edit-save" onclick="saveEditedFood(${f.id})">Save changes</button>
               <button class="food-edit-cancel" onclick="toggleFoodEdit(${f.id})">Cancel</button>
             </div>
           </div>
@@ -1546,6 +1636,7 @@ function renderToday() {
   renderWater();
   renderExercise();
   renderSavedMeals();
+  renderRecentFoods();
 }
 
 // Charts
