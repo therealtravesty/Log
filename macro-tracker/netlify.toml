@@ -6,3 +6,15 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[functions]
+  node_bundler = "esbuild"
+
+[functions."lookup"]
+  timeout = 26
+
+[functions."lookup-image"]
+  timeout = 26
+
+[functions."exercise-lookup"]
+  timeout = 26
