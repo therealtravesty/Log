@@ -172,8 +172,18 @@
 
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); font-size: 13px; padding: 10px 18px; border-radius: 30px; font-family: 'DM Sans', system-ui, sans-serif; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; pointer-events: none; white-space: nowrap; z-index: 999; }
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  /* Tab slide animation */
+  .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
   .view.active { display: block; }
+  .view.slide-in-left { animation: slideInLeft 0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .view.slide-in-right { animation: slideInRight 0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .view.slide-out-left { animation: slideOutLeft 0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .view.slide-out-right { animation: slideOutRight 0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+  @keyframes slideInLeft  { from { transform: translateX(100%); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes slideInRight { from { transform: translateX(-100%); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes slideOutLeft  { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+  @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
 
   /* Settings panel */
   .settings-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 1rem; overflow: hidden; }
@@ -398,15 +408,15 @@
   .offline-bar.syncing { background: var(--green); }
   /* Habits tab */
   .habits-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .habits-last5-badge { font-size: 12px; font-weight: 500; color: var(--text-2); background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 20px; padding: 4px 12px; }
+  .habits-last5-badge { font-size: 11px; font-weight: 400; color: var(--text-3); }
   .habit-cats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .habit-cat-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border-med); background: var(--surface); color: var(--text-2); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; display: flex; align-items: center; gap: 5px; }
   .habit-cat-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   /* Header row — spacer must match card left section exactly */
-  .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 4px; padding: 0 12px; }
+  .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 6px; padding: 0 12px; margin-top: -6px; }
   .habits-header-spacer { flex: 1; }
-  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 220px; }
-  .habit-day-header { width: 40px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .habits-header-days { display: flex; gap: 4px; flex-shrink: 0; width: 170px; }
+  .habit-day-header { width: 30px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .habit-day-header.today { color: var(--text); font-weight: 700; }
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
@@ -419,10 +429,10 @@
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
   .habit-name-pill { font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
   .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
-  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 220px; align-items: center; }
-  .habit-square { width: 40px; height: 40px; border-radius: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; transition: transform 0.12s; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
-  .habit-square:active { transform: scale(0.88); }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 9px 9px; }
+  .habit-squares { display: flex; gap: 4px; flex-shrink: 0; width: 170px; align-items: center; }
+  .habit-square { width: 30px; height: 30px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
+  .habit-square:active { transform: scale(0.75); opacity: 0.85; }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 7px 7px; transition: height 0.2s ease; }
   .habit-square-val { position: relative; z-index: 1; }
   .habit-square-arc { position: absolute; inset: 0; z-index: 1; }
   /* Habit edit modal */
@@ -565,10 +575,10 @@
 <div class="container" id="appContainer" style="display:none;">
   <div class="tabs" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
     <div style="display:flex;gap:4px;padding:4px;">
-      <button class="tab active" id="tab-goals" onclick="showView('goals')">Goals</button>
-      <button class="tab" id="tab-today" onclick="showView('today')">Log</button>
-      <button class="tab" id="tab-habits" onclick="showView('habits')">Habits</button>
-      <button class="tab" id="tab-history" onclick="showView('history')">History</button>
+      <button class="tab active" id="tab-goals" onclick="showView('goals', getTabDirection('goals'))">Goals</button>
+      <button class="tab" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
+      <button class="tab" id="tab-habits" onclick="showView('habits', getTabDirection('habits'))">Habits</button>
+      <button class="tab" id="tab-history" onclick="showView('history', getTabDirection('history'))">History</button>
     </div>
     <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile" style="margin-right:4px;">
       <div class="profile-chip-avatar" id="profileChipAvatar"></div>
@@ -804,6 +814,14 @@
             <div class="habit-icon-picker" id="editHabitIconPicker"></div>
           </div>
           <button class="habit-modal-save" onclick="saveEditedHabit()">Save changes</button>
+          <div class="habit-modal-field" style="margin-top:4px;">
+            <label class="habit-modal-label">Log past completions</label>
+            <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Tap any date to toggle completion. Retroactively fill in missed days.</div>
+            <div id="retroCalendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+            <div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--text-3);">
+              <span>Su Mo Tu We Th Fr Sa</span>
+            </div>
+          </div>
           <button class="habit-modal-delete" onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
       </div>
@@ -1284,7 +1302,7 @@ let _exercise  = {};
 let _savedMeals = [];
 let _habits = [];
 let _habitLogs = {};
-const HABIT_COLORS = ['#378ADD','#1D9E75','#EF9F27','#D4537E','#D85A30','#7F77DD','#E24B4A','#F59E0B','#10B981','#EC4899','#6366F1','#14B8A6'];
+const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#607D8B','#546E7A','#455A64'];
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -1609,18 +1627,48 @@ function onDateChange() {
   if (val) setDate(val);
 }
 
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+function showView(name, direction) {
+  const currentEl = document.querySelector('.view.active');
+  const nextEl = document.getElementById('view-'+name);
+  if (!nextEl || nextEl === currentEl) return;
+
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('view-'+name).classList.add('active');
   const tabEl = document.getElementById('tab-'+name);
   if (tabEl) tabEl.classList.add('active');
+
+  if (!direction || !currentEl) {
+    // No animation (first load or no direction info)
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active','slide-in-left','slide-in-right','slide-out-left','slide-out-right'));
+    nextEl.classList.add('active');
+  } else {
+    const inClass  = direction === 'left'  ? 'slide-in-left'  : 'slide-in-right';
+    const outClass = direction === 'left'  ? 'slide-out-left' : 'slide-out-right';
+    currentEl.classList.add(outClass);
+    nextEl.style.display = 'block';
+    nextEl.classList.add(inClass);
+    const cleanup = () => {
+      currentEl.classList.remove('active', outClass);
+      currentEl.style.display = '';
+      nextEl.classList.remove(inClass);
+      nextEl.classList.add('active');
+    };
+    nextEl.addEventListener('animationend', cleanup, { once: true });
+  }
+
   if (name === 'history') renderHistory();
-  if (name === 'habits') renderHabits();
+  if (name === 'habits')  renderHabits();
 }
 
 // ── Swipe between tabs ────────────────────────────────────────────
 const TAB_ORDER = ['goals', 'today', 'habits', 'history'];
+
+function getTabDirection(targetName) {
+  const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
+  const fromIdx = TAB_ORDER.indexOf(currentTab);
+  const toIdx   = TAB_ORDER.indexOf(targetName);
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return null;
+  return toIdx > fromIdx ? 'left' : 'right';
+}
 let _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false;
 
 document.addEventListener('touchstart', e => {
@@ -1643,8 +1691,8 @@ document.addEventListener('touchend', e => {
   const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
   const idx = TAB_ORDER.indexOf(currentTab);
   if (idx === -1) return;
-  if (dx < 0 && idx < TAB_ORDER.length - 1) showView(TAB_ORDER[idx + 1]); // swipe left → next
-  if (dx > 0 && idx > 0) showView(TAB_ORDER[idx - 1]);                     // swipe right → prev
+  if (dx < 0 && idx < TAB_ORDER.length - 1) showView(TAB_ORDER[idx + 1], 'left');
+  if (dx > 0 && idx > 0) showView(TAB_ORDER[idx - 1], 'right');
 }, { passive: true });
 
 // Weight
@@ -2469,7 +2517,7 @@ function renderHistory() {
       <div style="font-size:32px;margin-bottom:12px;">📋</div>
       <div style="font-size:15px;font-weight:500;margin-bottom:6px;">No history yet</div>
       <div style="font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.5;">Start logging meals on the Log tab and your history will appear here.</div>
-      <button onclick="showView('today')" style="height:36px;padding:0 20px;font-size:13px;font-weight:500;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Go to Log →</button>
+      <button onclick="showView('today', getTabDirection('today'))" style="height:36px;padding:0 20px;font-size:13px;font-weight:500;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Go to Log →</button>
     </div>`;
     return;
   }
@@ -2842,11 +2890,11 @@ function renderHabits() {
 
       if (isQty) {
         // Arc style for all quantity squares — consistent across days
-        const radius = 14, circ = 2 * Math.PI * radius;
+        const radius = 10, circ = 2 * Math.PI * radius;
         const dash = pct * circ, gap = circ - dash;
         if (done) {
-          // Completed — solid fill with white checkmark
-          return `<div class="habit-square" style="background:${h.color};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><polyline points="12,20 18,26 28,14" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+          // Completed — plain solid fill, same as boolean habits
+          return `<div class="habit-square" style="background:${h.color};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"></div>`;
         }
         const textColor = `rgba(${r},${g},${b},1)`;
         const valLabel = val > 0 ? `<text x="20" y="24" text-anchor="middle" font-size="11" font-weight="700" font-family="DM Mono,monospace" fill="${textColor}">${val}</text>` : '';
@@ -2980,6 +3028,59 @@ const HABIT_ICON_GROUPS = [
   { label: 'Life & Hobbies',   keys: ['sun','camera','art','plant','home','dog','money','phone','travel','fire','check','clock'] },
 ];
 
+function renderRetroCalendar(habitId) {
+  const cal = document.getElementById('retroCalendar');
+  if (!cal) return;
+  const h = _habits.find(h => h.id === habitId);
+  if (!h) return;
+
+  // Show last 35 days in a 7-column grid
+  const days = [];
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    days.push(`${y}-${m}-${day}`);
+  }
+
+  // Pad start to align with weekday
+  const firstDay = new Date(days[0] + 'T12:00:00').getDay();
+  const pads = Array(firstDay).fill(null);
+
+  const [r,g,b] = hexToRgb(h.color);
+
+  cal.innerHTML = [...pads.map(() => '<div></div>'), ...days.map(d => {
+    const val  = (_habitLogs[h.id]||{})[d] || 0;
+    const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    const isToday = d === todayStr();
+    const dt = new Date(d + 'T12:00:00');
+    const label = dt.getDate();
+    return `<div onclick="toggleRetroDate(${h.id},'${d}')"
+      style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:${isToday?'700':'400'};cursor:pointer;
+      background:${done ? h.color : `rgba(${r},${g},${b},0.12)`};
+      color:${done ? '#fff' : `rgba(${r},${g},${b},0.9)`};
+      outline:${isToday ? `1.5px solid ${h.color}` : 'none'};
+      transition:transform 0.08s;"
+      onmousedown="this.style.transform='scale(0.88)'" onmouseup="this.style.transform=''"
+      >${label}</div>`;
+  })].join('');
+
+  // Day labels row above
+  const dayLabels = document.querySelector('#retroCalendar + div span');
+  if (dayLabels) dayLabels.textContent = 'Su Mo Tu We Th Fr Sa';
+}
+
+async function toggleRetroDate(habitId, date) {
+  const h = _habits.find(h => h.id === habitId);
+  if (!h) return;
+  const current = (_habitLogs[habitId]||{})[date] || 0;
+  const target = parseFloat(h.target_value) || 1;
+  const done = h.target_type === 'quantity' ? current >= target : current >= 1;
+  const newVal = done ? 0 : (h.target_type === 'quantity' ? target : 1);
+  await writeHabitLog(habitId, date, newVal);
+  renderRetroCalendar(habitId); // re-render calendar to show update
+}
 function renderIconPicker(containerId, selectedKey, onclickFn) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -3040,6 +3141,8 @@ function openHabitModal(habitId) {
   if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
+  renderRetroCalendar(habitId);
+
   // Swipe down to dismiss
   const modal = document.getElementById('habitEditModal');
   let startY = 0, isDragging = false;
