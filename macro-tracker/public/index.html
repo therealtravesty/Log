@@ -825,7 +825,7 @@
     </div>
 
     <!-- Image scan review modal -->
-    <div class="habit-modal-overlay hidden" id="imageScanOverlay">
+    <div class="habit-modal-overlay hidden" id="imageScanOverlay" onclick="if(event.target===this)closeImageScanModal();">
       <div class="habit-modal" id="imageScanModal" style="max-height:90vh;">
         <div class="habit-modal-handle"></div>
         <div class="habit-modal-header">
@@ -1990,7 +1990,6 @@ async function lookupFoodFromImage(input) {
     if (!items || !items.length) throw new Error('No items found');
 
     if (items.length === 1) {
-      // Single item — go straight to the result card, no modal needed
       const item = items[0];
       document.getElementById('searchInput').value = item.name || '';
       pendingFood = {
@@ -2005,16 +2004,21 @@ async function lookupFoodFromImage(input) {
       window._internalMatch = null;
       renderFoodResult(pendingFood, item.serving_size || '1 serving', item.note || 'Image scan', false);
     } else {
-      // Multiple items — show review modal
       _scannedItems = items.map((item, i) => ({ ...item, _idx: i, _dismissed: false }));
       openImageScanModal();
     }
   } catch(e) {
+    // Ensure overlay is never left open on error
+    const overlay = document.getElementById('imageScanOverlay');
+    if (overlay && !overlay.classList.contains('hidden')) closeImageScanModal();
     resultArea.innerHTML = '<div class="err-msg">Couldn\'t read image — try a clearer photo or type the food instead.</div>';
+  } finally {
+    // Always restore interactivity — no matter what happened above
+    hint.style.display = 'none';
+    btn.disabled = false;
+    document.body.classList.remove('modal-open');
+    document.body.classList.remove('dragging-habit');
   }
-
-  hint.style.display = 'none';
-  btn.disabled = false;
 }
 
 function openImageScanModal() {
@@ -2128,23 +2132,37 @@ function resizeAndEncodeImage(file, maxPx) {
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
-      img.onload = () => {
-        // Yield to browser before heavy canvas work so spinner renders first
-        requestAnimationFrame(() => {
-          const isScreenshot = file.type === 'image/png';
-          const limit = isScreenshot ? 1920 : maxPx;
-          const scale = Math.min(1, limit / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          try {
-            const data = isScreenshot
-              ? canvas.toDataURL('image/png').split(',')[1]
-              : canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
-            resolve(data);
-          } catch(e) { reject(e); }
-        });
+      img.onload = async () => {
+        const isScreenshot = file.type === 'image/png';
+        const limit = isScreenshot ? 1200 : maxPx;
+        const scale = Math.min(1, limit / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+
+        try {
+          // OffscreenCanvas is genuinely async — doesn't block the UI thread
+          if (typeof OffscreenCanvas !== 'undefined') {
+            const oc = new OffscreenCanvas(w, h);
+            oc.getContext('2d').drawImage(img, 0, 0, w, h);
+            const mimeType = isScreenshot ? 'image/png' : 'image/jpeg';
+            const quality = isScreenshot ? undefined : 0.92;
+            const blob = await oc.convertToBlob({ type: mimeType, quality });
+            const buf = await blob.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let bin = '';
+            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+            resolve(btoa(bin));
+          } else {
+            // Fallback: regular canvas (synchronous but works everywhere)
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = isScreenshot
+              ? canvas.toDataURL('image/png')
+              : canvas.toDataURL('image/jpeg', 0.92);
+            resolve(dataUrl.split(',')[1]);
+          }
+        } catch(e) { reject(e); }
       };
       img.onerror = reject;
       img.src = e.target.result;
