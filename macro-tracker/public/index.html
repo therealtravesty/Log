@@ -3121,7 +3121,8 @@ let _habitRangeMode = 'daily'; // 'daily' | 'monthly' | 'yearly'
 
 function switchChartRange(range, btn) {
   _chartRange = range;
-  document.querySelectorAll('.chart-range-tab').forEach(t => t.classList.remove('active'));
+  // Only clear active state within the main range tabs, not the habits ones
+  document.querySelectorAll('#rangeTabsMain .chart-range-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderHistory();
 }
