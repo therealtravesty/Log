@@ -1,6 +1,6 @@
 {
-  "name": "Macro Tracker",
-  "short_name": "Macros",
+  "name": "Lōg",
+  "short_name": "Lōg",
   "description": "AI-powered personal nutrition and habit tracker",
   "start_url": "/",
   "display": "standalone",

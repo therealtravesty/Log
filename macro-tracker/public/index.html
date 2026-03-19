@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport"content="width=device-width, initial-scale=1.0"/>
-<title>Macro Tracker</title>
+<title>Lōg</title>
 <link rel="manifest"href="/manifest.json">
 <link rel="apple-touch-icon"sizes="512x512"href="/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable"content="yes">
 <meta name="apple-mobile-web-app-status-bar-style"content="default">
-<meta name="apple-mobile-web-app-title"content="Macros">
+<meta name="apple-mobile-web-app-title"content="Lōg">
 <meta name="theme-color"content="#1a1a18">
 <!-- Preconnect to external origins to cut DNS/TCP latency -->
 <link rel="preconnect"href="https://fonts.googleapis.com">
@@ -53,7 +53,7 @@
 
   .header { margin-bottom: 1.5rem; }
   .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px; }
-  .app-title { font-size: 22px; font-weight: 500; letter-spacing: -0.3px; }
+  .app-title { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
   .header-meta { font-size: 13px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .date-label { font-size: 13px; color: var(--text-2); }
 
@@ -147,6 +147,11 @@
   .chart-tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
   .chart-tab { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 0.5px solid var(--border-med); background: none; cursor: pointer; color: var(--text-2); font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; }
   .chart-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .chart-group-tabs { display: flex; gap: 0; margin-bottom: 0; background: var(--bg); border-radius: 10px; padding: 3px; border: 0.5px solid var(--border); width: fit-content; }
+  .chart-group-tab { font-size: 13px; font-weight: 500; padding: 6px 20px; border-radius: 8px; border: none; background: none; cursor: pointer; color: var(--text-2); font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; }
+  .chart-group-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .chart-sub-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 10px 0 12px; min-height: 28px; }
+  .chart-sub-tabs.hidden { display: none; }
   .chart-tab:not(.active):hover { background: var(--bg); }
   .chart-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; display: none; }
   .chart-card.active { display: block; }
@@ -428,7 +433,7 @@
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
   /* Cards — no border, just subtle separator */
-  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 7px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
+  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 7px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .habit-card:last-child { border-bottom: none; margin-bottom: 0; }
   .habit-card:hover { background: var(--bg); }
   .habits-cards-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -485,8 +490,8 @@
 <!-- Welcome modal -->
 <div class="welcome-overlay hidden"id="welcomeOverlay">
   <div class="welcome-box">
-    <img class="welcome-logo"src="/apple-touch-icon.png"alt="Macro Tracker"onerror="this.style.display='none'"/>
-    <div class="welcome-title">Welcome to Macro Tracker!</div>
+    <img class="welcome-logo"src="/apple-touch-icon.png"alt="Lōg"onerror="this.style.display='none'"/>
+    <div class="welcome-title">Welcome to Lōg</div>
     <div class="welcome-sub">Your personal AI-powered nutrition tracker. Hit your goals one meal at a time. Here's how to get started:</div>
     <div class="welcome-steps">
       <div class="welcome-step">
@@ -561,7 +566,7 @@
 </div>
 <div class="profile-screen hidden"id="profileScreen">
   <div class="profile-box">
-    <div class="profile-box-title">Macro Tracker</div>
+    <div class="profile-box-title">Lōg</div>
     <div class="profile-box-sub">Who's logging today?</div>
     <div class="profile-list"id="profileList"></div>
     <div class="profile-divider">or create a new profile</div>
@@ -603,7 +608,7 @@
   <div class="view active"id="view-today">
     <div class="header">
       <div class="header-top">
-        <div class="app-title">Macro Tracker</div>
+        <div class="app-title">Lōg</div>
         <div class="header-meta"id="headerMeta">2,850 kcal cut</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
@@ -617,16 +622,16 @@
     </div>
 
     <div class="summary-grid">
-      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal"style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro"style="background:var(--green);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val"id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill"id="barCarb"style="background:var(--amber);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val"id="totFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barFat"style="background:var(--pink);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val"id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill"id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val"id="totFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barFat" style="background:var(--pink);width:0%"></div></div></div>
     </div>
     <div class="summary-grid-2">
-      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val"id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barSatFat"style="background:var(--coral);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val"id="totSug">0g</div><div class="progress-bar"><div class="progress-fill"id="barSug"style="background:var(--red);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val"id="totSod">0</div><div class="progress-bar"><div class="progress-fill"id="barSod"style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val"id="totFib">0g</div><div class="progress-bar"><div class="progress-fill"id="barFib"style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val"id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val"id="totSug">0g</div><div class="progress-bar"><div class="progress-fill"id="barSug" style="background:var(--red);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val"id="totSod">0</div><div class="progress-bar"><div class="progress-fill"id="barSod" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val"id="totFib">0g</div><div class="progress-bar"><div class="progress-fill"id="barFib" style="background:var(--green);width:0%"></div></div></div>
     </div>
 
     <!-- Net calories banner — sits right below macros -->
@@ -781,7 +786,7 @@
         <div class="habits-header-spacer">
           <span class="habits-last5-badge">Last 5 days</span>
         </div>
-        <div class="habits-header-days"id="habitsDayHeaders"></div>
+        <div class="habits-header-days" id="habitsDayHeaders"></div>
       </div>
       <div class="habits-cards-wrap">
         <div id="habitsGrid"><div class="empty-msg"style="padding:1.25rem;">No habits yet — tap "+ New habit"to get started!</div></div>
@@ -830,9 +835,9 @@
           <div class="habit-modal-field"style="margin-top:4px;">
             <label class="habit-modal-label">Log past completions</label>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <button onclick="shiftRetroMonth(-1)"style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
+              <button onclick="shiftRetroMonth(-1)" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
               <span id="retroMonthLabel"style="font-size:13px;font-weight:500;color:var(--text);"></span>
-              <button onclick="shiftRetroMonth(1)"id="retroNextBtn"style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">›</button>
+              <button onclick="shiftRetroMonth(1)"id="retroNextBtn" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">›</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
               <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Su</div>
@@ -874,18 +879,29 @@
 
     <!-- Charts -->
     <div class="charts-section">
-      <div class="chart-tabs"style="flex-wrap:wrap;">
-        <button class="chart-tab active"onclick="switchChart('weight')">Weight</button>
-        <button class="chart-tab"onclick="switchChart('calories')">Calories</button>
-        <button class="chart-tab"onclick="switchChart('protein')">Protein</button>
-        <button class="chart-tab"onclick="switchChart('carbs')">Carbs</button>
-        <button class="chart-tab"onclick="switchChart('fat')">Fat</button>
-        <button class="chart-tab"onclick="switchChart('satfat')">Sat Fat</button>
-        <button class="chart-tab"onclick="switchChart('sugar')">Sugar</button>
-        <button class="chart-tab"onclick="switchChart('sodium')">Sodium</button>
-        <button class="chart-tab"onclick="switchChart('fiber')">Fiber</button>
-        <button class="chart-tab"onclick="switchChart('macros')">Total Macros</button>
-        <button class="chart-tab"onclick="switchChart('habits')">Habits</button>
+      <!-- Group tabs -->
+      <div class="chart-group-tabs">
+        <button class="chart-group-tab active" onclick="switchChartGroup('body')">Body</button>
+        <button class="chart-group-tab" onclick="switchChartGroup('nutrition')">Nutrition</button>
+        <button class="chart-group-tab" onclick="switchChartGroup('habits')">Habits</button>
+      </div>
+      <!-- Sub-tabs per group -->
+      <div class="chart-sub-tabs" id="chartSubTabs-body">
+        <button class="chart-tab active" onclick="switchChart('weight', event)">Weight</button>
+      </div>
+      <div class="chart-sub-tabs hidden" id="chartSubTabs-nutrition">
+        <button class="chart-tab active" onclick="switchChart('calories', event)">Calories</button>
+        <button class="chart-tab" onclick="switchChart('protein', event)">Protein</button>
+        <button class="chart-tab" onclick="switchChart('carbs', event)">Carbs</button>
+        <button class="chart-tab" onclick="switchChart('fat', event)">Fat</button>
+        <button class="chart-tab" onclick="switchChart('satfat', event)">Sat Fat</button>
+        <button class="chart-tab" onclick="switchChart('sugar', event)">Sugar</button>
+        <button class="chart-tab" onclick="switchChart('sodium', event)">Sodium</button>
+        <button class="chart-tab" onclick="switchChart('fiber', event)">Fiber</button>
+        <button class="chart-tab" onclick="switchChart('macros', event)">Macros</button>
+      </div>
+      <div class="chart-sub-tabs hidden" id="chartSubTabs-habits">
+        <!-- no sub-tabs needed, habits chart has its own selectors -->
       </div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
@@ -1219,12 +1235,12 @@ async function renderProfileList() {
     if (!profiles.length) { list.innerHTML = ''; return; }
     list.innerHTML = profiles.map(p => ` <div style="display:flex;align-items:center;gap:8px;">
         <button class="profile-btn"style="flex:1;"onclick="selectProfileFromList('${p.id}','${p.name}','${p.color}')">
-          <div class="profile-avatar"style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
+          <div class="profile-avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
           <div>
             <div class="profile-btn-name">${p.name}</div>
           </div>
         </button>
-        <button onclick="deleteProfile('${p.id}','${p.name}')"style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;"title="Delete profile"></button>
+        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;"title="Delete profile"></button>
       </div>`).join('');
   } catch(e) {
     list.innerHTML = '<div style="font-size:13px;color:var(--red-text);padding:8px 0;">Could not load profiles</div>';
@@ -1273,7 +1289,7 @@ async function deleteProfile(id, name) {
 function initColorPicker() {
   const picker = document.getElementById('colorPicker');
   picker.innerHTML = PROFILE_COLORS.map((c,i) =>
-    `<div class="color-swatch${i===0?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectColor(this)"></div>` ).join('');
+    `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}"onclick="selectColor(this)"></div>` ).join('');
 }
 
 function selectColor(el) {
@@ -2251,12 +2267,12 @@ function renderToday() {
         ${mf.length ? mf.map(f=>`<div class="food-item"id="food-item-${f.id}">
           <span class="food-name">${f.name}</span>
           <span class="food-macros">
-            <span><span class="macro-dot"style="background:var(--green)"></span>${f.pro}g P</span>
-            <span><span class="macro-dot"style="background:var(--amber)"></span>${f.carb}g C</span>
-            <span><span class="macro-dot"style="background:var(--pink)"></span>${f.fat}g F</span>
-            <span><span class="macro-dot"style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-            <span><span class="macro-dot"style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-            <span><span class="macro-dot"style="background:var(--green)"></span>${f.fib||0}g Fb</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
+            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
+            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
+            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
+            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="food-kcal">${f.cal} kcal</span>
           <button class="edit-btn"onclick="toggleFoodEdit(${f.id})"title="Edit macros"></button>
@@ -2401,11 +2417,41 @@ function buildCharts(days, allFoods, weights) {
   });
 }
 
-function switchChart(name) {
-  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.chart-card').forEach(c=>c.classList.remove('active'));
-  document.getElementById('chart-'+name).classList.add('active');
+// Track active group so renderHistory knows which sub-tab to default to
+let _activeChartGroup = 'body';
+
+function switchChartGroup(group) {
+  _activeChartGroup = group;
+  // Update group tabs
+  document.querySelectorAll('.chart-group-tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
+  // Show/hide sub-tab rows
+  ['body','nutrition','habits'].forEach(g => {
+    const el = document.getElementById(`chartSubTabs-${g}`);
+    if (el) el.classList.toggle('hidden', g !== group);
+  });
+  // Activate the first sub-tab in the group, or the habits chart directly
+  if (group === 'habits') {
+    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('chart-habits')?.classList.add('active');
+    renderHabitChart();
+  } else {
+    const firstBtn = document.querySelector(`#chartSubTabs-${group} .chart-tab`);
+    if (firstBtn) firstBtn.click();
+  }
+}
+
+function switchChart(name, e) {
+  const ev = e || event;
+  // Update sub-tabs within the active group only
+  const activeSubTabs = document.querySelector('.chart-sub-tabs:not(.hidden)');
+  if (activeSubTabs) {
+    activeSubTabs.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    if (ev?.target) ev.target.classList.add('active');
+  }
+  // Show the right chart card
+  document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('chart-'+name)?.classList.add('active');
   if (name === 'habits') renderHabitChart();
 }
 
@@ -2589,10 +2635,10 @@ function renderHistory() {
         </div>
         <div class="day-card-right">
           <div class="day-card-meta">
-            <span><span class="macro-dot"style="background:var(--green)"></span>${t.pro}g P</span>
-            <span><span class="macro-dot"style="background:var(--amber)"></span>${t.carb}g C</span>
-            <span><span class="macro-dot"style="background:var(--pink)"></span>${t.fat}g F</span>
-            <span><span class="macro-dot"style="background:var(--blue)"></span>${t.sod||0}mg Na</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${t.pro}g P</span>
+            <span><span class="macro-dot" style="background:var(--amber)"></span>${t.carb}g C</span>
+            <span><span class="macro-dot" style="background:var(--pink)"></span>${t.fat}g F</span>
+            <span><span class="macro-dot" style="background:var(--blue)"></span>${t.sod||0}mg Na</span>
           </div>
           <div class="day-card-kcal">${t.cal} kcal</div>
           <div class="day-card-chevron"id="chev-${d}">▾</div>
@@ -2612,12 +2658,12 @@ function renderHistory() {
         ${foods.map(f=>`<div class="day-food-row">
           <span class="day-food-name">${f.name}</span>
           <span class="day-food-macros">
-            <span><span class="macro-dot"style="background:var(--green)"></span>${f.pro}g P</span>
-            <span><span class="macro-dot"style="background:var(--amber)"></span>${f.carb}g C</span>
-            <span><span class="macro-dot"style="background:var(--pink)"></span>${f.fat}g F</span>
-            <span><span class="macro-dot"style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-            <span><span class="macro-dot"style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-            <span><span class="macro-dot"style="background:var(--green)"></span>${f.fib||0}g Fb</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
+            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
+            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
+            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
+            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
+            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="day-food-kcal">${f.cal} kcal</span>
         </div>`).join('')}
@@ -2854,7 +2900,7 @@ function renderHabits() {
   if (catsEl && cats.length > 1) {
     const catIcons = { fitness:'', study:'', nutrition:'', general:'•', health:'', mindfulness:''};
     catsEl.innerHTML = ['all', ...cats].map(c =>
-      `<button class="habit-cat-btn${c==='all'?'active':''}"data-cat="${c}"onclick="filterHabits(this)">${c !== 'all'? (catIcons[c]||'•') + '': ''}${c.charAt(0).toUpperCase()+c.slice(1)}</button>` ).join('');
+      `<button class="habit-cat-btn${c==='all'?' active':''}"data-cat="${c}"onclick="filterHabits(this)">${c !== 'all'? (catIcons[c]||'•') + '': ''}${c.charAt(0).toUpperCase()+c.slice(1)}</button>` ).join('');
   } else if (catsEl) { catsEl.innerHTML = ''; }
 
   // Day headers with tick dots
@@ -2865,7 +2911,7 @@ function renderHabits() {
       const dn = dt.toLocaleDateString('en-US', { weekday: 'short'}).slice(0,2);
       const dd = dt.getDate();
       const isToday = d === today;
-      return `<div class="habit-day-header${isToday?'today':''}"><span>${dn}</span><span>${dd}</span><div class="habit-day-tick"></div></div>`;
+      return `<div class="habit-day-header${isToday?' today':''}"><span>${dn}</span><span>${dd}</span><div class="habit-day-tick"></div></div>`;
     }).join('');
   }
 
@@ -2899,21 +2945,21 @@ function renderHabits() {
         const dash = pct * circ, gap = circ - dash;
         if (done) {
           // Completed — plain solid fill, same as boolean habits
-          return `<div class="habit-square"style="background:${h.color};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"></div>`;
+          return `<div class="habit-square" style="background:${h.color};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"></div>`;
         }
         const textColor = `rgba(${r},${g},${b},1)`;
         const valLabel = val > 0 ? `<text x="20"y="24"text-anchor="middle"font-size="11"font-weight="700"font-family="DM Mono,monospace"fill="${textColor}">${val}</text>` : '';
-        return `<div class="habit-square"style="background:${sqFade};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"title="${val}/${target}${h.target_unit?''+h.target_unit:''}"><svg viewBox="0 0 40 40"style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20"cy="20"r="${radius}"fill="none"stroke="rgba(${r},${g},${b},0.18)"stroke-width="2.5"/><circle cx="20"cy="20"r="${radius}"fill="none"stroke="${h.color}"stroke-width="2.5"stroke-dasharray="${dash} ${gap}"stroke-linecap="round"transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
+        return `<div class="habit-square" style="background:${sqFade};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"title="${val}/${target}${h.target_unit?''+h.target_unit:''}"><svg viewBox="0 0 40 40"style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20"cy="20"r="${radius}"fill="none"stroke="rgba(${r},${g},${b},0.18)"stroke-width="2.5"/><circle cx="20"cy="20"r="${radius}"fill="none"stroke="${h.color}"stroke-width="2.5"stroke-dasharray="${dash} ${gap}"stroke-linecap="round"transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
       } else {
-        return `<div class="habit-square"style="background:${done?h.color:sqFade};"onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
+        return `<div class="habit-square" style="background:${done?h.color:sqFade};"onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
       }
     }).join('');
 
     const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
 
     return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})" ontouchstart="habitLongPressStart(event,${h.id})">
-      <div class="habit-icon-wrap"style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
-      <div class="habit-name-section"><span class="habit-name-pill"style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
+      <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
+      <div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
       <div class="habit-squares">${squares}</div>
     </div>`;
   }).join('');
@@ -3217,14 +3263,14 @@ function renderIconPicker(containerId, selectedKey, onclickFn) {
     `<div style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">${g.label}</div>
       <div class="habit-icon-picker">${g.keys.map(k =>
-        `<button class="habit-icon-btn${k===selectedKey?'selected':''}"data-icon="${k}"onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>` ).join('')}</div>
+        `<button class="habit-icon-btn${k===selectedKey?' selected':''}" data-icon="${k}" onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>` ).join('')}</div>
     </div>` ).join('');
 }
 
 function initHabitForm() {
   const cp = document.getElementById('habitColorPicker');
   cp.innerHTML = HABIT_COLORS.map((c,i) =>
-    `<div class="habit-color-swatch${i===0?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectHabitColor(this)"></div>` ).join('');
+    `<div class="habit-color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectHabitColor(this)"></div>` ).join('');
   renderIconPicker('habitIconPicker', 'check', 'selectHabitIcon');
   toggleHabitQuantityFields();
 }
@@ -3261,7 +3307,7 @@ function openHabitModal(habitId) {
   toggleEditQuantityFields();
   const cp = document.getElementById('editHabitColorPicker');
   cp.innerHTML = HABIT_COLORS.map(c =>
-    `<div class="habit-color-swatch${c===h.color?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectEditHabitColor(this)"></div>` ).join('');
+    `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>` ).join('');
   const ip = document.getElementById('editHabitIconPicker');
   if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
