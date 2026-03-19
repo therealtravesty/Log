@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport"content="width=device-width, initial-scale=1.0"/>
 <title>Macro Tracker</title>
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" sizes="512x512" href="/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Macros">
-<meta name="theme-color" content="#1a1a18">
+<link rel="manifest"href="/manifest.json">
+<link rel="apple-touch-icon"sizes="512x512"href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable"content="yes">
+<meta name="apple-mobile-web-app-status-bar-style"content="default">
+<meta name="apple-mobile-web-app-title"content="Macros">
+<meta name="theme-color"content="#1a1a18">
 <!-- Preconnect to external origins to cut DNS/TCP latency -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="preconnect"href="https://fonts.googleapis.com">
+<link rel="preconnect"href="https://fonts.gstatic.com"crossorigin>
+<link rel="preconnect"href="https://cdnjs.cloudflare.com">
 <!-- Fonts: load async, swap text immediately so layout doesn't block -->
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"rel="stylesheet"media="print"onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"rel="stylesheet"></noscript>
 <!-- Chart.js: defer so it doesn't block HTML parsing or rendering -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"defer></script>
 <style>
   :root {
     --bg: #f7f6f3; --surface: #ffffff;
@@ -422,13 +422,13 @@
   /* Header row — spacer must match card left section exactly */
   .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 6px; padding: 0 12px; margin-top: -6px; }
   .habits-header-spacer { flex: 1; }
-  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 200px; }
-  .habit-day-header { width: 36px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 160px; }
+  .habit-day-header { width: 28px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .habit-day-header.today { color: var(--text); font-weight: 700; }
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
   /* Cards — no border, just subtle separator */
-  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 8px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
+  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 7px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
   .habit-card:last-child { border-bottom: none; margin-bottom: 0; }
   .habit-card:hover { background: var(--bg); }
   .habits-cards-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
@@ -436,13 +436,13 @@
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
   .habit-name-pill { font-size: 13px; font-weight: 500; padding: 5px 8px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
   .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
-  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 200px; align-items: center; }
-  .habit-square { width: 36px; height: 36px; border-radius: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
+  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 160px; align-items: center; }
+  .habit-square { width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
   .habit-square:active { transform: scale(0.75); opacity: 0.85; }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 9px 9px; transition: height 0.2s ease; }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 7px 7px; transition: height 0.2s ease; }
   .habit-square-val { position: relative; z-index: 1; }
   .habit-square-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: habitRipple 0.35s cubic-bezier(0.4,0,0.2,1) forwards; pointer-events: none; }
-  @keyframes habitRipple { 0% { transform: scale(0); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
+  @keyframes habitRipple { 0% { transform: scale(0); opacity: 0.8; } 100% { transform: scale(2.8); opacity: 0; } }
   .habit-square-unfill { position: absolute; inset: 0; animation: habitUnfill 0.25s ease-in forwards; pointer-events: none; border-radius: inherit; }
   @keyframes habitUnfill { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
   .habit-card.dragging { opacity: 0.35; transform: scale(0.97); }
@@ -483,9 +483,9 @@
 <body>
 
 <!-- Welcome modal -->
-<div class="welcome-overlay hidden" id="welcomeOverlay">
+<div class="welcome-overlay hidden"id="welcomeOverlay">
   <div class="welcome-box">
-    <img class="welcome-logo" src="/apple-touch-icon.png" alt="Macro Tracker" onerror="this.style.display='none'" />
+    <img class="welcome-logo"src="/apple-touch-icon.png"alt="Macro Tracker"onerror="this.style.display='none'"/>
     <div class="welcome-title">Welcome to Macro Tracker!</div>
     <div class="welcome-sub">Your personal AI-powered nutrition tracker. Hit your goals one meal at a time. Here's how to get started:</div>
     <div class="welcome-steps">
@@ -518,136 +518,136 @@
         </div>
       </div>
     </div>
-    <button class="welcome-btn" onclick="dismissWelcome()">Let's go! →</button>
+    <button class="welcome-btn"onclick="dismissWelcome()">Let's go! →</button>
   </div>
 </div>
 <!-- Goals explainer overlay — shown once for new profiles -->
-<div class="welcome-overlay hidden" id="goalsOverlay">
+<div class="welcome-overlay hidden"id="goalsOverlay">
   <div class="welcome-box">
-    <div class="welcome-title" style="margin-bottom:6px;">Set your goals</div>
+    <div class="welcome-title"style="margin-bottom:6px;">Set your goals</div>
     <div class="welcome-sub">These settings calculate your personalized calorie and macro targets. Here's what each field means:</div>
     <div class="welcome-steps">
       <div class="welcome-step">
-        <div class="welcome-step-num s1" style="font-size:16px;">♂♀</div>
+        <div class="welcome-step-num s1"style="font-size:16px;"></div>
         <div class="welcome-step-text">
           <div class="welcome-step-title">Sex, Age, Height & Weight</div>
           <div class="welcome-step-desc">Used to calculate your BMR (basal metabolic rate) — the calories your body burns at rest — using the Mifflin-St Jeor equation, the gold standard used by dietitians.</div>
         </div>
       </div>
       <div class="welcome-step">
-        <div class="welcome-step-num s2" style="font-size:16px;">⚡</div>
+        <div class="welcome-step-num s2"style="font-size:16px;"></div>
         <div class="welcome-step-text">
           <div class="welcome-step-title">Activity level</div>
           <div class="welcome-step-desc">Multiplies your BMR to get your TDEE — total daily energy expenditure. Be honest here; most people overestimate their activity level.</div>
         </div>
       </div>
       <div class="welcome-step">
-        <div class="welcome-step-num s3" style="font-size:16px;">🎯</div>
+        <div class="welcome-step-num s3"style="font-size:16px;"></div>
         <div class="welcome-step-text">
           <div class="welcome-step-title">Goal & weekly rate</div>
           <div class="welcome-step-desc">Losing 0.5–1 lb/week is sustainable and recommended by most dietitians. 1.5 lbs/week is aggressive — only for short-term cuts. Gaining is set conservatively to minimize fat gain.</div>
         </div>
       </div>
       <div class="welcome-step">
-        <div class="welcome-step-num s4" style="font-size:16px;">🥩</div>
+        <div class="welcome-step-num s4"style="font-size:16px;"></div>
         <div class="welcome-step-text">
           <div class="welcome-step-title">Macro split</div>
           <div class="welcome-step-desc">How your calories are divided between protein, carbs, and fat. High protein (40/30/30) is ideal for body recomposition. Your targets update automatically as you change any field.</div>
         </div>
       </div>
     </div>
-    <button class="welcome-btn" onclick="dismissGoalsOverlay()">Got it — let me set my goals</button>
+    <button class="welcome-btn"onclick="dismissGoalsOverlay()">Got it — let me set my goals</button>
   </div>
 </div>
-<div class="profile-screen hidden" id="profileScreen">
+<div class="profile-screen hidden"id="profileScreen">
   <div class="profile-box">
     <div class="profile-box-title">Macro Tracker</div>
     <div class="profile-box-sub">Who's logging today?</div>
-    <div class="profile-list" id="profileList"></div>
+    <div class="profile-list"id="profileList"></div>
     <div class="profile-divider">or create a new profile</div>
     <div class="new-profile-form">
-      <input class="new-profile-name" id="newProfileName" placeholder="Your name" maxlength="30" />
-      <div class="color-picker" id="colorPicker"></div>
+      <input class="new-profile-name"id="newProfileName"placeholder="Your name"maxlength="30"/>
+      <div class="color-picker"id="colorPicker"></div>
       <div class="new-profile-row">
-        <button class="create-btn" onclick="createProfile()">Create profile</button>
+        <button class="create-btn"onclick="createProfile()">Create profile</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Offline indicator -->
-<div class="offline-bar" id="offlineBar">📵 Offline — changes will sync when connection returns</div>
+<div class="offline-bar"id="offlineBar"> Offline — changes will sync when connection returns</div>
 
 <!-- Loading overlay — shown while switching profiles -->
-<div class="loading-overlay hidden" id="loadingOverlay">
-  <div class="loading-avatar" id="loadingAvatar"></div>
-  <div class="loading-name" id="loadingName"></div>
+<div class="loading-overlay hidden"id="loadingOverlay">
+  <div class="loading-avatar"id="loadingAvatar"></div>
+  <div class="loading-name"id="loadingName"></div>
   <div class="loading-spinner"></div>
 </div>
 
-<div class="container" id="appContainer" style="display:none;">
-  <div class="tabs" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+<div class="container"id="appContainer"style="display:none;">
+  <div class="tabs"style="display:flex;align-items:center;justify-content:space-between;width:100%;">
     <div style="display:flex;gap:4px;padding:4px;">
-      <button class="tab active" id="tab-goals" onclick="showView('goals', getTabDirection('goals'))">Goals</button>
-      <button class="tab" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
-      <button class="tab" id="tab-habits" onclick="showView('habits', getTabDirection('habits'))">Habits</button>
-      <button class="tab" id="tab-history" onclick="showView('history', getTabDirection('history'))">History</button>
+      <button class="tab active"id="tab-goals"onclick="showView('goals', getTabDirection('goals'))">Goals</button>
+      <button class="tab"id="tab-today"onclick="showView('today', getTabDirection('today'))">Log</button>
+      <button class="tab"id="tab-habits"onclick="showView('habits', getTabDirection('habits'))">Habits</button>
+      <button class="tab"id="tab-history"onclick="showView('history', getTabDirection('history'))">History</button>
     </div>
-    <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile" style="margin-right:4px;">
-      <div class="profile-chip-avatar" id="profileChipAvatar"></div>
-      <span class="profile-chip-name" id="profileChipName"></span>
+    <div class="profile-chip"onclick="showProfileScreen()"id="profileChip"title="Switch profile"style="margin-right:4px;">
+      <div class="profile-chip-avatar"id="profileChipAvatar"></div>
+      <span class="profile-chip-name"id="profileChipName"></span>
     </div>
   </div>
 
   <!-- TODAY -->
-  <div class="view active" id="view-today">
+  <div class="view active"id="view-today">
     <div class="header">
       <div class="header-top">
         <div class="app-title">Macro Tracker</div>
-        <div class="header-meta" id="headerMeta">2,850 kcal cut</div>
+        <div class="header-meta"id="headerMeta">2,850 kcal cut</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
-        <div class="date-friendly" id="dateFriendly"></div>
+        <div class="date-friendly"id="dateFriendly"></div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <input type="date" id="datePicker" style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;" onchange="onDateChange()" />
-          <button onclick="setDate(todayStr())" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
-          <span id="pastDayBadge" style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
+          <input type="date"id="datePicker"style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;"onchange="onDateChange()"/>
+          <button onclick="setDate(todayStr())"style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
+          <span id="pastDayBadge"style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
         </div>
       </div>
     </div>
 
     <div class="summary-grid">
-      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val" id="totCal">0</div><div class="progress-bar"><div class="progress-fill" id="barCal" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val" id="totPro">0g</div><div class="progress-bar"><div class="progress-fill" id="barPro" style="background:var(--green);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val" id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill" id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val" id="totFat">0g</div><div class="progress-bar"><div class="progress-fill" id="barFat" style="background:var(--pink);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal"style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro"style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Carbs</div><div class="metric-val"id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill"id="barCarb"style="background:var(--amber);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Total Fat</div><div class="metric-val"id="totFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barFat"style="background:var(--pink);width:0%"></div></div></div>
     </div>
     <div class="summary-grid-2">
-      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val" id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill" id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val" id="totSug">0g</div><div class="progress-bar"><div class="progress-fill" id="barSug" style="background:var(--red);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val" id="totSod">0</div><div class="progress-bar"><div class="progress-fill" id="barSod" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val" id="totFib">0g</div><div class="progress-bar"><div class="progress-fill" id="barFib" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sat. Fat</div><div class="metric-val"id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barSatFat"style="background:var(--coral);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sugar</div><div class="metric-val"id="totSug">0g</div><div class="progress-bar"><div class="progress-fill"id="barSug"style="background:var(--red);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Sodium</div><div class="metric-val"id="totSod">0</div><div class="progress-bar"><div class="progress-fill"id="barSod"style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card"><div class="metric-label">Fiber</div><div class="metric-val"id="totFib">0g</div><div class="progress-bar"><div class="progress-fill"id="barFib"style="background:var(--green);width:0%"></div></div></div>
     </div>
 
     <!-- Net calories banner — sits right below macros -->
-    <div class="net-banner" id="netBanner">
-      <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val" id="netFood">0</div></div>
+    <div class="net-banner"id="netBanner">
+      <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val"id="netFood">0</div></div>
       <div class="net-divider">−</div>
-      <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val" id="netExercise">0</div></div>
+      <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val"id="netExercise">0</div></div>
       <div class="net-divider">=</div>
-      <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val" id="netResult">0</div></div>
+      <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val"id="netResult">0</div></div>
       <div style="flex:1"></div>
-      <div class="net-item" style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val" id="netTarget">2,850</div></div>
+      <div class="net-item"style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val"id="netTarget">2,850</div></div>
     </div>
 
     <!-- Weight — standalone card -->
-    <div class="card" style="margin-bottom:1rem;">
-      <div class="section-title" id="weightSectionTitle">Today's weight</div>
+    <div class="card"style="margin-bottom:1rem;">
+      <div class="section-title"id="weightSectionTitle">Today's weight</div>
       <div class="weight-row">
         <label for="weightInput">Body weight</label>
-        <input type="number" id="weightInput" class="weight-input" placeholder="—" step="0.1" onblur="saveWeight()" onchange="saveWeight()" />
+        <input type="number"id="weightInput"class="weight-input"placeholder="—"step="0.1"onblur="saveWeight()"onchange="saveWeight()"/>
         <span class="weight-unit">lbs</span>
-        <span class="weight-saved" id="weightSaved">✓ Saved</span>
+        <span class="weight-saved"id="weightSaved"> Saved</span>
       </div>
     </div>
 
@@ -657,59 +657,59 @@
       <div id="foodItems"></div>
 
       <!-- Saved meals quick-log -->
-      <div id="savedMealsArea" style="display:none;margin-top:0.75rem;">
-        <div class="section-title" style="margin-bottom:8px;">Saved meals</div>
+      <div id="savedMealsArea"style="display:none;margin-top:0.75rem;">
+        <div class="section-title"style="margin-bottom:8px;">Saved meals</div>
         <div id="savedMealsList"></div>
       </div>
 
       <div class="search-area">
         <div class="section-title">Look up food</div>
         <!-- Meal picker tabs -->
-        <div class="meal-tabs" id="mealTabs">
-          <button class="meal-tab active" data-meal="breakfast" onclick="selectMealTab(this)">Breakfast</button>
-          <button class="meal-tab" data-meal="lunch" onclick="selectMealTab(this)">Lunch</button>
-          <button class="meal-tab" data-meal="dinner" onclick="selectMealTab(this)">Dinner</button>
-          <button class="meal-tab" data-meal="snacks" onclick="selectMealTab(this)">Snacks</button>
+        <div class="meal-tabs"id="mealTabs">
+          <button class="meal-tab active"data-meal="breakfast"onclick="selectMealTab(this)">Breakfast</button>
+          <button class="meal-tab"data-meal="lunch"onclick="selectMealTab(this)">Lunch</button>
+          <button class="meal-tab"data-meal="dinner"onclick="selectMealTab(this)">Dinner</button>
+          <button class="meal-tab"data-meal="snacks"onclick="selectMealTab(this)">Snacks</button>
         </div>
         <div class="search-wrap">
-          <textarea id="searchInput" class="search-textarea" placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
-          <button class="lookup-btn" id="lookupBtn" onclick="lookupFood()">Look up</button>
+          <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
+          <button class="lookup-btn"id="lookupBtn"onclick="lookupFood()">Look up</button>
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
         <div id="resultArea"></div>
       </div>
 
       <!-- Recent foods — collapsible, below search -->
-      <div id="recentFoodsArea" style="display:none;margin-top:0.5rem;" class="recents-section">
-        <div class="recents-toggle" onclick="toggleRecents()">
+      <div id="recentFoodsArea"style="display:none;margin-top:0.5rem;"class="recents-section">
+        <div class="recents-toggle"onclick="toggleRecents()">
           <div class="recents-toggle-left">
             <span class="recents-toggle-label">Recent foods</span>
-            <span class="recents-toggle-count" id="recentCount"></span>
+            <span class="recents-toggle-count"id="recentCount"></span>
           </div>
-          <span class="recents-toggle-arrow" id="recentChevron">▼</span>
+          <span class="recents-toggle-arrow"id="recentChevron">▼</span>
         </div>
-        <div id="recentFoodsList" style="display:none;padding-top:4px;"></div>
+        <div id="recentFoodsList"style="display:none;padding-top:4px;"></div>
       </div>
     </div>
 
     <!-- Exercise -->
-    <div class="card" style="margin-bottom:1rem;">
+    <div class="card"style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
-      <div id="exerciseItems"><div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div></div>
+      <div id="exerciseItems"><div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div></div>
       <div style="margin-top:1rem;border-top:0.5px solid var(--border);padding-top:1rem;">
         <div class="section-title">Log exercise</div>
         <div class="exercise-add-row">
-          <input class="exercise-input" id="exerciseName" placeholder="e.g. 30 min run, 1hr weight training, 45 min cycling..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lookupExercise()}" />
-          <button class="exercise-add-btn" id="exerciseLookupBtn" onclick="lookupExercise()">Look up</button>
+          <input class="exercise-input"id="exerciseName"placeholder="e.g. 30 min run, 1hr weight training, 45 min cycling..."onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();lookupExercise()}"/>
+          <button class="exercise-add-btn"id="exerciseLookupBtn"onclick="lookupExercise()">Look up</button>
         </div>
-        <div class="search-hint" style="margin-top:6px;">Include duration and intensity for best accuracy. Press Enter to look up.</div>
+        <div class="search-hint"style="margin-top:6px;">Include duration and intensity for best accuracy. Press Enter to look up.</div>
         <div id="exerciseResultArea"></div>
       </div>
     </div>
 
     <!-- Home screen tip — iOS only, dismissible -->
-    <div class="hs-tip hidden" id="hsTip">
-      <div class="hs-tip-icon">📱</div>
+    <div class="hs-tip hidden"id="hsTip">
+      <div class="hs-tip-icon"></div>
       <div class="hs-tip-body">
         <div class="hs-tip-title">Add to your iPhone home screen</div>
         <div class="hs-tip-steps">
@@ -720,60 +720,60 @@
           <span class="hs-tip-step">Tap <strong>Add to Home Screen</strong></span>
         </div>
       </div>
-      <button class="hs-tip-close" onclick="dismissHsTip()" title="Dismiss">×</button>
+      <button class="hs-tip-close"onclick="dismissHsTip()"title="Dismiss">×</button>
     </div>
 
     <div class="footer-actions">
-      <button class="ghost-btn danger" onclick="resetDay()">Reset this day</button>
-      <button class="ghost-btn" onclick="exportDay()">Export this day</button>
+      <button class="ghost-btn danger"onclick="resetDay()">Reset this day</button>
+      <button class="ghost-btn"onclick="exportDay()">Export this day</button>
     </div>
   </div>
 
   <!-- HABITS -->
-  <div class="view" id="view-habits">
+  <div class="view"id="view-habits">
     <div class="history-header">
       <div>
         <div class="history-title">Habits</div>
-        <div class="history-sub" id="habitsSub">Track your daily habits</div>
+        <div class="history-sub"id="habitsSub">Track your daily habits</div>
       </div>
-      <button class="ghost-btn" onclick="toggleAddHabitForm()">+ New habit</button>
+      <button class="ghost-btn"onclick="toggleAddHabitForm()">+ New habit</button>
     </div>
 
     <!-- Add habit form -->
-    <div class="add-habit-form hidden" id="addHabitForm">
-      <div class="settings-grid-2" style="margin-bottom:10px;">
+    <div class="add-habit-form hidden"id="addHabitForm">
+      <div class="settings-grid-2"style="margin-bottom:10px;">
         <div class="settings-field">
           <label class="settings-label">Habit name</label>
-          <input class="settings-input" id="habitName" placeholder="e.g. Drink water, Gym, Read..." maxlength="40" />
+          <input class="settings-input"id="habitName"placeholder="e.g. Drink water, Gym, Read..."maxlength="40"/>
         </div>
         <div class="settings-field">
           <label class="settings-label">Type</label>
-          <select class="settings-select" id="habitType" onchange="toggleHabitQuantityFields()">
+          <select class="settings-select"id="habitType"onchange="toggleHabitQuantityFields()">
             <option value="boolean">Simple (done / not done)</option>
             <option value="quantity">Quantity (e.g. 8 glasses)</option>
           </select>
         </div>
-        <div class="settings-field hidden" id="habitTargetField">
+        <div class="settings-field hidden"id="habitTargetField">
           <label class="settings-label">Target amount</label>
-          <input class="settings-input" id="habitTarget" type="number" min="1" placeholder="e.g. 8" />
+          <input class="settings-input"id="habitTarget"type="number"min="1"placeholder="e.g. 8"/>
         </div>
-        <div class="settings-field hidden" id="habitUnitField">
+        <div class="settings-field hidden"id="habitUnitField">
           <label class="settings-label">Unit</label>
-          <input class="settings-input" id="habitUnit" placeholder="e.g. glasses, pages, miles" />
+          <input class="settings-input"id="habitUnit"placeholder="e.g. glasses, pages, miles"/>
         </div>
       </div>
-      <div class="settings-label" style="margin-bottom:6px;">Color</div>
-      <div class="habit-color-picker" id="habitColorPicker"></div>
-      <div class="settings-label" style="margin-top:12px;margin-bottom:6px;">Icon</div>
-      <div class="habit-icon-picker" id="habitIconPicker"></div>
+      <div class="settings-label"style="margin-bottom:6px;">Color</div>
+      <div class="habit-color-picker"id="habitColorPicker"></div>
+      <div class="settings-label"style="margin-top:12px;margin-bottom:6px;">Icon</div>
+      <div class="habit-icon-picker"id="habitIconPicker"></div>
       <div style="display:flex;gap:8px;margin-top:16px;">
-        <button class="confirm-btn" onclick="saveNewHabit()">Save habit</button>
-        <button class="discard-btn" onclick="toggleAddHabitForm()">Cancel</button>
+        <button class="confirm-btn"onclick="saveNewHabit()">Save habit</button>
+        <button class="discard-btn"onclick="toggleAddHabitForm()">Cancel</button>
       </div>
     </div>
 
     <!-- Category filter chips -->
-    <div class="habit-cats" id="habitCats"></div>
+    <div class="habit-cats"id="habitCats"></div>
 
     <!-- Rolling 5-day grid -->
     <div style="margin-top:0.25rem;">
@@ -781,58 +781,58 @@
         <div class="habits-header-spacer">
           <span class="habits-last5-badge">Last 5 days</span>
         </div>
-        <div class="habits-header-days" id="habitsDayHeaders"></div>
+        <div class="habits-header-days"id="habitsDayHeaders"></div>
       </div>
       <div class="habits-cards-wrap">
-        <div id="habitsGrid"><div class="empty-msg" style="padding:1.25rem;">No habits yet — tap "+ New habit" to get started!</div></div>
+        <div id="habitsGrid"><div class="empty-msg"style="padding:1.25rem;">No habits yet — tap "+ New habit"to get started!</div></div>
       </div>
     </div>
 
-    <!-- Habit edit modal -->    <div class="habit-modal-overlay hidden" id="habitEditOverlay" onclick="closeHabitModal(event)">
-      <div class="habit-modal" id="habitEditModal">
+    <!-- Habit edit modal -->    <div class="habit-modal-overlay hidden"id="habitEditOverlay"onclick="closeHabitModal(event)">
+      <div class="habit-modal"id="habitEditModal">
         <div class="habit-modal-handle"></div>
         <div class="habit-modal-header">
           <span class="habit-modal-title">Edit habit</span>
-          <button class="habit-modal-close" onclick="closeHabitModal()">×</button>
+          <button class="habit-modal-close"onclick="closeHabitModal()">×</button>
         </div>
         <div class="habit-modal-body">
-          <input type="hidden" id="editHabitId" />
+          <input type="hidden"id="editHabitId"/>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Name</label>
-            <input class="habit-modal-input" id="editHabitName" type="text" maxlength="40" />
+            <input class="habit-modal-input"id="editHabitName"type="text"maxlength="40"/>
           </div>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Type</label>
-            <select class="habit-modal-select" id="editHabitType" onchange="toggleEditQuantityFields()">
+            <select class="habit-modal-select"id="editHabitType"onchange="toggleEditQuantityFields()">
               <option value="boolean">Simple (done / not done)</option>
               <option value="quantity">Quantity (tap to increment)</option>
             </select>
           </div>
-          <div id="editQuantityFields" style="display:none;flex-direction:column;gap:12px;">
+          <div id="editQuantityFields"style="display:none;flex-direction:column;gap:12px;">
             <div class="habit-modal-field">
               <label class="habit-modal-label">Daily target</label>
-              <input class="habit-modal-input" id="editHabitTarget" type="number" min="1" placeholder="e.g. 8" />
+              <input class="habit-modal-input"id="editHabitTarget"type="number"min="1"placeholder="e.g. 8"/>
             </div>
             <div class="habit-modal-field">
               <label class="habit-modal-label">Unit</label>
-              <input class="habit-modal-input" id="editHabitUnit" type="text" placeholder="e.g. glasses, pages, miles" />
+              <input class="habit-modal-input"id="editHabitUnit"type="text"placeholder="e.g. glasses, pages, miles"/>
             </div>
           </div>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Color</label>
-            <div class="habit-color-picker" id="editHabitColorPicker"></div>
+            <div class="habit-color-picker"id="editHabitColorPicker"></div>
           </div>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Icon</label>
-            <div class="habit-icon-picker" id="editHabitIconPicker"></div>
+            <div class="habit-icon-picker"id="editHabitIconPicker"></div>
           </div>
-          <button class="habit-modal-save" onclick="saveEditedHabit()">Save changes</button>
-          <div class="habit-modal-field" style="margin-top:4px;">
+          <button class="habit-modal-save"onclick="saveEditedHabit()">Save changes</button>
+          <div class="habit-modal-field"style="margin-top:4px;">
             <label class="habit-modal-label">Log past completions</label>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <button onclick="shiftRetroMonth(-1)" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
-              <span id="retroMonthLabel" style="font-size:13px;font-weight:500;color:var(--text);"></span>
-              <button onclick="shiftRetroMonth(1)" id="retroNextBtn" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">›</button>
+              <button onclick="shiftRetroMonth(-1)"style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
+              <span id="retroMonthLabel"style="font-size:13px;font-weight:500;color:var(--text);"></span>
+              <button onclick="shiftRetroMonth(1)"id="retroNextBtn"style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">›</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
               <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Su</div>
@@ -843,9 +843,9 @@
               <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Fr</div>
               <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Sa</div>
             </div>
-            <div id="retroCalendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+            <div id="retroCalendar"style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
           </div>
-          <button class="habit-modal-delete" onclick="deleteHabitFromModal()">Delete habit</button>
+          <button class="habit-modal-delete"onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
       </div>
     </div>
@@ -854,104 +854,104 @@
 
   <!-- HISTORY -->
 
-  <div class="view" id="view-history">
+  <div class="view"id="view-history">
     <div class="history-header">
       <div>
         <div class="history-title">History</div>
-        <div class="history-sub" id="historySubtitle"></div>
+        <div class="history-sub"id="historySubtitle"></div>
       </div>
-      <button class="ghost-btn" onclick="exportAll()">Export all CSV</button>
+      <button class="ghost-btn"onclick="exportAll()">Export all CSV</button>
     </div>
 
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Days logged</div><div class="stat-val" id="statDays">0</div><div class="stat-sub">total entries</div></div>
-      <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val" id="statAvgCal">—</div><div class="stat-sub" id="statAvgCalSub">goal: —</div></div>
-      <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val" id="statAvgPro">—</div><div class="stat-sub" id="statAvgProSub">goal: —</div></div>
-      <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val" id="statWeight">—</div><div class="stat-sub">lbs</div></div>
-      <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val" id="statStreak">0</div><div class="stat-sub" id="statStreakSub">days in a row</div></div>
-      <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val" id="statHabitStreak">—</div><div class="stat-sub" id="statHabitStreakSub">days all done</div></div>
+      <div class="stat-card"><div class="stat-label">Days logged</div><div class="stat-val"id="statDays">0</div><div class="stat-sub">total entries</div></div>
+      <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val"id="statAvgCal">—</div><div class="stat-sub"id="statAvgCalSub">goal: —</div></div>
+      <div class="stat-card"><div class="stat-label">Avg protein</div><div class="stat-val"id="statAvgPro">—</div><div class="stat-sub"id="statAvgProSub">goal: —</div></div>
+      <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val"id="statWeight">—</div><div class="stat-sub">lbs</div></div>
+      <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val"id="statStreak">0</div><div class="stat-sub"id="statStreakSub">days in a row</div></div>
+      <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val"id="statHabitStreak">—</div><div class="stat-sub"id="statHabitStreakSub">days all done</div></div>
     </div>
 
     <!-- Charts -->
     <div class="charts-section">
-      <div class="chart-tabs" style="flex-wrap:wrap;">
-        <button class="chart-tab active" onclick="switchChart('weight')">Weight</button>
-        <button class="chart-tab" onclick="switchChart('calories')">Calories</button>
-        <button class="chart-tab" onclick="switchChart('protein')">Protein</button>
-        <button class="chart-tab" onclick="switchChart('carbs')">Carbs</button>
-        <button class="chart-tab" onclick="switchChart('fat')">Fat</button>
-        <button class="chart-tab" onclick="switchChart('satfat')">Sat Fat</button>
-        <button class="chart-tab" onclick="switchChart('sugar')">Sugar</button>
-        <button class="chart-tab" onclick="switchChart('sodium')">Sodium</button>
-        <button class="chart-tab" onclick="switchChart('fiber')">Fiber</button>
-        <button class="chart-tab" onclick="switchChart('macros')">Total Macros</button>
-        <button class="chart-tab" onclick="switchChart('habits')">Habits</button>
+      <div class="chart-tabs"style="flex-wrap:wrap;">
+        <button class="chart-tab active"onclick="switchChart('weight')">Weight</button>
+        <button class="chart-tab"onclick="switchChart('calories')">Calories</button>
+        <button class="chart-tab"onclick="switchChart('protein')">Protein</button>
+        <button class="chart-tab"onclick="switchChart('carbs')">Carbs</button>
+        <button class="chart-tab"onclick="switchChart('fat')">Fat</button>
+        <button class="chart-tab"onclick="switchChart('satfat')">Sat Fat</button>
+        <button class="chart-tab"onclick="switchChart('sugar')">Sugar</button>
+        <button class="chart-tab"onclick="switchChart('sodium')">Sodium</button>
+        <button class="chart-tab"onclick="switchChart('fiber')">Fiber</button>
+        <button class="chart-tab"onclick="switchChart('macros')">Total Macros</button>
+        <button class="chart-tab"onclick="switchChart('habits')">Habits</button>
       </div>
-      <div class="chart-card active" id="chart-weight">
+      <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
         <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-calories">
+      <div class="chart-card"id="chart-calories">
         <div class="chart-title">Daily calories vs. 2,850 kcal target</div>
         <div class="chart-wrap"><canvas id="calChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-protein">
+      <div class="chart-card"id="chart-protein">
         <div class="chart-title">Daily protein vs. 200g goal</div>
         <div class="chart-wrap"><canvas id="proChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-carbs">
+      <div class="chart-card"id="chart-carbs">
         <div class="chart-title">Daily carbs vs. 300g target</div>
         <div class="chart-wrap"><canvas id="carbChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-fat">
+      <div class="chart-card"id="chart-fat">
         <div class="chart-title">Daily total fat vs. 75g limit</div>
         <div class="chart-wrap"><canvas id="fatChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-satfat">
+      <div class="chart-card"id="chart-satfat">
         <div class="chart-title">Daily saturated fat vs. 25g limit</div>
         <div class="chart-wrap"><canvas id="satFatChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-sugar">
+      <div class="chart-card"id="chart-sugar">
         <div class="chart-title">Daily sugar vs. 50g limit</div>
         <div class="chart-wrap"><canvas id="sugarChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-sodium">
+      <div class="chart-card"id="chart-sodium">
         <div class="chart-title">Daily sodium vs. 2,300mg limit</div>
         <div class="chart-wrap"><canvas id="sodiumChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-fiber">
+      <div class="chart-card"id="chart-fiber">
         <div class="chart-title">Daily fiber vs. 35g goal</div>
         <div class="chart-wrap"><canvas id="fiberChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-macros">
+      <div class="chart-card"id="chart-macros">
         <div class="chart-title">Total macros breakdown over time (kcal)</div>
         <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
       </div>
-      <div class="chart-card" id="chart-habits">
+      <div class="chart-card"id="chart-habits">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <div class="chart-title" style="margin-bottom:0;">Habit completions by month</div>
+          <div class="chart-title"style="margin-bottom:0;">Habit completions by month</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <select id="habitChartSelect" class="settings-select" style="height:30px;font-size:12px;padding:0 8px;width:auto;" onchange="renderHabitChart()">
+            <select id="habitChartSelect"class="settings-select"style="height:30px;font-size:12px;padding:0 8px;width:auto;"onchange="renderHabitChart()">
               <option value="all">All habits</option>
             </select>
-            <select id="habitChartYear" class="settings-select" style="height:30px;font-size:12px;padding:0 8px;width:auto;" onchange="renderHabitChart()">
+            <select id="habitChartYear"class="settings-select"style="height:30px;font-size:12px;padding:0 8px;width:auto;"onchange="renderHabitChart()">
             </select>
           </div>
         </div>
         <div class="chart-wrap"><canvas id="habitChart"></canvas></div>
-        <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
+        <div id="habitChartLegend"style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
     </div>
 
-    <div id="historyList"><div class="empty-msg" style="padding:2rem 0;">No history yet — start logging today!</div></div>
+    <div id="historyList"><div class="empty-msg"style="padding:2rem 0;">No history yet — start logging today!</div></div>
   </div>
 
   <!-- GOALS -->
-  <div class="view" id="view-goals">
+  <div class="view"id="view-goals">
     <div class="header">
       <div class="header-top">
         <div class="app-title">Goals &amp; Profile</div>
-        <div class="header-meta" id="headerMetaGoals"></div>
+        <div class="header-meta"id="headerMetaGoals"></div>
       </div>
     </div>
 
@@ -960,29 +960,29 @@
       <div class="settings-grid">
         <div class="settings-field">
           <label class="settings-label">Sex</label>
-          <select class="settings-select" id="sSex" onchange="recalcGoals()">
+          <select class="settings-select"id="sSex"onchange="recalcGoals()">
             <option value="male">Male</option>
             <option value="female">Female</option>
           </select>
         </div>
         <div class="settings-field">
           <label class="settings-label">Age</label>
-          <input class="settings-input" type="number" id="sAge" min="16" max="100" placeholder="30" oninput="recalcGoals()" />
+          <input class="settings-input"type="number"id="sAge"min="16"max="100"placeholder="30"oninput="recalcGoals()"/>
         </div>
         <div class="settings-field">
           <label class="settings-label">Height</label>
           <div style="display:flex;gap:6px;">
-            <input class="settings-input" type="number" id="sHeightFt" min="3" max="8" placeholder="ft" oninput="recalcGoals()" style="width:50%;" />
-            <input class="settings-input" type="number" id="sHeightIn" min="0" max="11" placeholder="in" oninput="recalcGoals()" style="width:50%;" />
+            <input class="settings-input"type="number"id="sHeightFt"min="3"max="8"placeholder="ft"oninput="recalcGoals()"style="width:50%;"/>
+            <input class="settings-input"type="number"id="sHeightIn"min="0"max="11"placeholder="in"oninput="recalcGoals()"style="width:50%;"/>
           </div>
         </div>
         <div class="settings-field">
           <label class="settings-label">Weight (lbs)</label>
-          <input class="settings-input" type="number" id="sWeight" min="80" max="500" placeholder="183" oninput="recalcGoals()" />
+          <input class="settings-input"type="number"id="sWeight"min="80"max="500"placeholder="183"oninput="recalcGoals()"/>
         </div>
         <div class="settings-field">
           <label class="settings-label">Activity level</label>
-          <select class="settings-select" id="sActivity" onchange="recalcGoals()">
+          <select class="settings-select"id="sActivity"onchange="recalcGoals()">
             <option value="1.2">Sedentary (desk job, little exercise)</option>
             <option value="1.375">Lightly active (1–3x/week)</option>
             <option value="1.55">Moderately active (3–5x/week)</option>
@@ -992,28 +992,28 @@
         </div>
         <div class="settings-field">
           <label class="settings-label">Goal</label>
-          <select class="settings-select" id="sGoal" onchange="recalcGoals()">
+          <select class="settings-select"id="sGoal"onchange="recalcGoals()">
             <option value="cut">Lose weight</option>
             <option value="maintain">Maintain weight</option>
             <option value="gain">Gain muscle</option>
           </select>
         </div>
-        <div class="settings-field" id="rateField">
+        <div class="settings-field"id="rateField">
           <label class="settings-label">Weekly rate</label>
-          <select class="settings-select" id="sRate" onchange="recalcGoals()">
+          <select class="settings-select"id="sRate"onchange="recalcGoals()">
             <option value="0.25">0.25 lbs/week (slow)</option>
             <option value="0.5">0.5 lbs/week</option>
-            <option value="1" selected>1 lb/week (moderate)</option>
+            <option value="1"selected>1 lb/week (moderate)</option>
             <option value="1.5">1.5 lbs/week (aggressive)</option>
           </select>
         </div>
       </div>
 
-      <div class="section-title" style="margin-top:1.25rem;">Diet style</div>
+      <div class="section-title"style="margin-top:1.25rem;">Diet style</div>
       <div class="settings-grid-2">
         <div class="settings-field">
           <label class="settings-label">Macro split</label>
-          <select class="settings-select" id="sSplit" onchange="recalcGoals()">
+          <select class="settings-select"id="sSplit"onchange="recalcGoals()">
             <option value="highprotein">High protein (40/30/30)</option>
             <option value="standard">Standard (35/35/30)</option>
             <option value="lowcarb">Low carb (40/20/40)</option>
@@ -1022,20 +1022,20 @@
         </div>
         <div class="settings-field">
           <label class="settings-label">Units</label>
-          <select class="settings-select" id="sUnits" onchange="recalcGoals()">
+          <select class="settings-select"id="sUnits"onchange="recalcGoals()">
             <option value="imperial">Imperial (lbs, ft/in)</option>
             <option value="metric">Metric (kg, cm)</option>
           </select>
         </div>
       </div>
 
-      <div class="settings-result" id="settingsResult" style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;"></div>
-      <div id="goalsSavedMsg" style="display:none;font-size:12px;color:var(--green-text);margin-top:10px;font-family:'DM Mono',monospace;">✓ Goals saved</div>
+      <div class="settings-result"id="settingsResult"style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="goalsSavedMsg"style="display:none;font-size:12px;color:var(--green-text);margin-top:10px;font-family:'DM Mono',monospace;"> Goals saved</div>
     </div>
   </div>
 
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast"id="toast"></div>
 
 <script>
 // ── API helpers ──────────────────────────────────────────────────
@@ -1046,11 +1046,11 @@ let _isOnline = navigator.onLine;
 let _syncDB = null;
 
 // Register service worker — only on actual deployment, not preview environments
-if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
+if ('serviceWorker'in navigator && !location.hostname.includes('claudeusercontent')) {
   navigator.serviceWorker.register('/sw.js').then(() => {
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data?.type === 'SYNC_COMPLETE') {
-        showOfflineBar('syncing', '✓ Back online — all changes synced');
+        showOfflineBar('syncing', 'Back online — all changes synced');
         setTimeout(hideOfflineBar, 3000);
       }
     });
@@ -1063,8 +1063,8 @@ window.addEventListener('offline', () => { _isOnline = false; showOfflineBar('of
 function showOfflineBar(mode, msg) {
   const bar = document.getElementById('offlineBar');
   if (!bar) return;
-  bar.textContent = msg || '📵 Offline — changes will sync when connection returns';
-  bar.className = `offline-bar visible${mode === 'syncing' ? ' syncing' : ''}`;
+  bar.textContent = msg || 'Offline — changes will sync when connection returns';
+  bar.className = `offline-bar visible${mode === 'syncing'? 'syncing': ''}`;
 }
 function hideOfflineBar() {
   const bar = document.getElementById('offlineBar');
@@ -1083,7 +1083,7 @@ async function onConnectionRestored() {
     renderToday();
     if (document.getElementById('view-habits')?.classList.contains('active')) renderHabits();
   }
-  showOfflineBar('syncing', '✓ All changes synced');
+  showOfflineBar('syncing', 'All changes synced');
   setTimeout(hideOfflineBar, 3000);
 }
 
@@ -1122,7 +1122,7 @@ async function flushOfflineQueue() {
     try {
       const res = await fetch(item.url, {
         method: item.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json'},
         body: item.body ? JSON.stringify(item.body) : undefined,
       });
       if (res.ok) {
@@ -1137,25 +1137,25 @@ async function api(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const isWrite = method !== 'GET';
 
-  const doFetch = () => fetch('/api/' + path, {
+  const doFetch = () => fetch('/api/'+ path, {
     method,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     body: options.body != null ? JSON.stringify(options.body) : undefined,
   }).then(async res => {
-    if (!res.ok) throw new Error('API error ' + res.status);
+    if (!res.ok) throw new Error('API error '+ res.status);
     const text = await res.text();
     return text ? JSON.parse(text) : null;
   });
 
   if (!_isOnline && isWrite) {
-    await enqueueRequest('/api/' + path, method, options.body ?? null);
+    await enqueueRequest('/api/'+ path, method, options.body ?? null);
     return options.body ? { ...options.body, offline: true } : { offline: true };
   }
   try {
     return await doFetch();
   } catch(e) {
     if (isWrite) {
-      await enqueueRequest('/api/' + path, method, options.body ?? null);
+      await enqueueRequest('/api/'+ path, method, options.body ?? null);
       return options.body ? { ...options.body, offline: true } : { offline: true };
     }
     throw e;
@@ -1189,8 +1189,7 @@ async function selectProfile(id, profileData, isNew = false) {
   if (overlay) {
     loadAvatar.style.background = activeProfileData.color;
     loadName.textContent = isNew
-      ? `Welcome, ${activeProfileData.name}!`
-      : `Welcome back, ${activeProfileData.name}!`;
+      ? `Welcome, ${activeProfileData.name}!` : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
@@ -1218,15 +1217,14 @@ async function renderProfileList() {
   try {
     const profiles = await api('profiles');
     if (!profiles.length) { list.innerHTML = ''; return; }
-    list.innerHTML = profiles.map(p => `
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button class="profile-btn" style="flex:1;" onclick="selectProfileFromList('${p.id}','${p.name}','${p.color}')">
-          <div class="profile-avatar" style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
+    list.innerHTML = profiles.map(p => ` <div style="display:flex;align-items:center;gap:8px;">
+        <button class="profile-btn"style="flex:1;"onclick="selectProfileFromList('${p.id}','${p.name}','${p.color}')">
+          <div class="profile-avatar"style="background:${p.color}">${p.name.charAt(0).toUpperCase()}</div>
           <div>
             <div class="profile-btn-name">${p.name}</div>
           </div>
         </button>
-        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;" title="Delete profile">🗑</button>
+        <button onclick="deleteProfile('${p.id}','${p.name}')"style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;"title="Delete profile"></button>
       </div>`).join('');
   } catch(e) {
     list.innerHTML = '<div style="font-size:13px;color:var(--red-text);padding:8px 0;">Could not load profiles</div>';
@@ -1244,7 +1242,7 @@ async function createProfile() {
   if (!name) { document.getElementById('newProfileName').focus(); return; }
   const selected = document.querySelector('.color-swatch.selected');
   const color = selected ? selected.dataset.color : PROFILE_COLORS[0];
-  const id = 'p_' + Date.now();
+  const id = 'p_'+ Date.now();
   const btn = document.querySelector('.create-btn');
   btn.textContent = 'Creating...'; btn.disabled = true;
   try {
@@ -1265,7 +1263,7 @@ async function createProfile() {
 async function deleteProfile(id, name) {
   if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will permanently delete all their food logs, weights, and settings. This cannot be undone.`)) return;
   try {
-    await api(`profiles?id=${id}`, { method: 'DELETE' });
+    await api(`profiles?id=${id}`, { method: 'DELETE'});
     if (activeProfileId === id) { activeProfileId = null; activeProfileData = null; }
     await renderProfileList();
     if (!activeProfileId) document.getElementById('profileScreen').classList.remove('hidden');
@@ -1275,8 +1273,7 @@ async function deleteProfile(id, name) {
 function initColorPicker() {
   const picker = document.getElementById('colorPicker');
   picker.innerHTML = PROFILE_COLORS.map((c,i) =>
-    `<div class="color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectColor(this)"></div>`
-  ).join('');
+    `<div class="color-swatch${i===0?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectColor(this)"></div>` ).join('');
 }
 
 function selectColor(el) {
@@ -1329,8 +1326,7 @@ const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
-  activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial'
-};
+  activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial'};
 
 // ── Server data loaders ──────────────────────────────────────────
 async function loadAllFromServer() {
@@ -1448,7 +1444,7 @@ async function addFood(food, meal) {
 
 async function removeFood(food) {
   if (food.dbId) {
-    await api(`foods?id=${food.dbId}`, { method: 'DELETE' });
+    await api(`foods?id=${food.dbId}`, { method: 'DELETE'});
   }
   _allFoods[activeDate] = (_allFoods[activeDate]||[]).filter(f => f.id !== food.id);
   if (!_allFoods[activeDate].length) delete _allFoods[activeDate];
@@ -1456,7 +1452,7 @@ async function removeFood(food) {
 }
 
 async function clearDay(date) {
-  await api(`foods?profile_id=${activeProfileId}&date=${date}`, { method: 'DELETE' });
+  await api(`foods?profile_id=${activeProfileId}&date=${date}`, { method: 'DELETE'});
   delete _allFoods[date];
   cacheSet('allFoods', _allFoods);
 }
@@ -1499,8 +1495,7 @@ function calcGoals(s) {
     heightCm = ((parseFloat(s.heightFt)||6) * 12 + (parseFloat(s.heightIn)||0)) * 2.54;
   }
   const age = parseFloat(s.age) || 30;
-  let bmr = s.sex === 'male'
-    ? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
+  let bmr = s.sex === 'male'? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
     : 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
   const tdee = Math.round(bmr * parseFloat(s.activity));
   // Weekly rate → daily deficit/surplus (3,500 kcal per lb)
@@ -1581,16 +1576,12 @@ function populateSettingsForm(s) {
 
 function updateRateFieldVisibility(goal) {
   const rateField = document.getElementById('rateField');
-  if (rateField) rateField.style.display = goal === 'maintain' ? 'none' : '';
+  if (rateField) rateField.style.display = goal === 'maintain'? 'none': '';
 }
 
 function updateSettingsSummary(s, g) {
   const rate = parseFloat(s.rate) || 1;
-  const goalLabel = s.goal === 'cut'
-    ? `Lose ${rate} lb/week`
-    : s.goal === 'gain'
-    ? `Gain ${(rate*0.5).toFixed(2).replace(/\.?0+$/,'')} lb/week`
-    : 'Maintenance';
+  const goalLabel = s.goal === 'cut'? `Lose ${rate} lb/week` : s.goal === 'gain'? `Gain ${(rate*0.5).toFixed(2).replace(/\.?0+$/,'')} lb/week` : 'Maintenance';
   const summary = `${goalLabel} · ${g.cal.toLocaleString()} kcal · TDEE ${g.tdee.toLocaleString()}`;
   document.getElementById('headerMeta').textContent  = `${goalLabel} · ${g.cal.toLocaleString()} kcal`;
   const goalsHeader = document.getElementById('headerMetaGoals');
@@ -1634,13 +1625,13 @@ function setDate(d) {
   activeDate = d;
   document.getElementById('datePicker').value = d;
   const isToday = d === todayStr();
-  document.getElementById('pastDayBadge').style.display = isToday ? 'none' : 'inline';
+  document.getElementById('pastDayBadge').style.display = isToday ? 'none': 'inline';
   const dateObj = new Date(d + 'T12:00:00');
-  const friendly = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const todayFriendly = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const friendly = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric'});
+  const todayFriendly = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric'});
   const friendlyEl = document.getElementById('dateFriendly');
-  if (friendlyEl) friendlyEl.textContent = isToday ? 'Today — ' + friendly : friendly;
-  document.getElementById('weightSectionTitle').textContent = isToday ? "Today's weight" : "Weight for " + friendly;
+  if (friendlyEl) friendlyEl.textContent = isToday ? 'Today — '+ friendly : friendly;
+  document.getElementById('weightSectionTitle').textContent = isToday ? "Today's weight": "Weight for "+ friendly;
   loadActiveWeight();
   renderToday();
 }
@@ -1664,8 +1655,8 @@ function showView(name, direction) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active','slide-in-left','slide-in-right','slide-out-left','slide-out-right'));
     nextEl.classList.add('active');
   } else {
-    const inClass  = direction === 'left'  ? 'slide-in-left'  : 'slide-in-right';
-    const outClass = direction === 'left'  ? 'slide-out-left' : 'slide-out-right';
+    const inClass  = direction === 'left'? 'slide-in-left': 'slide-in-right';
+    const outClass = direction === 'left'? 'slide-out-left': 'slide-out-right';
     currentEl.classList.add(outClass);
     nextEl.style.display = 'block';
     nextEl.classList.add(inClass);
@@ -1690,7 +1681,7 @@ function getTabDirection(targetName) {
   const fromIdx = TAB_ORDER.indexOf(currentTab);
   const toIdx   = TAB_ORDER.indexOf(targetName);
   if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return null;
-  return toIdx > fromIdx ? 'left' : 'right';
+  return toIdx > fromIdx ? 'left': 'right';
 }
 let _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false;
 
@@ -1758,10 +1749,10 @@ async function lookupFood(excludeSource = null) {
   try {
     const res = await fetch('/api/lookup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json'},
       body: JSON.stringify({ query, excludeSource })
     });
-    if (!res.ok) throw new Error('Server error ' + res.status);
+    if (!res.ok) throw new Error('Server error '+ res.status);
     const data = await res.json();
     // Store base macros at 1x serving for scaling
     pendingFood = { id: Date.now(), name: data.name,
@@ -1777,34 +1768,32 @@ async function lookupFood(excludeSource = null) {
       <div class="result-name">${data.name}</div>
       <div class="result-source">
         <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="result-source-badge">📊 ${sourceText}</span>
-          <button class="result-retry" onclick="lookupFood(${JSON.stringify(sourceText)})">Try different source</button>
+          <span class="result-source-badge"> ${sourceText}</span>
+          <button class="result-retry"onclick="lookupFood(${JSON.stringify(sourceText)})">Try different source</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
         <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-        <input id="re_servings" type="number" min="0.25" step="0.25" value="1" class="serving-input"
-          style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
-          oninput="scaleServings(this.value)" />
+        <input id="re_servings"type="number"min="0.25"step="0.25"value="1"class="serving-input"style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"oninput="scaleServings(this.value)"/>
         <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
       </div>
       <div class="result-edit-grid">
-        <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${pendingFood.cal}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input" id="re_pro" type="number" value="${pendingFood.pro}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Carbs (g)</label><input class="result-edit-input" id="re_carb" type="number" value="${pendingFood.carb}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Fat (g)</label><input class="result-edit-input" id="re_fat" type="number" value="${pendingFood.fat}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sat Fat (g)</label><input class="result-edit-input" id="re_satFat" type="number" value="${pendingFood.satFat}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sugar (g)</label><input class="result-edit-input" id="re_sug" type="number" value="${pendingFood.sug}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sodium (mg)</label><input class="result-edit-input" id="re_sod" type="number" value="${pendingFood.sod}" /></div>
-        <div class="result-edit-field"><label class="result-edit-label">Fiber (g)</label><input class="result-edit-input" id="re_fib" type="number" value="${pendingFood.fib}" /></div>
+        <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input"id="re_cal"type="number"value="${pendingFood.cal}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input"id="re_pro"type="number"value="${pendingFood.pro}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Carbs (g)</label><input class="result-edit-input"id="re_carb"type="number"value="${pendingFood.carb}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fat (g)</label><input class="result-edit-input"id="re_fat"type="number"value="${pendingFood.fat}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sat Fat (g)</label><input class="result-edit-input"id="re_satFat"type="number"value="${pendingFood.satFat}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sugar (g)</label><input class="result-edit-input"id="re_sug"type="number"value="${pendingFood.sug}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sodium (mg)</label><input class="result-edit-input"id="re_sod"type="number"value="${pendingFood.sod}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fiber (g)</label><input class="result-edit-input"id="re_fib"type="number"value="${pendingFood.fib}"/></div>
       </div>
       <div class="result-actions">
-        <button class="confirm-btn" onclick="confirmAdd()">+ Add to log</button>
-        <button class="discard-btn" onclick="discardResult()">Discard</button>
+        <button class="confirm-btn"onclick="confirmAdd()">+ Add to log</button>
+        <button class="discard-btn"onclick="discardResult()">Discard</button>
       </div>
     </div>`;
   } catch(e) {
-    resultArea.innerHTML = '<div class="err-msg">Lookup failed: ' + e.message + '</div>';
+    resultArea.innerHTML = '<div class="err-msg">Lookup failed: '+ e.message + '</div>';
   }
   btn.disabled = false;
 }
@@ -1902,7 +1891,7 @@ function discardResult() {
 
 function toggleFoodEdit(foodId) {
   const el = document.getElementById('food-edit-'+foodId);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el) el.style.display = el.style.display === 'none'? 'block': 'none';
 }
 
 async function saveEditedFood(foodId) {
@@ -1931,13 +1920,13 @@ async function delFood(foodId) {
   if (!food) return;
   try {
     await removeFood(food);
-    renderToday(); showToast('Removed: ' + food.name);
+    renderToday(); showToast('Removed: '+ food.name);
   } catch(e) { showToast('Could not remove — try again'); }
 }
 
 async function resetDay() {
-  const label = activeDate === todayStr() ? 'today' : new Date(activeDate+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  if (!confirm('Clear all foods for ' + label + '?')) return;
+  const label = activeDate === todayStr() ? 'today': new Date(activeDate+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if (!confirm('Clear all foods for '+ label + '?')) return;
   try {
     await clearDay(activeDate);
     renderToday(); showToast('Day reset');
@@ -1969,9 +1958,9 @@ function renderWater() {
   const amountEl = document.getElementById('waterAmount');
   const goalEl   = document.getElementById('waterGoalLbl');
   const fillEl   = document.getElementById('waterFill');
-  if (amountEl) amountEl.textContent = oz + ' oz';
+  if (amountEl) amountEl.textContent = oz + 'oz';
   if (goalEl)   goalEl.textContent   = `of ${goal} oz goal`;
-  if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)'; }
+  if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)': 'var(--blue)'; }
 }
 
 // ── Exercise ─────────────────────────────────────────────────────
@@ -1987,29 +1976,29 @@ async function lookupExercise() {
   try {
     const res = await fetch('/api/exercise-lookup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json'},
       body: JSON.stringify({ query })
     });
-    if (!res.ok) throw new Error('Server error ' + res.status);
+    if (!res.ok) throw new Error('Server error '+ res.status);
     const data = await res.json();
     resultArea.innerHTML = `<div class="exercise-result">
       <div class="exercise-result-name">${data.name}</div>
-      <div class="exercise-result-note">📊 ${data.note || 'MET-based estimate'}</div>
+      <div class="exercise-result-note"> ${data.note || 'MET-based estimate'}</div>
       <div class="exercise-result-kcal">
         <span class="exercise-result-kcal-label">Calories burned</span>
-        <input class="exercise-result-kcal-input" id="exerciseKcalResult" type="number" value="${data.calories_burned}" />
+        <input class="exercise-result-kcal-input"id="exerciseKcalResult"type="number"value="${data.calories_burned}"/>
         <span style="font-size:12px;color:var(--text-3);">kcal</span>
       </div>
       <div class="exercise-result-actions">
-        <button class="confirm-btn" onclick="confirmExercise('${data.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
-        <button class="discard-btn" onclick="discardExercise()">Discard</button>
+        <button class="confirm-btn"onclick="confirmExercise('${data.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
+        <button class="discard-btn"onclick="discardExercise()">Discard</button>
       </div>
     </div>`;
   } catch(e) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed — you can still log manually below.</div>';
-    resultArea.innerHTML += `<div class="exercise-add-row" style="margin-top:8px;">
-      <input class="exercise-kcal-input" id="exerciseKcalManual" type="number" min="0" placeholder="kcal burned" />
-      <button class="exercise-add-btn" onclick="addExerciseManual()">+ Add</button>
+    resultArea.innerHTML += `<div class="exercise-add-row"style="margin-top:8px;">
+      <input class="exercise-kcal-input"id="exerciseKcalManual"type="number"min="0"placeholder="kcal burned"/>
+      <button class="exercise-add-btn"onclick="addExerciseManual()">+ Add</button>
     </div>`;
   }
   btn.disabled = false;
@@ -2051,7 +2040,7 @@ async function addExercise() {
 
 async function removeExercise(id) {
   try {
-    await api(`exercise?id=${id}`, { method: 'DELETE' });
+    await api(`exercise?id=${id}`, { method: 'DELETE'});
     _exercise[activeDate] = (_exercise[activeDate]||[]).filter(e => e.id !== id);
     cacheSet('exercise', _exercise);
     renderExercise(); renderNetBanner();
@@ -2061,11 +2050,11 @@ async function removeExercise(id) {
 function renderExercise() {
   const items = _exercise[activeDate] || [];
   const c = document.getElementById('exerciseItems');
-  if (!items.length) { c.innerHTML = '<div class="empty-msg" style="padding:8px 0;">No exercise logged yet</div>'; return; }
+  if (!items.length) { c.innerHTML = '<div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div>'; return; }
   c.innerHTML = items.map(e => `<div class="exercise-row">
     <span class="exercise-name">${e.name}</span>
     <span class="exercise-burned">−${e.calories_burned} kcal</span>
-    <button class="del-btn" onclick="removeExercise(${e.id})">✕</button>
+    <button class="del-btn"onclick="removeExercise(${e.id})"></button>
   </div>`).join('');
 }
 
@@ -2083,13 +2072,13 @@ function renderNetBanner() {
   document.getElementById('netTarget').textContent = target.toLocaleString();
   const el = document.getElementById('netResult');
   el.textContent = net.toLocaleString();
-  el.className = 'net-result-val ' + (net > target ? 'over' : 'under');
+  el.className = 'net-result-val '+ (net > target ? 'over': 'under');
 }
 
 // ── Saved meals ───────────────────────────────────────────────────
 async function saveMeal(mealName) {
   const foods = getActiveFoods().filter(f => f.meal === mealName);
-  if (!foods.length) { showToast('No foods in ' + mealName + ' to save'); return; }
+  if (!foods.length) { showToast('No foods in '+ mealName + 'to save'); return; }
   const name = prompt('Name this saved meal:', mealName.charAt(0).toUpperCase() + mealName.slice(1));
   if (!name) return;
   try {
@@ -2109,14 +2098,14 @@ async function logSavedMeal(id) {
     for (const f of meal.foods) {
       await addFood({ ...f, id: Date.now() + Math.random() }, targetMeal);
     }
-    renderToday(); showToast('Logged: ' + meal.name);
+    renderToday(); showToast('Logged: '+ meal.name);
   } catch(e) { showToast('Could not log meal'); }
 }
 
 async function deleteSavedMeal(id) {
   if (!confirm('Delete this saved meal?')) return;
   try {
-    await api(`saved-meals?id=${id}`, { method: 'DELETE' });
+    await api(`saved-meals?id=${id}`, { method: 'DELETE'});
     _savedMeals = _savedMeals.filter(m => m.id !== id);
     cacheSet('savedMeals', _savedMeals);
     renderSavedMeals(); showToast('Saved meal deleted');
@@ -2135,8 +2124,8 @@ function renderSavedMeals() {
         <div class="saved-meal-name">${m.name}</div>
         <div class="saved-meal-sub">${m.foods.length} items · ${t.cal} kcal · ${t.pro}g P</div>
       </div>
-      <button class="saved-meal-log-btn" onclick="logSavedMeal(${m.id})">+ Log</button>
-      <button class="del-btn" onclick="deleteSavedMeal(${m.id})">✕</button>
+      <button class="saved-meal-log-btn"onclick="logSavedMeal(${m.id})">+ Log</button>
+      <button class="del-btn"onclick="deleteSavedMeal(${m.id})"></button>
     </div>`;
   }).join('');
 }
@@ -2155,7 +2144,7 @@ function toggleRecents() {
   const list = document.getElementById('recentFoodsList');
   const arrow = document.getElementById('recentChevron');
   const open = list.style.display !== 'none';
-  list.style.display = open ? 'none' : 'block';
+  list.style.display = open ? 'none': 'block';
   arrow.classList.toggle('open', !open);
 }
 
@@ -2190,10 +2179,8 @@ function renderRecentFoods() {
   if (countEl) countEl.textContent = `${_recentFoodsCache.length} items`;
   list.innerHTML = _recentFoodsCache.map((f, i) => {
     const servingInfo = f.servingMult && f.servingMult !== 1
-      ? ` · ${f.servingMult}× ${f.servingLabel || 'serving'}`
-      : (f.servingLabel && f.servingLabel !== '1 serving' ? ` · ${f.servingLabel}` : '');
-    return `
-    <div class="recent-item" onclick="logRecentFood(${i})">
+      ? ` · ${f.servingMult}× ${f.servingLabel || 'serving'}` : (f.servingLabel && f.servingLabel !== '1 serving'? ` · ${f.servingLabel}` : '');
+    return ` <div class="recent-item"onclick="logRecentFood(${i})">
       <span class="recent-item-name">${f.name}</span>
       <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${servingInfo}</span>
       <span class="recent-item-add">+</span>
@@ -2208,7 +2195,7 @@ async function logRecentFood(idx) {
   try {
     await addFood({ ...f, id: Date.now() }, meal);
     renderToday();
-    showToast('Added: ' + f.name);
+    showToast('Added: '+ f.name);
   } catch(e) { showToast('Could not add — try again'); }
 }
 
@@ -2241,11 +2228,11 @@ function renderToday() {
     const pct=Math.min((t[k]/goal)*100,100);
     const bar=document.getElementById(barId);
     bar.style.width=pct+'%';
-    bar.style.background = k==='fib' ? def : (barColor(pct)||def);
+    bar.style.background = k==='fib'? def : (barColor(pct)||def);
   });
   // Meal sections
   const MEALS = ['breakfast','lunch','dinner','snacks'];
-  const MEAL_LABELS = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
+  const MEAL_LABELS = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks'};
   const c = document.getElementById('foodItems');
   if (!foods.length) {
     c.innerHTML = '<div class="empty-msg">No foods logged yet — look up a food below to get started</div>';
@@ -2257,26 +2244,26 @@ function renderToday() {
         <div class="meal-header">
           <span class="meal-title">${MEAL_LABELS[meal]}</span>
           <span style="display:flex;align-items:center;gap:8px;">
-            ${mf.length ? `<button class="meal-save-btn" onclick="saveMeal('${meal}')">Save meal</button>` : ''}
-            <span class="meal-kcal">${mf.length ? mt.cal+' kcal' : '—'}</span>
+            ${mf.length ? `<button class="meal-save-btn"onclick="saveMeal('${meal}')">Save meal</button>` : ''}
+            <span class="meal-kcal">${mf.length ? mt.cal+'kcal': '—'}</span>
           </span>
         </div>
-        ${mf.length ? mf.map(f=>`<div class="food-item" id="food-item-${f.id}">
+        ${mf.length ? mf.map(f=>`<div class="food-item"id="food-item-${f.id}">
           <span class="food-name">${f.name}</span>
           <span class="food-macros">
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
-            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
-            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
-            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
+            <span><span class="macro-dot"style="background:var(--green)"></span>${f.pro}g P</span>
+            <span><span class="macro-dot"style="background:var(--amber)"></span>${f.carb}g C</span>
+            <span><span class="macro-dot"style="background:var(--pink)"></span>${f.fat}g F</span>
+            <span><span class="macro-dot"style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
+            <span><span class="macro-dot"style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
+            <span><span class="macro-dot"style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="food-kcal">${f.cal} kcal</span>
-          <button class="edit-btn" onclick="toggleFoodEdit(${f.id})" title="Edit macros">✎</button>
-          <button class="del-btn" onclick="delFood(${f.id})">✕</button>
+          <button class="edit-btn"onclick="toggleFoodEdit(${f.id})"title="Edit macros"></button>
+          <button class="del-btn"onclick="delFood(${f.id})"></button>
         </div>
-        <div id="food-edit-${f.id}" style="display:none;">
-          <div class="food-edit-form" style="display:block;padding:10px 0 12px;">
+        <div id="food-edit-${f.id}"style="display:none;">
+          <div class="food-edit-form"style="display:block;padding:10px 0 12px;">
             <!-- Original values reference -->
             <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-bottom:8px;padding:6px 8px;background:var(--bg);border-radius:6px;">
               Originally logged: ${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${f.servingMult && f.servingMult !== 1 ? ` · ${f.servingMult}× ${f.servingLabel||'serving'}` : ''}
@@ -2284,25 +2271,23 @@ function renderToday() {
             <!-- Serving multiplier -->
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
               <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-              <input id="fe_servings_${f.id}" type="number" min="0.25" step="0.25" value="${f.servingMult || 1}" class="serving-input"
-                style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"
-                oninput="scaleEditServings(${f.id}, this.value)" />
+              <input id="fe_servings_${f.id}"type="number"min="0.25"step="0.25"value="${f.servingMult || 1}"class="serving-input"style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"oninput="scaleEditServings(${f.id}, this.value)"/>
               <span style="font-size:12px;color:var(--text-3);">× ${f.servingLabel || '1 serving'}</span>
             </div>
             <!-- Macro inputs -->
             <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
-              <div class="food-edit-field"><label class="food-edit-label">Calories</label><input class="food-edit-input" id="fe_cal_${f.id}" type="number" value="${f.cal}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Protein (g)</label><input class="food-edit-input" id="fe_pro_${f.id}" type="number" value="${f.pro}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Carbs (g)</label><input class="food-edit-input" id="fe_carb_${f.id}" type="number" value="${f.carb}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Fat (g)</label><input class="food-edit-input" id="fe_fat_${f.id}" type="number" value="${f.fat}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Sat Fat (g)</label><input class="food-edit-input" id="fe_satFat_${f.id}" type="number" value="${f.satFat||0}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input" id="fe_sug_${f.id}" type="number" value="${f.sug||0}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input" id="fe_sod_${f.id}" type="number" value="${f.sod||0}" /></div>
-              <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input" id="fe_fib_${f.id}" type="number" value="${f.fib||0}" /></div>
+              <div class="food-edit-field"><label class="food-edit-label">Calories</label><input class="food-edit-input"id="fe_cal_${f.id}"type="number"value="${f.cal}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Protein (g)</label><input class="food-edit-input"id="fe_pro_${f.id}"type="number"value="${f.pro}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Carbs (g)</label><input class="food-edit-input"id="fe_carb_${f.id}"type="number"value="${f.carb}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Fat (g)</label><input class="food-edit-input"id="fe_fat_${f.id}"type="number"value="${f.fat}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sat Fat (g)</label><input class="food-edit-input"id="fe_satFat_${f.id}"type="number"value="${f.satFat||0}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input"id="fe_sug_${f.id}"type="number"value="${f.sug||0}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input"id="fe_sod_${f.id}"type="number"value="${f.sod||0}"/></div>
+              <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input"id="fe_fib_${f.id}"type="number"value="${f.fib||0}"/></div>
             </div>
             <div class="food-edit-actions">
-              <button class="food-edit-save" onclick="saveEditedFood(${f.id})">Save changes</button>
-              <button class="food-edit-cancel" onclick="toggleFoodEdit(${f.id})">Cancel</button>
+              <button class="food-edit-save"onclick="saveEditedFood(${f.id})">Save changes</button>
+              <button class="food-edit-cancel"onclick="toggleFoodEdit(${f.id})">Cancel</button>
             </div>
           </div>
         </div>`).join('') : '<div class="meal-empty">Nothing logged yet</div>'}
@@ -2319,13 +2304,13 @@ function renderToday() {
 
 // Charts
 const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const tickColor = darkMode ? '#5a5956' : '#a8a8a3';
-const gridColor = darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-const tooltipBg = darkMode ? '#2a2a28' : '#1a1a18';
+const tickColor = darkMode ? '#5a5956': '#a8a8a3';
+const gridColor = darkMode ? 'rgba(255,255,255,0.05)': 'rgba(0,0,0,0.05)';
+const tooltipBg = darkMode ? '#2a2a28': '#1a1a18';
 
 const chartDefaults = {
   responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, titleFont: { family: 'DM Sans' }, bodyFont: { family: 'DM Mono' }, padding: 10, cornerRadius: 8 } },
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, titleFont: { family: 'DM Sans'}, bodyFont: { family: 'DM Mono'}, padding: 10, cornerRadius: 8 } },
   scales: {
     x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 }, color: tickColor, maxTicksLimit: 8 } },
     y: { grid: { color: gridColor }, ticks: { font: { family: 'DM Mono', size: 11 }, color: tickColor }, border: { display: false } }
@@ -2362,12 +2347,12 @@ function buildCharts(days, allFoods, weights) {
     chartInstances.weight = new Chart(document.getElementById('weightChart'), {
       type: 'line',
       data: { labels: wDays.map(shortDate), datasets: [{ data: wDays.map(d=>weights[d]), borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#378ADD', fill: true, tension: 0.3 }] },
-      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y+' lbs' } } } }
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y+'lbs'} } } }
     });
   }
 
   // Calories — red when over target
-  chartInstances.calories = simpleBar('calChart', t=>t.cal, GOALS.cal, v=>v>GOALS.cal?'rgba(226,75,74,0.7)':'rgba(55,138,221,0.7)', ' kcal', `Target: ${GOALS.cal.toLocaleString()} kcal`);
+  chartInstances.calories = simpleBar('calChart', t=>t.cal, GOALS.cal, v=>v>GOALS.cal?'rgba(226,75,74,0.7)':'rgba(55,138,221,0.7)', 'kcal', `Target: ${GOALS.cal.toLocaleString()} kcal`);
 
   // Protein — brighter when at goal
   chartInstances.protein = simpleBar('proChart', t=>t.pro, GOALS.pro, v=>v>=GOALS.pro?'rgba(29,158,117,0.85)':'rgba(29,158,117,0.4)', 'g', `Goal: ${GOALS.pro}g`);
@@ -2430,7 +2415,7 @@ function populateHabitChartControls() {
   if (!sel || !yearSel) return;
 
   // Habit selector
-  sel.innerHTML = '<option value="all">All habits</option>' +
+  sel.innerHTML = '<option value="all">All habits</option>'+
     _habits.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
 
   // Year selector from habit log dates
@@ -2452,7 +2437,7 @@ function renderHabitChart() {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   // Habits to show
-  const habitsToShow = selectedId === 'all' ? _habits : _habits.filter(h => String(h.id) === selectedId);
+  const habitsToShow = selectedId === 'all'? _habits : _habits.filter(h => String(h.id) === selectedId);
 
   // Build datasets — one per habit
   const datasets = habitsToShow.map(h => {
@@ -2460,7 +2445,7 @@ function renderHabitChart() {
       const monthStr = `${selectedYear}-${String(mi+1).padStart(2,'0')}`;
       const logs = _habitLogs[h.id] || {};
       return Object.entries(logs).filter(([d]) => d.startsWith(monthStr)).filter(([,v]) => {
-        return h.target_type === 'quantity' ? v >= (h.target_value||1) : v >= 1;
+        return h.target_type === 'quantity'? v >= (h.target_value||1) : v >= 1;
       }).length;
     });
     const [r,g,b] = hexToRgb(h.color);
@@ -2496,8 +2481,7 @@ function renderHabitChart() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's' : ''} completed`
-          }
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's': ''} completed` }
         }
       },
       scales: {
@@ -2521,8 +2505,7 @@ function renderHabitChart() {
       `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);">
         <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>
         ${h.name}
-      </div>`
-    ).join('');
+      </div>` ).join('');
   }
 }
 
@@ -2537,10 +2520,10 @@ function renderHistory() {
   if (!days.length) {
     ['statDays','statAvgCal','statAvgPro','statWeight'].forEach(id => document.getElementById(id).textContent = '—');
     document.getElementById('historyList').innerHTML = `<div style="text-align:center;padding:3rem 1rem;">
-      <div style="font-size:32px;margin-bottom:12px;">📋</div>
+      <div style="font-size:32px;margin-bottom:12px;"></div>
       <div style="font-size:15px;font-weight:500;margin-bottom:6px;">No history yet</div>
       <div style="font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.5;">Start logging meals on the Log tab and your history will appear here.</div>
-      <button onclick="showView('today', getTabDirection('today'))" style="height:36px;padding:0 20px;font-size:13px;font-weight:500;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Go to Log →</button>
+      <button onclick="showView('today', getTabDirection('today'))"style="height:36px;padding:0 20px;font-size:13px;font-weight:500;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Go to Log →</button>
     </div>`;
     return;
   }
@@ -2569,12 +2552,12 @@ function renderHistory() {
   if (streakEl) {
     streakEl.textContent = streak;
     streakEl.closest('.stat-card').querySelector('.stat-sub').textContent =
-      streak >= 7 ? '🔥 on fire!' : streak >= 3 ? '⚡ keep it up' : 'days in a row';
+      streak >= 7 ? 'on fire!': streak >= 3 ? 'keep it up': 'days in a row';
   }
 
   const weightDays = Object.keys(weights).sort();
   const latestWeight = weightDays.length ? weights[weightDays[weightDays.length-1]] : null;
-  document.getElementById('statWeight').textContent = latestWeight ? latestWeight+'' : '—';
+  document.getElementById('statWeight').textContent = latestWeight ? latestWeight+'': '—';
 
   buildCharts(days, all, weights);
   populateHabitChartControls();
@@ -2586,7 +2569,7 @@ function renderHistory() {
   if (habitStreakEl) {
     const hs = calcHabitStreak();
     habitStreakEl.textContent = hs > 0 ? hs : '—';
-    if (habitStreakSub) habitStreakSub.textContent = hs >= 7 ? '🔥 on fire!' : hs >= 3 ? '⚡ keep it up' : 'days all done';
+    if (habitStreakSub) habitStreakSub.textContent = hs >= 7 ? 'on fire!': hs >= 3 ? 'keep it up': 'days all done';
   }
 
   document.getElementById('historyList').innerHTML = daysRev.map(d => {
@@ -2599,48 +2582,48 @@ function renderHistory() {
     const satFatPct=Math.min(((t.satFat||0)/GOALS.satFat)*100,100), sugPct=Math.min((t.sug/GOALS.sug)*100,100);
     const sodPct=Math.min(((t.sod||0)/GOALS.sod)*100,100), fibPct=Math.min(((t.fib||0)/GOALS.fib)*100,100);
     return `<div class="day-card">
-      <div class="day-card-header" onclick="toggleDay('${d}')">
+      <div class="day-card-header"onclick="toggleDay('${d}')">
         <div>
           <div class="day-card-date">${isToday?'Today · ':''}${dateStr}</div>
           ${w?`<div style="font-size:12px;color:var(--text-3);margin-top:2px;font-family:'DM Mono',monospace;">${w} lbs</div>`:''}
         </div>
         <div class="day-card-right">
           <div class="day-card-meta">
-            <span><span class="macro-dot" style="background:var(--green)"></span>${t.pro}g P</span>
-            <span><span class="macro-dot" style="background:var(--amber)"></span>${t.carb}g C</span>
-            <span><span class="macro-dot" style="background:var(--pink)"></span>${t.fat}g F</span>
-            <span><span class="macro-dot" style="background:var(--blue)"></span>${t.sod||0}mg Na</span>
+            <span><span class="macro-dot"style="background:var(--green)"></span>${t.pro}g P</span>
+            <span><span class="macro-dot"style="background:var(--amber)"></span>${t.carb}g C</span>
+            <span><span class="macro-dot"style="background:var(--pink)"></span>${t.fat}g F</span>
+            <span><span class="macro-dot"style="background:var(--blue)"></span>${t.sod||0}mg Na</span>
           </div>
           <div class="day-card-kcal">${t.cal} kcal</div>
-          <div class="day-card-chevron" id="chev-${d}">▾</div>
+          <div class="day-card-chevron"id="chev-${d}">▾</div>
         </div>
       </div>
-      <div class="day-card-body" id="body-${d}">
+      <div class="day-card-body"id="body-${d}">
         <div class="day-bars">
-          <div class="day-bar-wrap"><div class="day-bar-label">Cal</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${calPct}%;background:${calPct>=100?'var(--red)':calPct>=85?'var(--amber)':'var(--blue)'}"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Pro</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${proPct}%;background:var(--green)"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Carb</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${carbPct}%;background:var(--amber)"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Fat</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${fatPct}%;background:var(--pink)"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Sat F</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${satFatPct}%;background:${satFatPct>=100?'var(--red)':'var(--coral)'}"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Sugar</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${sugPct}%;background:var(--red)"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Na</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${sodPct}%;background:${sodPct>=100?'var(--red)':'var(--blue)'}"></div></div></div>
-          <div class="day-bar-wrap"><div class="day-bar-label">Fiber</div><div class="day-bar-track"><div class="day-bar-fill" style="width:${fibPct}%;background:var(--green)"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Cal</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${calPct}%;background:${calPct>=100?'var(--red)':calPct>=85?'var(--amber)':'var(--blue)'}"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Pro</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${proPct}%;background:var(--green)"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Carb</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${carbPct}%;background:var(--amber)"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Fat</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${fatPct}%;background:var(--pink)"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Sat F</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${satFatPct}%;background:${satFatPct>=100?'var(--red)':'var(--coral)'}"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Sugar</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${sugPct}%;background:var(--red)"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Na</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${sodPct}%;background:${sodPct>=100?'var(--red)':'var(--blue)'}"></div></div></div>
+          <div class="day-bar-wrap"><div class="day-bar-label">Fiber</div><div class="day-bar-track"><div class="day-bar-fill"style="width:${fibPct}%;background:var(--green)"></div></div></div>
         </div>
         ${foods.map(f=>`<div class="day-food-row">
           <span class="day-food-name">${f.name}</span>
           <span class="day-food-macros">
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
-            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
-            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
-            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
+            <span><span class="macro-dot"style="background:var(--green)"></span>${f.pro}g P</span>
+            <span><span class="macro-dot"style="background:var(--amber)"></span>${f.carb}g C</span>
+            <span><span class="macro-dot"style="background:var(--pink)"></span>${f.fat}g F</span>
+            <span><span class="macro-dot"style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
+            <span><span class="macro-dot"style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
+            <span><span class="macro-dot"style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="day-food-kcal">${f.cal} kcal</span>
         </div>`).join('')}
         <div class="day-actions">
-          <button class="ghost-btn" style="font-size:11px;" onclick="exportDayById('${d}')">Export day</button>
-          <button class="ghost-btn danger" style="font-size:11px;" onclick="deleteDayById('${d}')">Delete day</button>
+          <button class="ghost-btn"style="font-size:11px;"onclick="exportDayById('${d}')">Export day</button>
+          <button class="ghost-btn danger"style="font-size:11px;"onclick="deleteDayById('${d}')">Delete day</button>
         </div>
       </div>
     </div>`;
@@ -2690,7 +2673,7 @@ async function deleteDayById(d) {
     await clearDay(d);
     delete _weights[d];
     cacheSet('weights', _weights);
-    try { await api(`weights?profile_id=${activeProfileId}&date=${d}`, { method: 'DELETE' }); } catch(e) {}
+    try { await api(`weights?profile_id=${activeProfileId}&date=${d}`, { method: 'DELETE'}); } catch(e) {}
     if (d === activeDate) renderToday();
     renderHistory(); showToast('Deleted '+dateStr);
   } catch(e) { showToast('Could not delete — try again'); }
@@ -2710,7 +2693,7 @@ function showToast(msg) {
 
 // Enter to lookup (Shift+Enter for newline)
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
+  if (e.key === 'Enter'&& !e.shiftKey) { e.preventDefault(); lookupFood(); }
 });
 
 // ── Welcome modal & home screen tip ─────────────────────────────
@@ -2736,13 +2719,13 @@ function showApp() {
 }
 
 function dismissGoalsOverlay() {
-  localStorage.setItem('macroGoalsOverlaySeen_' + activeProfileId, '1');
+  localStorage.setItem('macroGoalsOverlaySeen_'+ activeProfileId, '1');
   document.getElementById('goalsOverlay').classList.add('hidden');
 }
 
 function maybeShowGoalsOverlay() {
   if (!activeProfileId) return;
-  if (localStorage.getItem('macroGoalsOverlaySeen_' + activeProfileId)) return;
+  if (localStorage.getItem('macroGoalsOverlaySeen_'+ activeProfileId)) return;
   document.getElementById('goalsOverlay').classList.remove('hidden');
 }
 
@@ -2776,70 +2759,70 @@ const HABIT_ICON_KEYS = [
 
 const HABIT_ICONS_SVG = {
   // Sports & Fitness
-  run:    '<circle cx="13" cy="4.5" r="1.5"/><path d="M10 20l2-5 3 3 2-8"/><path d="M5 13l4-2 3 2 3-4"/>',
-  walk:   '<circle cx="12" cy="4" r="1.5"/><path d="M9 20l1.5-5 2.5 2 2-7"/><path d="M7 14l2-1.5M15 9l2 2-3 2"/>',
+  run:    '<circle cx="13"cy="4.5"r="1.5"/><path d="M10 20l2-5 3 3 2-8"/><path d="M5 13l4-2 3 2 3-4"/>',
+  walk:   '<circle cx="12"cy="4"r="1.5"/><path d="M9 20l1.5-5 2.5 2 2-7"/><path d="M7 14l2-1.5M15 9l2 2-3 2"/>',
   gym:    '<path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4M6 12h12"/>',
-  bike:   '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5L9 11l3-3 4 3.5"/>',
-  swim:   '<path d="M2 12h20M2 16c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><circle cx="12" cy="7" r="2"/><path d="M12 9v3"/>',
+  bike:   '<circle cx="5.5"cy="17.5"r="3.5"/><circle cx="18.5"cy="17.5"r="3.5"/><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5L9 11l3-3 4 3.5"/>',
+  swim:   '<path d="M2 12h20M2 16c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2 2.5-2 5-2"/><circle cx="12"cy="7"r="2"/><path d="M12 9v3"/>',
   hike:   '<path d="M3 20l4-12 3 4 3-7 4 15"/><path d="M17 8l2-4M5 20h14"/>',
-  yoga:   '<circle cx="12" cy="3" r="1.5"/><path d="M12 5v5l-4 3M12 10l4 3M8 16l-2 5M16 16l2 5M10 15h4"/>',
+  yoga:   '<circle cx="12"cy="3"r="1.5"/><path d="M12 5v5l-4 3M12 10l4 3M8 16l-2 5M16 16l2 5M10 15h4"/>',
   steps:  '<path d="M3 20h4l2-6h6l2 6h4"/><path d="M9 14V8l3-4 3 4v6"/>',
-  sports: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/>',
+  sports: '<circle cx="12"cy="12"r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/>',
   heart:  '<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
-  soccer: '<circle cx="12" cy="12" r="10"/><path d="M12 2l3.09 9.26H5.91L9 11h6l3 1.26M5.91 11.26L3 19.74M18.09 11.26L21 19.74M9 22h6"/>',
-  tennis: '<circle cx="12" cy="12" r="10"/><path d="M6.3 6.3a9.9 9.9 0 0011.4 0M6.3 17.7a9.9 9.9 0 0111.4 0M2 12h20"/>',
-  basketball: '<circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.93 4.93a16 16 0 0114.14 14.14M19.07 4.93A16 16 0 004.93 19.07"/>',
-  ski:    '<path d="M20 16l-4-8-4 4-4-4-4 8"/><path d="M2 20h20"/><circle cx="8" cy="6" r="1.5"/>',
-  golf:   '<circle cx="12" cy="18" r="2"/><path d="M12 16V4l7 3-7 3"/>',
-  climb:  '<path d="M12 22V12M12 12l-3-4M12 12l3-4M7 22l5-10 5 10M4 18l3-6M20 18l-3-6"/><circle cx="12" cy="4" r="2"/>',
+  soccer: '<circle cx="12"cy="12"r="10"/><path d="M12 2l3.09 9.26H5.91L9 11h6l3 1.26M5.91 11.26L3 19.74M18.09 11.26L21 19.74M9 22h6"/>',
+  tennis: '<circle cx="12"cy="12"r="10"/><path d="M6.3 6.3a9.9 9.9 0 0011.4 0M6.3 17.7a9.9 9.9 0 0111.4 0M2 12h20"/>',
+  basketball: '<circle cx="12"cy="12"r="10"/><path d="M12 2v20M2 12h20M4.93 4.93a16 16 0 0114.14 14.14M19.07 4.93A16 16 0 004.93 19.07"/>',
+  ski:    '<path d="M20 16l-4-8-4 4-4-4-4 8"/><path d="M2 20h20"/><circle cx="8"cy="6"r="1.5"/>',
+  golf:   '<circle cx="12"cy="18"r="2"/><path d="M12 16V4l7 3-7 3"/>',
+  climb:  '<path d="M12 22V12M12 12l-3-4M12 12l3-4M7 22l5-10 5 10M4 18l3-6M20 18l-3-6"/><circle cx="12"cy="4"r="2"/>',
   // Health & Body
   sleep:  '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
   pill:   '<path d="M10.5 20H4a2 2 0 01-2-2V6a2 2 0 012-2h6.5M13.5 4H20a2 2 0 012 2v12a2 2 0 01-2 2h-6.5M12 4v16"/>',
   brain:  '<path d="M9.5 2A2.5 2.5 0 007 4.5v0A2.5 2.5 0 004.5 7v0A2.5 2.5 0 002 9.5v5A2.5 2.5 0 004.5 17v0A2.5 2.5 0 007 19.5v0A2.5 2.5 0 009.5 22h5a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v0a2.5 2.5 0 002.5-2.5v-5A2.5 2.5 0 0019.5 7v0A2.5 2.5 0 0017 4.5v0A2.5 2.5 0 0014.5 2h-5z"/>',
-  water:  '<polyline points="12 2 8 8 4 14 4 18 8 20 16 20 20 18 20 14 16 8 12 2"/><line x1="8" y1="14" x2="16" y2="14"/>',
-  weight: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>',
+  water:  '<polyline points="12 2 8 8 4 14 4 18 8 20 16 20 20 18 20 14 16 8 12 2"/><line x1="8"y1="14"x2="16"y2="14"/>',
+  weight: '<circle cx="12"cy="12"r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>',
   pulse:  '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
   lungs:  '<path d="M6 12H4a2 2 0 00-2 2v4a2 2 0 002 2h2c0 2 .5 3 2 3s2-1.5 2-3V7c0-2-1-3-2-3s-2 1-2 3v5zM18 12h2a2 2 0 012 2v4a2 2 0 01-2 2h-2c0 2-.5 3-2 3s-2-1.5-2-3V7c0-2 1-3 2-3s2 1 2 3v5z"/>',
   tooth:  '<path d="M12 2c-4 0-7 2-7 6 0 3 1 5 2 8s1.5 4 2 4c.5 0 1-.5 1.5-2S12 15 12 15s.5 3 1.5 5S15 22 15.5 22c.5 0 1-1 2-4s2-5 2-8c0-4-3-6-7.5-8z"/>',
-  eye:    '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eye:    '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12"cy="12"r="3"/>',
   hand:   '<path d="M18 11V6a2 2 0 00-2-2v0a2 2 0 00-2 2v0M14 10V4a2 2 0 00-2-2v0a2 2 0 00-2 2v2M10 10.5V6a2 2 0 00-2-2v0a2 2 0 00-2 2v8l4 4h4a4 4 0 004-4v-2a2 2 0 00-2-2h-4z"/>',
   // Food & Nutrition
-  food:   '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  food:   '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6"y1="1"x2="6"y2="4"/><line x1="10"y1="1"x2="10"y2="4"/><line x1="14"y1="1"x2="14"y2="4"/>',
   veg:    '<path d="M2 22l10-10"/><path d="M16 4s-8 2-10 10c2-2 6-4 10-4s8 2 8 2-2 4-8 4"/>',
   fruit:  '<path d="M12 22a8 8 0 100-16 8 8 0 000 16z"/><path d="M12 6C12 4 13 2 15 2"/>',
-  coffee: '<path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/>',
+  coffee: '<path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6"y1="2"x2="6"y2="4"/><line x1="10"y1="2"x2="10"y2="4"/>',
   bottle: '<path d="M8 2h8M9 2v3l-2 2v13a2 2 0 002 2h6a2 2 0 002-2V7l-2-2V2M9 11h6M9 15h6"/>',
   salad:  '<path d="M2 20a2 2 0 002 2h16a2 2 0 002-2v-2H2v2z"/><path d="M4 18c0-4 2-8 8-8s8 4 8 8"/><path d="M12 10V6M8 10l-2-4M16 10l2-4"/>',
   cook:   '<path d="M3 11l4-8 4 4 4-4 4 8H3z"/><path d="M3 11v6a2 2 0 002 2h14a2 2 0 002-2v-6"/>',
-  fast:   '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  fast:   '<circle cx="12"cy="12"r="10"/><line x1="12"y1="8"x2="12"y2="12"/><line x1="12"y1="16"x2="12.01"y2="16"/>',
   // Mind & Study
   book:   '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
   write:  '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
-  music:  '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  music:  '<path d="M9 18V5l12-2v13"/><circle cx="6"cy="18"r="3"/><circle cx="18"cy="16"r="3"/>',
   study:  '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>',
-  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  target: '<circle cx="12"cy="12"r="10"/><circle cx="12"cy="12"r="6"/><circle cx="12"cy="12"r="2"/>',
   star:   '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-  bulb:   '<line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14.77A6 6 0 106.91 14.77L5 18h14l-1.91-3.23z"/>',
-  medal:  '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>',
+  bulb:   '<line x1="9"y1="18"x2="15"y2="18"/><line x1="10"y1="22"x2="14"y2="22"/><path d="M15.09 14.77A6 6 0 106.91 14.77L5 18h14l-1.91-3.23z"/>',
+  medal:  '<circle cx="12"cy="8"r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>',
   // Life & Hobbies
-  sun:    '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
-  camera: '<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>',
-  art:    '<circle cx="13.5" cy="6.5" r="1.5"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.69 0 3-.5 3-2 0-.51-.19-.98-.49-1.37a.744.744 0 01.58-1.19H17c2.76 0 5-2.24 5-5 0-5.52-4.48-10-10-10z"/>',
+  sun:    '<circle cx="12"cy="12"r="5"/><line x1="12"y1="1"x2="12"y2="3"/><line x1="12"y1="21"x2="12"y2="23"/><line x1="4.22"y1="4.22"x2="5.64"y2="5.64"/><line x1="18.36"y1="18.36"x2="19.78"y2="19.78"/><line x1="1"y1="12"x2="3"y2="12"/><line x1="21"y1="12"x2="23"y2="12"/><line x1="4.22"y1="19.78"x2="5.64"y2="18.36"/><line x1="18.36"y1="5.64"x2="19.78"y2="4.22"/>',
+  camera: '<path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12"cy="13"r="4"/>',
+  art:    '<circle cx="13.5"cy="6.5"r="1.5"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.69 0 3-.5 3-2 0-.51-.19-.98-.49-1.37a.744.744 0 01.58-1.19H17c2.76 0 5-2.24 5-5 0-5.52-4.48-10-10-10z"/>',
   plant:  '<path d="M12 22V12"/><path d="M12 12C12 8 9 4 4 4c0 5 4 8 8 8"/><path d="M12 12c0-4 3-8 8-8 0 5-4 8-8 8"/>',
   home:   '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   dog:    '<path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .352-3.5 2-3.5 4 0 3 2 4.5 4.5 7 1.24 1.24 2.5 2.5 3.5 4 2.5-3 7-5 7-9 0-2-1.5-4-4-4-1 0-2 .5-3 1l-1 2"/><path d="M8 14v.01"/>',
-  money:  '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
-  phone:  '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  money:  '<line x1="12"y1="1"x2="12"y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+  phone:  '<rect x="5"y="2"width="14"height="20"rx="2"ry="2"/><line x1="12"y1="18"x2="12.01"y2="18"/>',
   travel: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>',
   fire:   '<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/>',
   check:  '<polyline points="20 6 9 17 4 12"/>',
-  clock:  '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  clock:  '<circle cx="12"cy="12"r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
 
 
 function habitIconSvg(key, color, size=20) {
   const paths = HABIT_ICONS_SVG[key] || HABIT_ICONS_SVG.check;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  return `<svg width="${size}"height="${size}"viewBox="0 0 24 24"fill="none"stroke="${color}"stroke-width="1.8"stroke-linecap="round"stroke-linejoin="round">${paths}</svg>`;
 }
 
 function hexToRgb(hex) {
@@ -2855,7 +2838,7 @@ function habitStreak(h) {
     const y = check.getFullYear(), m = String(check.getMonth()+1).padStart(2,'0'), day = String(check.getDate()).padStart(2,'0');
     const d = `${y}-${m}-${day}`;
     const val = (_habitLogs[h.id]||{})[d] || 0;
-    const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    const done = h.target_type === 'quantity'? val >= (h.target_value||1) : val >= 1;
     if (done) { streak++; check.setDate(check.getDate()-1); } else break;
   }
   return streak;
@@ -2869,10 +2852,9 @@ function renderHabits() {
   const cats = [...new Set(_habits.map(h => h.category || 'general'))];
   const catsEl = document.getElementById('habitCats');
   if (catsEl && cats.length > 1) {
-    const catIcons = { fitness:'🏃', study:'📖', nutrition:'🥗', general:'•', health:'💊', mindfulness:'🧘' };
+    const catIcons = { fitness:'', study:'', nutrition:'', general:'•', health:'', mindfulness:''};
     catsEl.innerHTML = ['all', ...cats].map(c =>
-      `<button class="habit-cat-btn${c==='all'?' active':''}" data-cat="${c}" onclick="filterHabits(this)">${c !== 'all' ? (catIcons[c]||'•') + ' ' : ''}${c.charAt(0).toUpperCase()+c.slice(1)}</button>`
-    ).join('');
+      `<button class="habit-cat-btn${c==='all'?'active':''}"data-cat="${c}"onclick="filterHabits(this)">${c !== 'all'? (catIcons[c]||'•') + '': ''}${c.charAt(0).toUpperCase()+c.slice(1)}</button>` ).join('');
   } else if (catsEl) { catsEl.innerHTML = ''; }
 
   // Day headers with tick dots
@@ -2880,19 +2862,19 @@ function renderHabits() {
   if (headers) {
     headers.innerHTML = days.map(d => {
       const dt = new Date(d + 'T12:00:00');
-      const dn = dt.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2);
+      const dn = dt.toLocaleDateString('en-US', { weekday: 'short'}).slice(0,2);
       const dd = dt.getDate();
       const isToday = d === today;
-      return `<div class="habit-day-header${isToday?' today':''}"><span>${dn}</span><span>${dd}</span><div class="habit-day-tick"></div></div>`;
+      return `<div class="habit-day-header${isToday?'today':''}"><span>${dn}</span><span>${dd}</span><div class="habit-day-tick"></div></div>`;
     }).join('');
   }
 
   const grid = document.getElementById('habitsGrid');
   const activeCat = document.querySelector('.habit-cat-btn.active')?.dataset.cat || 'all';
-  const visibleHabits = activeCat === 'all' ? _habits : _habits.filter(h => (h.category||'general') === activeCat);
+  const visibleHabits = activeCat === 'all'? _habits : _habits.filter(h => (h.category||'general') === activeCat);
 
   if (!visibleHabits.length) {
-    grid.innerHTML = '<div class="empty-msg" style="padding:1.25rem;">No habits yet — tap "+ New habit" to get started!</div>';
+    grid.innerHTML = '<div class="empty-msg"style="padding:1.25rem;">No habits yet — tap "+ New habit"to get started!</div>';
     updateHabitsSub(); return;
   }
 
@@ -2913,29 +2895,25 @@ function renderHabits() {
 
       if (isQty) {
         // Arc style for all quantity squares — consistent across days
-        const radius = 13, circ = 2 * Math.PI * radius;
+        const radius = 10, circ = 2 * Math.PI * radius;
         const dash = pct * circ, gap = circ - dash;
         if (done) {
           // Completed — plain solid fill, same as boolean habits
-          return `<div class="habit-square" style="background:${h.color};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"></div>`;
+          return `<div class="habit-square"style="background:${h.color};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"></div>`;
         }
         const textColor = `rgba(${r},${g},${b},1)`;
-        const valLabel = val > 0 ? `<text x="20" y="24" text-anchor="middle" font-size="11" font-weight="700" font-family="DM Mono,monospace" fill="${textColor}">${val}</text>` : '';
-        return `<div class="habit-square" style="background:${sqFade};" onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})" title="${val}/${target}${h.target_unit?' '+h.target_unit:''}"><svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20" cy="20" r="${radius}" fill="none" stroke="rgba(${r},${g},${b},0.18)" stroke-width="2.5"/><circle cx="20" cy="20" r="${radius}" fill="none" stroke="${h.color}" stroke-width="2.5" stroke-dasharray="${dash} ${gap}" stroke-linecap="round" transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
+        const valLabel = val > 0 ? `<text x="20"y="24"text-anchor="middle"font-size="11"font-weight="700"font-family="DM Mono,monospace"fill="${textColor}">${val}</text>` : '';
+        return `<div class="habit-square"style="background:${sqFade};"onclick="event.stopPropagation();incrementHabitQty(${h.id},'${d}',${target})"title="${val}/${target}${h.target_unit?''+h.target_unit:''}"><svg viewBox="0 0 40 40"style="position:absolute;inset:0;width:100%;height:100%;"><circle cx="20"cy="20"r="${radius}"fill="none"stroke="rgba(${r},${g},${b},0.18)"stroke-width="2.5"/><circle cx="20"cy="20"r="${radius}"fill="none"stroke="${h.color}"stroke-width="2.5"stroke-dasharray="${dash} ${gap}"stroke-linecap="round"transform="rotate(-90 20 20)"/>${valLabel}</svg></div>`;
       } else {
-        return `<div class="habit-square" style="background:${done?h.color:sqFade};" onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
+        return `<div class="habit-square"style="background:${done?h.color:sqFade};"onclick="event.stopPropagation();toggleHabit(${h.id},'${d}')"></div>`;
       }
     }).join('');
 
     const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
 
-    return `<div class="habit-card" data-habit-id="${h.id}"
-      onclick="openHabitModal(${h.id})"
-      ontouchstart="habitLongPressStart(event,${h.id})"
-      ontouchend="habitLongPressCancel()"
-      ontouchmove="habitLongPressCancel()">
-      <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
-      <div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
+    return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})" ontouchstart="habitLongPressStart(event,${h.id})">
+      <div class="habit-icon-wrap"style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
+      <div class="habit-name-section"><span class="habit-name-pill"style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
       <div class="habit-squares">${squares}</div>
     </div>`;
   }).join('');
@@ -2955,18 +2933,25 @@ function updateHabitsSub() {
   if (!sub) return;
   if (!_habits.length) { sub.textContent = 'Track your daily habits'; return; }
   sub.textContent = streak > 1
-    ? `${_habits.length} habit${_habits.length===1?'':'s'} · ${streak} day streak 🔥`
-    : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
+    ? `${_habits.length} habit${_habits.length===1?'':'s'} · ${streak} day streak ` : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
 }
 
 // ── Habit drag reorder (long-press whole card) ────────────────────
-let _dragHabitId = null, _dragEl = null, _longPressTimer = null;
+let _dragHabitId = null, _dragEl = null, _longPressTimer = null, _lpStartY = 0;
 
 function habitLongPressStart(e, habitId) {
+  // Don't trigger if tapping a square
+  if (e.target.closest('.habit-square')) return;
+  _lpStartY = e.touches[0].clientY;
   _longPressTimer = setTimeout(() => {
     _longPressTimer = null;
     startHabitDrag(e, habitId);
-  }, 400);
+  }, 450);
+  // Cancel long press if user scrolls more than 8px vertically
+  const cancelIfScroll = ev => {
+    if (Math.abs(ev.touches[0].clientY - _lpStartY) > 8) habitLongPressCancel();
+  };
+  document.addEventListener('touchmove', cancelIfScroll, { passive: true, once: true });
 }
 
 function habitLongPressCancel() {
@@ -2974,7 +2959,6 @@ function habitLongPressCancel() {
 }
 
 function startHabitDrag(e, habitId) {
-  e.preventDefault();
   _dragHabitId = habitId;
   _dragEl = document.querySelector(`.habit-card[data-habit-id="${habitId}"]`);
   if (!_dragEl) return;
@@ -2984,8 +2968,8 @@ function startHabitDrag(e, habitId) {
   const onMove = ev => {
     ev.preventDefault();
     const y = ev.touches[0].clientY;
+    document.querySelectorAll('.habit-card:not(.drag-lifted)').forEach(c => c.classList.remove('drag-over'));
     const cards = [...document.querySelectorAll('.habit-card:not(.drag-lifted)')];
-    cards.forEach(c => c.classList.remove('drag-over'));
     const target = cards.find(c => {
       const r = c.getBoundingClientRect();
       return y >= r.top && y <= r.bottom;
@@ -2993,15 +2977,13 @@ function startHabitDrag(e, habitId) {
     if (target) target.classList.add('drag-over');
   };
 
-  const onEnd = async ev => {
+  const onEnd = async () => {
     document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onEnd);
     if (!_dragEl) return;
     _dragEl.classList.remove('drag-lifted');
-    document.querySelectorAll('.habit-card').forEach(c => c.classList.remove('drag-over', 'dragging'));
     const overEl = document.querySelector('.habit-card.drag-over');
-    if (overEl) {
-      overEl.classList.remove('drag-over');
+    document.querySelectorAll('.habit-card').forEach(c => c.classList.remove('drag-over', 'drag-lifted'));
+    if (overEl && overEl !== _dragEl) {
       const targetId = parseInt(overEl.dataset.habitId);
       await reorderHabit(_dragHabitId, targetId);
     }
@@ -3010,6 +2992,7 @@ function startHabitDrag(e, habitId) {
 
   document.addEventListener('touchmove', onMove, { passive: false });
   document.addEventListener('touchend', onEnd, { once: true });
+  document.addEventListener('touchcancel', onEnd, { once: true });
 }
 
 async function reorderHabit(fromId, toId) {
@@ -3106,7 +3089,7 @@ function calcHabitStreak() {
     const d = `${y}-${m}-${day}`;
     const allDone = _habits.every(h => {
       const val = (_habitLogs[h.id]||{})[d] || 0;
-      return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+      return h.target_type === 'quantity'? val >= (h.target_value||1) : val >= 1;
     });
     if (allDone) { streak++; check.setDate(check.getDate()-1); } else break;
   }
@@ -3131,11 +3114,11 @@ function writeHabitLog(habitId, date, value) {
     _habitLogs[habitId][date] = value;
   }
   cacheSet('habitLogs', _habitLogs);
-  // Re-render grid immediately
-  renderHabits();
+  // Defer render by one frame so the ripple animation plays before DOM replacement
+  requestAnimationFrame(() => renderHabits());
   // Fire server in background — don't await
   if (value <= 0) {
-    api(`habit-logs?habit_id=${habitId}&date=${date}`, { method: 'DELETE' }).catch(() => {});
+    api(`habit-logs?habit_id=${habitId}&date=${date}`, { method: 'DELETE'}).catch(() => {});
   } else {
     api('habit-logs', { method: 'POST', body: { habit_id: habitId, profile_id: activeProfileId, date, value } }).catch(() => {});
   }
@@ -3173,11 +3156,11 @@ function renderRetroCalendar(habitId) {
 
   // Update label
   const label = document.getElementById('retroMonthLabel');
-  if (label) label.textContent = target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  if (label) label.textContent = target.toLocaleDateString('en-US', { month: 'long', year: 'numeric'});
 
   // Disable next button if already on current month
   const nextBtn = document.getElementById('retroNextBtn');
-  if (nextBtn) nextBtn.style.opacity = _retroMonthOffset >= 0 ? '0.3' : '1';
+  if (nextBtn) nextBtn.style.opacity = _retroMonthOffset >= 0 ? '0.3': '1';
 
   // Build all days in this month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -3195,19 +3178,18 @@ function renderRetroCalendar(habitId) {
 
   cal.innerHTML = [...pads.map(() => '<div></div>'), ...days.map(d => {
     const val  = (_habitLogs[h.id]||{})[d] || 0;
-    const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    const done = h.target_type === 'quantity'? val >= (h.target_value||1) : val >= 1;
     const isToday = d === todayStr_;
     const isFuture = d > todayStr_;
     const dayNum = parseInt(d.slice(8));
-    return `<div ${isFuture ? '' : `onclick="toggleRetroDate(${h.id},'${d}')"`}
+    return `<div ${isFuture ? '': `onclick="toggleRetroDate(${h.id},'${d}')"`}
       style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;
       font-size:11px;font-weight:${isToday?'700':'400'};
       cursor:${isFuture?'default':'pointer'};
-      background:${isFuture ? 'transparent' : done ? h.color : `rgba(${r},${g},${b},0.12)`};
-      color:${isFuture ? 'var(--border-med)' : done ? '#fff' : `rgba(${r},${g},${b},0.9)`};
+      background:${isFuture ? 'transparent': done ? h.color : `rgba(${r},${g},${b},0.12)`};
+      color:${isFuture ? 'var(--border-med)': done ? '#fff': `rgba(${r},${g},${b},0.9)`};
       outline:${isToday ? `1.5px solid ${h.color}` : 'none'};
-      transition:transform 0.08s;"
-      >${dayNum}</div>`;
+      transition:transform 0.08s;">${dayNum}</div>`;
   })].join('');
 }
 
@@ -3223,8 +3205,8 @@ async function toggleRetroDate(habitId, date) {
   if (!h) return;
   const current = (_habitLogs[habitId]||{})[date] || 0;
   const target = parseFloat(h.target_value) || 1;
-  const done = h.target_type === 'quantity' ? current >= target : current >= 1;
-  const newVal = done ? 0 : (h.target_type === 'quantity' ? target : 1);
+  const done = h.target_type === 'quantity'? current >= target : current >= 1;
+  const newVal = done ? 0 : (h.target_type === 'quantity'? target : 1);
   await writeHabitLog(habitId, date, newVal);
   renderRetroCalendar(habitId);
 }
@@ -3235,17 +3217,14 @@ function renderIconPicker(containerId, selectedKey, onclickFn) {
     `<div style="margin-bottom:10px;">
       <div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">${g.label}</div>
       <div class="habit-icon-picker">${g.keys.map(k =>
-        `<button class="habit-icon-btn${k===selectedKey?' selected':''}" data-icon="${k}" onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>`
-      ).join('')}</div>
-    </div>`
-  ).join('');
+        `<button class="habit-icon-btn${k===selectedKey?'selected':''}"data-icon="${k}"onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>` ).join('')}</div>
+    </div>` ).join('');
 }
 
 function initHabitForm() {
   const cp = document.getElementById('habitColorPicker');
   cp.innerHTML = HABIT_COLORS.map((c,i) =>
-    `<div class="habit-color-swatch${i===0?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectHabitColor(this)"></div>`
-  ).join('');
+    `<div class="habit-color-swatch${i===0?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectHabitColor(this)"></div>` ).join('');
   renderIconPicker('habitIconPicker', 'check', 'selectHabitIcon');
   toggleHabitQuantityFields();
 }
@@ -3282,8 +3261,7 @@ function openHabitModal(habitId) {
   toggleEditQuantityFields();
   const cp = document.getElementById('editHabitColorPicker');
   cp.innerHTML = HABIT_COLORS.map(c =>
-    `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>`
-  ).join('');
+    `<div class="habit-color-swatch${c===h.color?'selected':''}"style="background:${c}"data-color="${c}"onclick="selectEditHabitColor(this)"></div>` ).join('');
   const ip = document.getElementById('editHabitIconPicker');
   if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
@@ -3307,11 +3285,11 @@ function openHabitModal(habitId) {
     const delta = e.touches[0].clientY - startY;
     // Lock gesture direction on first 8px of movement
     if (!gestureDir) {
-      if (Math.abs(delta) > 8) gestureDir = delta > 0 ? 'down' : 'up';
+      if (Math.abs(delta) > 8) gestureDir = delta > 0 ? 'down': 'up';
       return;
     }
     // Only intercept downward drag when at top of scroll
-    if (gestureDir === 'down' && startScrollTop === 0 && modal.scrollTop === 0) {
+    if (gestureDir === 'down'&& startScrollTop === 0 && modal.scrollTop === 0) {
       modal.style.transform = `translateY(${Math.max(0, delta)}px)`;
       e.preventDefault();
     }
@@ -3320,7 +3298,7 @@ function openHabitModal(habitId) {
     if (!isDragging) return;
     isDragging = false;
     const delta = e.changedTouches[0].clientY - startY;
-    if (gestureDir === 'down' && startScrollTop === 0 && delta > 100) {
+    if (gestureDir === 'down'&& startScrollTop === 0 && delta > 100) {
       closeHabitModal();
     } else {
       modal.style.transform = '';
@@ -3351,7 +3329,7 @@ function selectEditHabitColor(el) {
 function toggleEditQuantityFields() {
   const isQty = document.getElementById('editHabitType')?.value === 'quantity';
   const fields = document.getElementById('editQuantityFields');
-  if (fields) fields.style.display = isQty ? 'flex' : 'none';
+  if (fields) fields.style.display = isQty ? 'flex': 'none';
 }
 
 async function saveEditedHabit() {
@@ -3366,7 +3344,7 @@ async function saveEditedHabit() {
   try {
     await api(`habits?id=${id}`, { method: 'PATCH', body: {
       name, color, icon, target_type: type,
-      target_value: type === 'quantity' ? target : 1,
+      target_value: type === 'quantity'? target : 1,
       target_unit: unit,
     }});
     const idx = _habits.findIndex(h => h.id === id);
@@ -3382,7 +3360,7 @@ async function deleteHabitFromModal() {
   const id = parseInt(document.getElementById('editHabitId').value);
   if (!confirm('Delete this habit and all its history?')) return;
   try {
-    await api(`habits?id=${id}`, { method: 'DELETE' });
+    await api(`habits?id=${id}`, { method: 'DELETE'});
     _habits = _habits.filter(h => h.id !== id);
     delete _habitLogs[id];
     cacheSet('habits', _habits);
@@ -3405,7 +3383,7 @@ async function saveNewHabit() {
     const result = await api('habits', { method: 'POST', body: {
       profile_id: activeProfileId, name, color, icon,
       category: 'general', target_type: type,
-      target_value: type === 'quantity' ? target : 1,
+      target_value: type === 'quantity'? target : 1,
       target_unit: unit, sort_order: _habits.length
     }});
     const saved = Array.isArray(result) ? result[0] : result;
@@ -3421,7 +3399,7 @@ async function saveNewHabit() {
 async function deleteHabit(id) {
   if (!confirm('Delete this habit and all its history?')) return;
   try {
-    await api(`habits?id=${id}`, { method: 'DELETE' });
+    await api(`habits?id=${id}`, { method: 'DELETE'});
     _habits = _habits.filter(h => h.id !== id);
     delete _habitLogs[id];
     cacheSet('habits', _habits);
