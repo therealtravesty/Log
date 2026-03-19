@@ -1982,12 +1982,15 @@ async function lookupFoodFromImage(input) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageData, mediaType })
     });
-    if (!res.ok) throw new Error('Server error ' + res.status);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Server error ${res.status}`);
+    }
     const items = await res.json();
 
-    resultArea.innerHTML = '';
+    if (!items || !items.length) throw new Error('No items recognised in this image');
 
-    if (!items || !items.length) throw new Error('No items found');
+    resultArea.innerHTML = '';
 
     if (items.length === 1) {
       const item = items[0];
@@ -2008,10 +2011,9 @@ async function lookupFoodFromImage(input) {
       openImageScanModal();
     }
   } catch(e) {
-    // Ensure overlay is never left open on error
     const overlay = document.getElementById('imageScanOverlay');
     if (overlay && !overlay.classList.contains('hidden')) closeImageScanModal();
-    resultArea.innerHTML = '<div class="err-msg">Couldn\'t read image — try a clearer photo or type the food instead.</div>';
+    resultArea.innerHTML = `<div class="err-msg">Image lookup failed: ${e.message}</div>`;
   } finally {
     // Always restore interactivity — no matter what happened above
     hint.style.display = 'none';
