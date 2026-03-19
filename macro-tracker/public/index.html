@@ -1974,7 +1974,10 @@ async function lookupFoodFromImage(input) {
 
   try {
     const isScreenshot = file.type === 'image/png';
+    console.log('[img-lookup] file type:', file.type, 'size:', file.size, 'isScreenshot:', isScreenshot);
+
     const imageData = await resizeAndEncodeImage(file, 1024);
+    console.log('[img-lookup] encoded length:', imageData.length, 'approx KB:', Math.round(imageData.length * 0.75 / 1024));
     const mediaType = isScreenshot ? 'image/png' : 'image/jpeg';
 
     const res = await fetch('/api/lookup-image', {
@@ -1982,11 +1985,14 @@ async function lookupFoodFromImage(input) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageData, mediaType })
     });
+    console.log('[img-lookup] response status:', res.status);
+
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || `Server error ${res.status}`);
     }
     const items = await res.json();
+    console.log('[img-lookup] parsed items:', JSON.stringify(items));
 
     if (!items || !items.length) throw new Error('No items recognised in this image');
 
@@ -2011,6 +2017,7 @@ async function lookupFoodFromImage(input) {
       openImageScanModal();
     }
   } catch(e) {
+    console.error('[img-lookup] error:', e.message, e);
     const overlay = document.getElementById('imageScanOverlay');
     if (overlay && !overlay.classList.contains('hidden')) closeImageScanModal();
     resultArea.innerHTML = `<div class="err-msg">Image lookup failed: ${e.message}</div>`;
@@ -2470,11 +2477,19 @@ async function lookupExerciseOnline() {
   if (!query) return;
   const resultArea = document.getElementById('exerciseResultArea');
   resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Estimating calories burned...</div>';
+
+  // Use most recent logged weight, fall back to goals weight, then 183 lbs
+  const weightDays = Object.keys(_weights).sort().reverse();
+  const weightLbs = weightDays.length
+    ? parseFloat(_weights[weightDays[0]])
+    : (parseFloat(document.getElementById('sWeight')?.value) || 183);
+  const weightKg = Math.round(weightLbs * 0.453592 * 10) / 10;
+
   try {
     const res = await fetch('/api/exercise-lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ query, weightKg })
     });
     if (!res.ok) throw new Error('Server error ' + res.status);
     const data = await res.json();
