@@ -1,4 +1,3 @@
-// Fetch with explicit timeout to prevent hanging until Netlify kills the function
 async function fetchWithTimeout(url, options, ms = 20000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
@@ -23,18 +22,21 @@ exports.handler = async (event) => {
       ? `\nIMPORTANT: Do NOT use "${excludeSource}" as your source this time. Find a different source.`
       : '';
 
-    const prompt = `You are a precise nutrition database assistant. The user wants to log: "${query}"${excludeClause}
+    const prompt = `You are a nutrition database. The user logged: "${query}"${excludeClause}
 
-Follow this exact priority order when sourcing nutrition data:
-1. EXACT BRAND MATCH: If the query names a specific brand or product (e.g. "Chobani Greek yogurt", "Quest protein bar"), use that brand's official published nutrition facts. State the exact product name and brand.
-2. GENERIC BRANDED ITEM: If no exact product match, use the most common version of that branded product category.
-3. USDA / DATABASE ESTIMATE: If no brand is mentioned or identifiable, use USDA FoodData Central or a reputable nutrition database.
-4. REASONABLE ESTIMATE: Only if nothing else works, estimate based on similar items and clearly state "estimated based on similar items".
+Source priority:
+1. Named brand/restaurant → use their official published nutrition facts
+2. No brand → use USDA FoodData Central
+3. Unknown → estimate and say so
 
-Return ONLY a raw JSON object — no markdown, no explanation:
-{"name":"exact product name or descriptive name with quantity","serving_size":"e.g. 1 cup (240ml), 1 bar (60g)","note":"source: [exact source used]","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}
+CRITICAL: Return ONLY this exact JSON with no text before or after it, no markdown, no commentary:
+{"name":"food name max 80 chars","serving_size":"serving description","note":"source used","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}
 
-Round all numbers to nearest integer. Be as specific as possible about the source.`;
+Rules:
+- Keep name under 80 characters
+- Round all numbers to nearest integer
+- No apostrophes or quotes inside string values
+- Output ONLY the JSON object, nothing else`;
 
     const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -57,8 +59,10 @@ Round all numbers to nearest integer. Be as specific as possible about the sourc
 
     const data = await res.json();
     const raw = (data.content || []).map(b => b.text || '').join('').trim();
+
+    // Extract JSON robustly — handles trailing commentary, markdown fences, etc.
     const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-    if (s === -1) return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response', raw: raw.slice(0, 200) }) };
+    if (s === -1) return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response', raw: raw.slice(0, 300) }) };
 
     const parsed = JSON.parse(raw.slice(s, e + 1));
     return {
