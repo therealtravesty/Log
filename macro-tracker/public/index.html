@@ -212,13 +212,13 @@
   .settings-chevron.open { transform: rotate(180deg); }
   .settings-body { display: none; border-top: 0.5px solid var(--border); padding: 1.25rem; }
   .settings-body.open { display: block; }
-  .settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 1rem; }
+  .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 1rem; }
   .settings-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 1rem; }
   .settings-field { display: flex; flex-direction: column; gap: 5px; }
   .settings-label { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
-  .settings-input { height: 36px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; transition: border-color 0.15s; width: 100%; }
+  .settings-input { height: 34px; font-size: 14px; padding: 0 9px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; transition: border-color 0.15s; width: 100%; }
   .settings-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
-  .settings-select { height: 36px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; width: 100%; }
+  .settings-select { height: 34px; font-size: 14px; padding: 0 9px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; width: 100%; }
   .settings-select:focus { border-color: rgba(0,0,0,0.3); font-size: 16px; }
   .settings-divider { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; margin-top: 4px; font-family: 'DM Mono', monospace; }
   .settings-result { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; padding-top: 1rem; border-top: 0.5px solid var(--border); }
@@ -999,16 +999,6 @@
           <input class="settings-input"type="number"id="sWeight"min="80"max="500"placeholder="183"oninput="recalcGoals()"/>
         </div>
         <div class="settings-field">
-          <label class="settings-label">Activity level</label>
-          <select class="settings-select"id="sActivity"onchange="recalcGoals()">
-            <option value="1.2">Sedentary (desk job, little exercise)</option>
-            <option value="1.375">Lightly active (1–3x/week)</option>
-            <option value="1.55">Moderately active (3–5x/week)</option>
-            <option value="1.725">Very active (6–7x/week)</option>
-            <option value="1.9">Extremely active (2x/day training)</option>
-          </select>
-        </div>
-        <div class="settings-field">
           <label class="settings-label">Goal</label>
           <select class="settings-select"id="sGoal"onchange="recalcGoals()">
             <option value="cut">Lose weight</option>
@@ -1019,12 +1009,22 @@
         <div class="settings-field"id="rateField">
           <label class="settings-label">Weekly rate</label>
           <select class="settings-select"id="sRate"onchange="recalcGoals()">
-            <option value="0.25">0.25 lbs/week (slow)</option>
-            <option value="0.5">0.5 lbs/week</option>
-            <option value="1"selected>1 lb/week (moderate)</option>
-            <option value="1.5">1.5 lbs/week (aggressive)</option>
+            <option value="0.25">0.25 lbs/wk (slow)</option>
+            <option value="0.5">0.5 lbs/wk</option>
+            <option value="1" selected>1 lb/wk (moderate)</option>
+            <option value="1.5">1.5 lbs/wk (aggressive)</option>
           </select>
         </div>
+      </div>
+      <div class="settings-field" style="margin-bottom:1rem;">
+        <label class="settings-label">Activity level</label>
+        <select class="settings-select" id="sActivity" onchange="recalcGoals()">
+          <option value="1.2">Sedentary — desk job, little exercise</option>
+          <option value="1.375">Lightly active — 1–3×/week</option>
+          <option value="1.55">Moderately active — 3–5×/week</option>
+          <option value="1.725">Very active — 6–7×/week</option>
+          <option value="1.9">Extremely active — 2×/day</option>
+        </select>
       </div>
 
       <div class="section-title"style="margin-top:1.25rem;">Diet style</div>
