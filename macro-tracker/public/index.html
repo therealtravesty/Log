@@ -59,7 +59,8 @@
 
   .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 0.5rem; }
   .summary-grid-2 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 1rem; }
-  .metric-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 10px; position: relative; }
+  .metric-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 10px; position: relative; cursor: pointer; transition: background 0.15s; }
+  .metric-card:active { background: var(--bg); }
   .metric-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; font-family: 'DM Mono', monospace; }
   .metric-val { font-size: 22px; font-weight: 500; color: var(--text); line-height: 1; margin-bottom: 2px; }
   .metric-goal { position: absolute; top: 9px; right: 9px; font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; }
@@ -642,16 +643,16 @@
     </div>
 
     <div class="summary-grid">
-      <div class="metric-card"><span class="metric-goal"id="goalCal"></span><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalPro"></span><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro" style="background:var(--green);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalCarb"></span><div class="metric-label">Carbs</div><div class="metric-val"id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill"id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalFat"></span><div class="metric-label">Total Fat</div><div class="metric-val"id="totFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barFat" style="background:var(--pink);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('cal','Calories','kcal')"><span class="metric-goal"id="goalCal"></span><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('pro','Protein','g')"><span class="metric-goal"id="goalPro"></span><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('carb','Carbs','g')"><span class="metric-goal"id="goalCarb"></span><div class="metric-label">Carbs</div><div class="metric-val"id="totCarb">0g</div><div class="progress-bar"><div class="progress-fill"id="barCarb" style="background:var(--amber);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('fat','Total Fat','g')"><span class="metric-goal"id="goalFat"></span><div class="metric-label">Total Fat</div><div class="metric-val"id="totFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barFat" style="background:var(--pink);width:0%"></div></div></div>
     </div>
     <div class="summary-grid-2">
-      <div class="metric-card"><span class="metric-goal"id="goalSatFat"></span><div class="metric-label">Sat. Fat</div><div class="metric-val"id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalSug"></span><div class="metric-label">Sugar</div><div class="metric-val"id="totSug">0g</div><div class="progress-bar"><div class="progress-fill"id="barSug" style="background:var(--red);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalSod"></span><div class="metric-label">Sodium</div><div class="metric-val"id="totSod">0</div><div class="progress-bar"><div class="progress-fill"id="barSod" style="background:var(--blue);width:0%"></div></div></div>
-      <div class="metric-card"><span class="metric-goal"id="goalFib"></span><div class="metric-label">Fiber</div><div class="metric-val"id="totFib">0g</div><div class="progress-bar"><div class="progress-fill"id="barFib" style="background:var(--green);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('satFat','Sat. Fat','g')"><span class="metric-goal"id="goalSatFat"></span><div class="metric-label">Sat. Fat</div><div class="metric-val"id="totSatFat">0g</div><div class="progress-bar"><div class="progress-fill"id="barSatFat" style="background:var(--coral);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('sug','Sugar','g')"><span class="metric-goal"id="goalSug"></span><div class="metric-label">Sugar</div><div class="metric-val"id="totSug">0g</div><div class="progress-bar"><div class="progress-fill"id="barSug" style="background:var(--red);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('sod','Sodium','mg')"><span class="metric-goal"id="goalSod"></span><div class="metric-label">Sodium</div><div class="metric-val"id="totSod">0</div><div class="progress-bar"><div class="progress-fill"id="barSod" style="background:var(--blue);width:0%"></div></div></div>
+      <div class="metric-card" onclick="showMacroBreakdown('fib','Fiber','g')"><span class="metric-goal"id="goalFib"></span><div class="metric-label">Fiber</div><div class="metric-val"id="totFib">0g</div><div class="progress-bar"><div class="progress-fill"id="barFib" style="background:var(--green);width:0%"></div></div></div>
     </div>
 
     <!-- Live coaching blurb -->
@@ -821,6 +822,18 @@
       </div>
       <div class="habits-cards-wrap">
         <div id="habitsGrid"><div class="empty-msg"style="padding:1.25rem;">No habits yet — tap "+ New habit"to get started!</div></div>
+      </div>
+    </div>
+
+    <!-- Macro breakdown modal -->
+    <div class="habit-modal-overlay hidden" id="macroBreakdownOverlay" onclick="if(event.target===this)closeMacroBreakdown();">
+      <div class="habit-modal" id="macroBreakdownModal" style="max-height:80vh;">
+        <div class="habit-modal-handle"></div>
+        <div class="habit-modal-header">
+          <span class="habit-modal-title" id="macroBreakdownTitle">Breakdown</span>
+          <button class="habit-modal-close" onclick="closeMacroBreakdown()">×</button>
+        </div>
+        <div class="habit-modal-body" id="macroBreakdownBody" style="padding:12px 20px 20px;"></div>
       </div>
     </div>
 
@@ -2745,6 +2758,54 @@ async function logRecentFood(idx) {
   } catch(e) { showToast('Could not add — try again'); }
 }
 
+function showMacroBreakdown(key, label, unit) {
+  const foods = getActiveFoods();
+  if (!foods.length) return;
+
+  // Map food key to actual food property
+  const keyMap = { cal:'cal', pro:'pro', carb:'carb', fat:'fat', satFat:'satFat', sug:'sug', sod:'sod', fib:'fib' };
+  const prop = keyMap[key];
+
+  // Sort foods by this macro descending, filter out zeros
+  const ranked = foods
+    .map(f => ({ name: f.name, val: Math.round(f[prop] || 0), meal: f.meal || 'uncategorized' }))
+    .filter(f => f.val > 0)
+    .sort((a, b) => b.val - a.val);
+
+  const total = ranked.reduce((s, f) => s + f.val, 0);
+
+  const mealColors = { breakfast: 'var(--blue)', lunch: 'var(--amber)', dinner: 'var(--pink)', snacks: 'var(--green)', uncategorized: 'var(--border-med)' };
+  const mealLabels = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks', uncategorized: '' };
+
+  document.getElementById('macroBreakdownTitle').textContent = `${label} breakdown`;
+  document.getElementById('macroBreakdownBody').innerHTML = ranked.length === 0
+    ? `<div style="font-size:13px;color:var(--text-3);text-align:center;padding:20px 0;">Nothing logged yet</div>`
+    : ranked.map(f => {
+        const pct = total > 0 ? Math.round((f.val / total) * 100) : 0;
+        const barW = total > 0 ? (f.val / ranked[0].val) * 100 : 0; // relative to max
+        const mealDot = f.meal && f.meal !== 'uncategorized'
+          ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${mealColors[f.meal]||'var(--border-med)'};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>`
+          : '';
+        return `<div style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+            <span style="font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px;">${mealDot}${f.name}</span>
+            <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);flex-shrink:0;">${f.val}${unit} <span style="color:var(--text-3);">(${pct}%)</span></span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:${barW}%;background:var(--blue);border-radius:2px;transition:width 0.3s ease;"></div>
+          </div>
+        </div>`;
+      }).join('');
+
+  document.getElementById('macroBreakdownOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+
+function closeMacroBreakdown() {
+  document.getElementById('macroBreakdownOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
 function renderCoachingBlurb(t) {
   const el = document.getElementById('coachingBlurb');
   if (!el) return;
@@ -3116,6 +3177,7 @@ function buildCharts(days, allFoods, weights) {
 }
 
 // Track active group so renderHistory knows which sub-tab to default to
+let _activeChartGroup = 'weight';
 let _chartRange = 'all'; // '7d' | '30d' | '3m' | '1y' | 'all'
 let _habitRangeMode = 'daily'; // 'daily' | 'monthly' | 'yearly'
 
@@ -3486,6 +3548,19 @@ function renderHistory() {
   document.getElementById('statWeight').textContent = latestWeight ? latestWeight+'': '—';
 
   buildCharts(days, all, weights);
+
+  // Re-assert which chart is visible after rebuild — Chart.js needs visible canvas to render
+  const group = _activeChartGroup || 'weight';
+  if (group === 'weight') {
+    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('chart-weight')?.classList.add('active');
+  } else if (group === 'nutrition') {
+    const activeSubTab = document.querySelector('#chartSubTabs-nutrition .chart-tab.active');
+    const chartName = activeSubTab ? activeSubTab.getAttribute('onclick').match(/switchChart\('([^']+)'/)?.[1] : 'macros';
+    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('chart-' + (chartName || 'macros'))?.classList.add('active');
+  }
+
   populateHabitChartControls();
   renderHabitChart();
 
