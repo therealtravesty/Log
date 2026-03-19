@@ -1945,7 +1945,10 @@ async function lookupFood(excludeSource = null) {
       try { msg = JSON.parse(rawErr).error || msg; } catch(_) { if (rawErr.length < 200) msg = rawErr; }
       throw new Error(msg);
     }
-    const data = await res.json();
+    const rawText = await res.text();
+    const s = rawText.indexOf('{'), e = rawText.lastIndexOf('}');
+    if (s === -1) throw new Error('No data returned — try again');
+    const data = JSON.parse(rawText.slice(s, e + 1));
     pendingFood = { id: Date.now(), name: data.name,
       cal: Math.round(data.calories), pro: Math.round(data.protein_g),
       carb: Math.round(data.carbs_g), fat: Math.round(data.fat_g),
@@ -2499,7 +2502,10 @@ async function lookupExerciseOnline() {
       try { msg = JSON.parse(rawErr).error || msg; } catch(_) { if (rawErr.length < 200) msg = rawErr; }
       throw new Error(msg);
     }
-    const data = await res.json();
+    const rawEx = await res.text();
+    const es = rawEx.indexOf('{'), ee = rawEx.lastIndexOf('}');
+    if (es === -1) throw new Error('No data returned — try again');
+    const data = JSON.parse(rawEx.slice(es, ee + 1));
     resultArea.innerHTML = `<div class="exercise-result">
       <div class="exercise-result-name">${data.name}</div>
       <div class="exercise-result-note">${data.note || 'MET-based estimate'}</div>
