@@ -422,8 +422,8 @@
   /* Header row — spacer must match card left section exactly */
   .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 6px; padding: 0 12px; margin-top: -6px; }
   .habits-header-spacer { flex: 1; }
-  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 220px; }
-  .habit-day-header { width: 40px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 200px; }
+  .habit-day-header { width: 36px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .habit-day-header.today { color: var(--text); font-weight: 700; }
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
@@ -436,15 +436,18 @@
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
   .habit-name-pill { font-size: 13px; font-weight: 500; padding: 5px 8px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
   .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
-  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 220px; align-items: center; }
-  .habit-square { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
+  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 200px; align-items: center; }
+  .habit-square { width: 36px; height: 36px; border-radius: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
   .habit-square:active { transform: scale(0.75); opacity: 0.85; }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 10px 10px; transition: height 0.2s ease; }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 9px 9px; transition: height 0.2s ease; }
   .habit-square-val { position: relative; z-index: 1; }
   .habit-square-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: habitRipple 0.35s cubic-bezier(0.4,0,0.2,1) forwards; pointer-events: none; }
-  @keyframes habitRipple { 0% { transform: scale(0); opacity: 0.7; } 100% { transform: scale(3); opacity: 0; } }
-  .habit-card.dragging { opacity: 0.4; }
-  .habit-card.drag-over { border-top: 2px solid var(--blue); }
+  @keyframes habitRipple { 0% { transform: scale(0); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
+  .habit-square-unfill { position: absolute; inset: 0; animation: habitUnfill 0.25s ease-in forwards; pointer-events: none; border-radius: inherit; }
+  @keyframes habitUnfill { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+  .habit-card.dragging { opacity: 0.35; transform: scale(0.97); }
+  .habit-card.drag-over { border-top: 2px solid var(--blue) !important; }
+  .habit-card.drag-lifted { opacity: 0.95; transform: scale(1.03) rotate(1deg); box-shadow: 0 8px 24px rgba(0,0,0,0.18); z-index: 10; position: relative; transition: none; }
   /* Habit edit modal */
   .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); touch-action: none; }
   .habit-modal-overlay.hidden { display: none; }
@@ -2910,7 +2913,7 @@ function renderHabits() {
 
       if (isQty) {
         // Arc style for all quantity squares — consistent across days
-        const radius = 14, circ = 2 * Math.PI * radius;
+        const radius = 13, circ = 2 * Math.PI * radius;
         const dash = pct * circ, gap = circ - dash;
         if (done) {
           // Completed — plain solid fill, same as boolean habits
@@ -2926,8 +2929,11 @@ function renderHabits() {
 
     const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
 
-    return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})">
-      <div class="habit-drag-handle" onmousedown="event.stopPropagation()" ontouchstart="startHabitDrag(event,${h.id})" style="padding:4px 6px 4px 0;cursor:grab;color:var(--text-3);font-size:14px;flex-shrink:0;" onclick="event.stopPropagation()">⠿</div>
+    return `<div class="habit-card" data-habit-id="${h.id}"
+      onclick="openHabitModal(${h.id})"
+      ontouchstart="habitLongPressStart(event,${h.id})"
+      ontouchend="habitLongPressCancel()"
+      ontouchmove="habitLongPressCancel()">
       <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
       <div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
       <div class="habit-squares">${squares}</div>
@@ -2953,21 +2959,32 @@ function updateHabitsSub() {
     : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
 }
 
-// ── Habit drag reorder ────────────────────────────────────────────
-let _dragHabitId = null, _dragStartY = 0, _dragEl = null;
+// ── Habit drag reorder (long-press whole card) ────────────────────
+let _dragHabitId = null, _dragEl = null, _longPressTimer = null;
+
+function habitLongPressStart(e, habitId) {
+  _longPressTimer = setTimeout(() => {
+    _longPressTimer = null;
+    startHabitDrag(e, habitId);
+  }, 400);
+}
+
+function habitLongPressCancel() {
+  if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+}
 
 function startHabitDrag(e, habitId) {
-  e.stopPropagation();
+  e.preventDefault();
   _dragHabitId = habitId;
-  _dragEl = e.currentTarget.closest('.habit-card');
-  _dragStartY = e.touches[0].clientY;
-  _dragEl.classList.add('dragging');
-  if (navigator.vibrate) navigator.vibrate(20);
+  _dragEl = document.querySelector(`.habit-card[data-habit-id="${habitId}"]`);
+  if (!_dragEl) return;
+  if (navigator.vibrate) navigator.vibrate(30);
+  _dragEl.classList.add('drag-lifted');
 
   const onMove = ev => {
     ev.preventDefault();
     const y = ev.touches[0].clientY;
-    const cards = [...document.querySelectorAll('.habit-card:not(.dragging)')];
+    const cards = [...document.querySelectorAll('.habit-card:not(.drag-lifted)')];
     cards.forEach(c => c.classList.remove('drag-over'));
     const target = cards.find(c => {
       const r = c.getBoundingClientRect();
@@ -2979,7 +2996,9 @@ function startHabitDrag(e, habitId) {
   const onEnd = async ev => {
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('touchend', onEnd);
-    _dragEl.classList.remove('dragging');
+    if (!_dragEl) return;
+    _dragEl.classList.remove('drag-lifted');
+    document.querySelectorAll('.habit-card').forEach(c => c.classList.remove('drag-over', 'dragging'));
     const overEl = document.querySelector('.habit-card.drag-over');
     if (overEl) {
       overEl.classList.remove('drag-over');
@@ -2998,39 +3017,42 @@ async function reorderHabit(fromId, toId) {
   const fromIdx = _habits.findIndex(h => h.id === fromId);
   const toIdx   = _habits.findIndex(h => h.id === toId);
   if (fromIdx === -1 || toIdx === -1) return;
-  // Reorder in memory
   const [moved] = _habits.splice(fromIdx, 1);
   _habits.splice(toIdx, 0, moved);
-  // Update sort_order for all
   _habits.forEach((h, i) => { h.sort_order = i; });
   cacheSet('habits', _habits);
   renderHabits();
-  // Persist to server
   try {
     await Promise.all(_habits.map((h, i) =>
       api(`habits?id=${h.id}`, { method: 'PATCH', body: { sort_order: i } })
     ));
   } catch(e) { showToast('Could not save order'); }
 }
-function habitTapFeedback(squareEl, color) {
-  if (navigator.vibrate) navigator.vibrate(10);
-  const ripple = document.createElement('div');
-  const size = squareEl.offsetWidth;
-  ripple.className = 'habit-square-ripple';
-  ripple.style.cssText = `width:${size}px;height:${size}px;left:0;top:0;background:${color};`;
-  squareEl.appendChild(ripple);
-  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+function habitTapFeedback(squareEl, color, removing) {
+  if (navigator.vibrate) navigator.vibrate(removing ? 5 : 10);
+  if (removing) {
+    const unfill = document.createElement('div');
+    unfill.className = 'habit-square-unfill';
+    unfill.style.background = color;
+    squareEl.appendChild(unfill);
+    unfill.addEventListener('animationend', () => unfill.remove(), { once: true });
+  } else {
+    const ripple = document.createElement('div');
+    const size = squareEl.offsetWidth;
+    ripple.className = 'habit-square-ripple';
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:0;top:0;background:${color};`;
+    squareEl.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+  }
 }
 
-async function incrementHabitQty(habitId, date, target) {
+function incrementHabitQty(habitId, date, target) {
   const current = (_habitLogs[habitId]||{})[date] || 0;
   const newVal = current >= target ? 0 : current + 1;
-  if (newVal > 0) {
-    const h = _habits.find(h => h.id === habitId);
-    const sq = event?.target?.closest('.habit-square');
-    if (sq && h) habitTapFeedback(sq, h.color);
-  }
-  await writeHabitLog(habitId, date, newVal);
+  const h = _habits.find(h => h.id === habitId);
+  const sq = event?.target?.closest('.habit-square');
+  if (sq && h) habitTapFeedback(sq, h.color, newVal === 0);
+  writeHabitLog(habitId, date, newVal);
 }
 
 async function loadHabitsFromServer() {
@@ -3091,31 +3113,32 @@ function calcHabitStreak() {
   return streak;
 }
 
-async function toggleHabit(habitId, date) {
+function toggleHabit(habitId, date) {
   const current = (_habitLogs[habitId]||{})[date] || 0;
   const newVal = current >= 1 ? 0 : 1;
-  if (newVal === 1) {
-    const h = _habits.find(h => h.id === habitId);
-    const sq = event?.target?.closest('.habit-square');
-    if (sq && h) habitTapFeedback(sq, h.color);
-  }
-  await writeHabitLog(habitId, date, newVal);
+  const h = _habits.find(h => h.id === habitId);
+  const sq = event?.target?.closest('.habit-square');
+  if (sq && h) habitTapFeedback(sq, h.color, newVal === 0);
+  writeHabitLog(habitId, date, newVal);
 }
 
-async function writeHabitLog(habitId, date, value) {
+function writeHabitLog(habitId, date, value) {
+  // Update memory instantly — no await, no blocking
   if (!_habitLogs[habitId]) _habitLogs[habitId] = {};
   if (value <= 0) {
     delete _habitLogs[habitId][date];
-    cacheSet('habitLogs', _habitLogs);
-    try { await api(`habit-logs?habit_id=${habitId}&date=${date}`, { method: 'DELETE' }); } catch(e) {}
   } else {
     _habitLogs[habitId][date] = value;
-    cacheSet('habitLogs', _habitLogs);
-    try {
-      await api('habit-logs', { method: 'POST', body: { habit_id: habitId, profile_id: activeProfileId, date, value } });
-    } catch(e) {}
   }
+  cacheSet('habitLogs', _habitLogs);
+  // Re-render grid immediately
   renderHabits();
+  // Fire server in background — don't await
+  if (value <= 0) {
+    api(`habit-logs?habit_id=${habitId}&date=${date}`, { method: 'DELETE' }).catch(() => {});
+  } else {
+    api('habit-logs', { method: 'POST', body: { habit_id: habitId, profile_id: activeProfileId, date, value } }).catch(() => {});
+  }
 }
 
 function toggleAddHabitForm() {
@@ -3184,8 +3207,6 @@ function renderRetroCalendar(habitId) {
       color:${isFuture ? 'var(--border-med)' : done ? '#fff' : `rgba(${r},${g},${b},0.9)`};
       outline:${isToday ? `1.5px solid ${h.color}` : 'none'};
       transition:transform 0.08s;"
-      onmousedown="${isFuture?'':''`this.style.transform='scale(0.88)'`}" 
-      onmouseup="this.style.transform=''"
       >${dayNum}</div>`;
   })].join('');
 }
