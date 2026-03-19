@@ -402,11 +402,11 @@
   .hs-tip-arrow { font-size: 11px; color: var(--text-3); }
   .hs-tip-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 4px; flex-shrink: 0; }
   /* Profile loading overlay */
-  .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity 0.25s; }
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: opacity 0.25s; }
   .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-  .loading-app-title { font-size: 36px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px; }
+  .loading-app-title { font-size: 72px; font-weight: 700; color: var(--text); letter-spacing: -2px; margin-bottom: 4px; line-height: 1; }
   .loading-avatar { width: 48px; height: 48px; border-radius: 50%; }
-  .loading-name { font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
+  .loading-name { font-size: 22px; font-weight: 500; color: var(--text); letter-spacing: -0.3px; }
   .loading-spinner { width: 20px; height: 20px; border: 2px solid var(--border-med); border-top-color: var(--text-2); border-radius: 50%; animation: spin 0.7s linear infinite; }
   /* Friendly date label */
   .date-friendly { font-size: 13px; color: var(--text-2); font-weight: 500; }
@@ -939,12 +939,19 @@
       </div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
       <!-- Time range filter — sits just above the chart -->
-      <div class="chart-range-tabs">
+      <!-- Time range filter for weight/nutrition -->
+      <div class="chart-range-tabs" id="rangeTabsMain">
         <button class="chart-range-tab" onclick="switchChartRange('7d', this)">7D</button>
         <button class="chart-range-tab" onclick="switchChartRange('30d', this)">30D</button>
         <button class="chart-range-tab" onclick="switchChartRange('3m', this)">3M</button>
         <button class="chart-range-tab" onclick="switchChartRange('1y', this)">1Y</button>
         <button class="chart-range-tab active" onclick="switchChartRange('all', this)">All</button>
+      </div>
+      <!-- Time range filter for habits -->
+      <div class="chart-range-tabs hidden" id="rangeTabsHabits">
+        <button class="chart-range-tab active" onclick="switchHabitRange('daily', this)">Daily</button>
+        <button class="chart-range-tab" onclick="switchHabitRange('monthly', this)">Monthly</button>
+        <button class="chart-range-tab" onclick="switchHabitRange('yearly', this)">Yearly</button>
       </div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
@@ -988,10 +995,11 @@
       </div>
       <div class="chart-card" id="chart-habits">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div class="chart-title" style="margin-bottom:0;">Habit completions by month</div>
-          <select id="habitChartYear" class="settings-select" style="height:28px;font-size:14px;padding:0 8px;width:auto;" onchange="renderHabitChart()"></select>
+          <div class="chart-title" id="habitChartTitle" style="margin-bottom:0;">Habit completions — last 30 days</div>
+          <select id="habitChartYear" class="settings-select" style="height:28px;font-size:14px;padding:0 8px;width:auto;display:none;" onchange="renderHabitChart()"></select>
         </div>
-        <div class="chart-wrap"><canvas id="habitChart"></canvas></div>
+        <div class="chart-wrap" id="habitChartWrap"><canvas id="habitChart"></canvas></div>
+        <div id="habitHeatmap" style="display:none;overflow-x:auto;padding-bottom:4px;"></div>
         <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
     </div>
@@ -1278,7 +1286,7 @@ async function renderProfileList() {
             <div class="profile-btn-name">${p.name}</div>
           </div>
         </button>
-        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;"title="Delete profile"></button>
+        <button onclick="deleteProfile('${p.id}','${p.name}')" style="background:none;border:0.5px solid var(--border-med);cursor:pointer;color:var(--text-3);font-size:13px;padding:6px 10px;border-radius:6px;flex-shrink:0;" title="Delete profile">×</button>
       </div>`).join('');
   } catch(e) {
     list.innerHTML = '<div style="font-size:13px;color:var(--red-text);padding:8px 0;">Could not load profiles</div>';
@@ -2908,72 +2916,178 @@ function shortDate(d) {
   return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
+// ── Chart aggregation helpers ─────────────────────────────────
+// Returns { days, labels, aggregatedFoods, aggregatedWeights } based on range
+function aggregateChartData(days, allFoods, weights) {
+  const range = _chartRange;
+  // 7D and 30D → daily (no aggregation)
+  if (range === '7d' || range === '30d' || days.length <= 35) {
+    return {
+      labels: days.map(shortDate),
+      days,
+      foodData: days.map(d => allFoods[d] || []),
+      weightData: null // handled separately
+    };
+  }
+  // 3M → weekly averages
+  if (range === '3m' || days.length <= 120) {
+    return aggregateByWeek(days, allFoods, weights);
+  }
+  // 1Y / All → monthly averages
+  return aggregateByMonth(days, allFoods, weights);
+}
+
+function aggregateByWeek(days, allFoods, weights) {
+  const weeks = {};
+  days.forEach(d => {
+    // ISO week key: year + week number
+    const dt = new Date(d + 'T12:00:00');
+    const jan1 = new Date(dt.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((dt - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    const key = `${dt.getFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+    if (!weeks[key]) weeks[key] = { days: [], firstDay: d };
+    weeks[key].days.push(d);
+  });
+  const keys = Object.keys(weeks).sort();
+  return {
+    labels: keys.map(k => {
+      const dt = new Date(weeks[k].firstDay + 'T12:00:00');
+      return 'Wk ' + dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    }),
+    days: keys.map(k => weeks[k].firstDay), // representative day per bucket
+    foodData: keys.map(k => {
+      // Merge all foods in the week into one array for totalling
+      const merged = weeks[k].days.flatMap(d => allFoods[d] || []);
+      // Average by dividing totals by number of logged days
+      return { _avgDays: weeks[k].days.length, _merged: merged };
+    }),
+    weightData: keys.map(k => {
+      const wts = weeks[k].days.map(d => weights[d]).filter(Boolean);
+      return wts.length ? wts.reduce((a,b)=>a+b,0)/wts.length : null;
+    }),
+    weightLabels: keys.map(k => {
+      const dt = new Date(weeks[k].firstDay + 'T12:00:00');
+      return 'Wk ' + dt.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    })
+  };
+}
+
+function aggregateByMonth(days, allFoods, weights) {
+  const months = {};
+  days.forEach(d => {
+    const key = d.slice(0, 7); // YYYY-MM
+    if (!months[key]) months[key] = { days: [], firstDay: d };
+    months[key].days.push(d);
+  });
+  const keys = Object.keys(months).sort();
+  return {
+    labels: keys.map(k => {
+      const [y, m] = k.split('-');
+      return new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('en-US', { month:'short', year:'numeric' });
+    }),
+    days: keys.map(k => months[k].firstDay),
+    foodData: keys.map(k => ({
+      _avgDays: months[k].days.length,
+      _merged: months[k].days.flatMap(d => allFoods[d] || [])
+    })),
+    weightData: keys.map(k => {
+      const wts = months[k].days.map(d => weights[d]).filter(Boolean);
+      return wts.length ? Math.round(wts.reduce((a,b)=>a+b,0)/wts.length * 10) / 10 : null;
+    }),
+    weightLabels: keys.map(k => {
+      const [y, m] = k.split('-');
+      return new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('en-US', { month:'short', year:'numeric' });
+    })
+  };
+}
+
+// Average a macro across an aggregated bucket
+function avgMacro(bucket, fn) {
+  if (Array.isArray(bucket)) return Math.round(fn(totals(bucket)));
+  // Aggregated bucket: { _avgDays, _merged }
+  const t = totals(bucket._merged);
+  return Math.round(fn(t) / bucket._avgDays);
+}
+
 function buildCharts(days, allFoods, weights) {
-  const labels = days.map(shortDate);
+  const agg = aggregateChartData(days, allFoods, weights);
+  const { labels, foodData } = agg;
+  const isAggregated = foodData[0] && !Array.isArray(foodData[0]);
+  const tooltipSuffix = isAggregated
+    ? (_chartRange === '3m' ? ' (weekly avg)' : ' (monthly avg)')
+    : '';
+
   Object.values(chartInstances).forEach(c => c.destroy());
   chartInstances = {};
 
   function goalLine(val) {
-    return { type: 'line', data: days.map(()=>val), borderColor: 'rgba(128,128,128,0.3)', borderDash: [4,4], borderWidth: 1.5, pointRadius: 0, fill: false };
+    return { type: 'line', data: labels.map(()=>val), borderColor: 'rgba(128,128,128,0.3)', borderDash: [4,4], borderWidth: 1.5, pointRadius: 0, fill: false };
   }
 
   function simpleBar(canvasId, dataFn, goal, colorFn, unit, goalLabel) {
-    const data = days.map(d => Math.round(dataFn(totals(allFoods[d]))));
+    const data = foodData.map(b => avgMacro(b, dataFn));
     return new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: { labels, datasets: [{ data, backgroundColor: data.map(colorFn), borderRadius: 4 }, goalLine(goal)] },
       options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip,
-        callbacks: { label: ctx => ctx.datasetIndex===0 ? ctx.parsed.y+unit : (goalLabel||`Goal: ${goal}${unit}`) }
+        callbacks: { label: ctx => ctx.datasetIndex===0 ? ctx.parsed.y+unit+tooltipSuffix : (goalLabel||`Goal: ${goal}${unit}`) }
       }}}
     });
   }
 
-  // Weight — use ALL weight entries filtered by active range
+  // Weight — aggregate if needed
   const cutoff = getChartRangeCutoff();
   const allWeightDays = Object.keys(weights).sort();
-  const wDays = (cutoff ? allWeightDays.filter(d => d >= cutoff) : allWeightDays).filter(d => weights[d]);
-  if (wDays.length) {
+  const filteredWeightDays = (cutoff ? allWeightDays.filter(d => d >= cutoff) : allWeightDays).filter(d => weights[d]);
+
+  if (filteredWeightDays.length) {
+    let wLabels, wData;
+    if (isAggregated && agg.weightData) {
+      // Use aggregated weight data, filter out nulls
+      const pairs = agg.weightLabels
+        .map((l,i) => [l, agg.weightData[i]])
+        .filter(([,v]) => v !== null);
+      wLabels = pairs.map(([l]) => l);
+      wData   = pairs.map(([,v]) => v);
+    } else {
+      wLabels = filteredWeightDays.map(shortDate);
+      wData   = filteredWeightDays.map(d => weights[d]);
+    }
     chartInstances.weight = new Chart(document.getElementById('weightChart'), {
       type: 'line',
-      data: { labels: wDays.map(shortDate), datasets: [{ data: wDays.map(d=>weights[d]), borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#378ADD', fill: true, tension: 0.3 }] },
-      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y+'lbs'} } } }
+      data: { labels: wLabels, datasets: [{ data: wData, borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', borderWidth: 2, pointRadius: wData.length > 60 ? 2 : 4, pointBackgroundColor: '#378ADD', fill: true, tension: 0.3 }] },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { ...chartDefaults.plugins.tooltip,
+        callbacks: { label: ctx => ctx.parsed.y+'lbs' + (isAggregated ? tooltipSuffix : '') } } } }
     });
   }
 
-  // Calories — red when over target
+  // Calories
   chartInstances.calories = simpleBar('calChart', t=>t.cal, GOALS.cal, v=>v>GOALS.cal?'rgba(226,75,74,0.7)':'rgba(55,138,221,0.7)', 'kcal', `Target: ${GOALS.cal.toLocaleString()} kcal`);
-
-  // Protein — brighter when at goal
+  // Protein
   chartInstances.protein = simpleBar('proChart', t=>t.pro, GOALS.pro, v=>v>=GOALS.pro?'rgba(29,158,117,0.85)':'rgba(29,158,117,0.4)', 'g', `Goal: ${GOALS.pro}g`);
-
-  // Carbs — red when over target
+  // Carbs
   chartInstances.carbs = simpleBar('carbChart', t=>t.carb, GOALS.carb, v=>v>GOALS.carb?'rgba(226,75,74,0.7)':'rgba(239,159,39,0.75)', 'g', `Target: ${GOALS.carb}g`);
 
-  // Fat — stacked bar (sat fat + remaining fat), goal line
+  // Fat stacked
   if (chartInstances.fat) chartInstances.fat.destroy();
   chartInstances.fat = new Chart(document.getElementById('fatChart'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Sat fat', data: days.map(d => Math.round(totals(allFoods[d]).satFat||0)),
+      { label: 'Sat fat', data: foodData.map(b => avgMacro(b, t=>t.satFat||0)),
         backgroundColor: 'rgba(216,90,48,0.85)', borderRadius: 0, stack: 'fat' },
-      { label: 'Other fat', data: days.map(d => { const t=totals(allFoods[d]); return Math.max(0,Math.round(t.fat-(t.satFat||0))); }),
-        backgroundColor: days.map(d => totals(allFoods[d]).fat>GOALS.fat?'rgba(226,75,74,0.75)':'rgba(212,83,126,0.75)'),
+      { label: 'Other fat', data: foodData.map(b => { const sf=avgMacro(b,t=>t.satFat||0); const f=avgMacro(b,t=>t.fat); return Math.max(0,f-sf); }),
+        backgroundColor: foodData.map(b => avgMacro(b,t=>t.fat)>GOALS.fat?'rgba(226,75,74,0.75)':'rgba(212,83,126,0.75)'),
         borderRadius: 4, stack: 'fat' },
       goalLine(GOALS.fat),
     ]},
     options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
-      tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.dataset.label !== undefined ? ` ${ctx.dataset.label}: ${ctx.parsed.y}g` : '' }}},
+      tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.dataset.label !== undefined ? ` ${ctx.dataset.label}: ${ctx.parsed.y}g${tooltipSuffix}` : '' }}},
       scales: { ...chartDefaults.scales, x: { ...chartDefaults.scales.x, stacked: true }, y: { ...chartDefaults.scales.y, stacked: true }}}
   });
 
-  // Sugar — red when over limit
-  chartInstances.sugar = simpleBar('sugarChart', t=>t.sug, GOALS.sug, v=>v>GOALS.sug?'rgba(226,75,74,0.7)':'rgba(226,75,74,0.45)', 'g', `Limit: ${GOALS.sug}g`);
-
-  // Sodium — red when over limit
-  chartInstances.sodium = simpleBar('sodiumChart', t=>t.sod||0, GOALS.sod, v=>v>GOALS.sod?'rgba(226,75,74,0.7)':'rgba(55,138,221,0.55)', 'mg', `Limit: ${GOALS.sod.toLocaleString()}mg`);
-
-  // Fiber — brighter when at goal (more is better)
-  chartInstances.fiber = simpleBar('fiberChart', t=>t.fib||0, GOALS.fib, v=>v>=GOALS.fib?'rgba(29,158,117,0.85)':'rgba(29,158,117,0.4)', 'g', `Goal: ${GOALS.fib}g`);
+  chartInstances.sugar  = simpleBar('sugarChart',  t=>t.sug,    GOALS.sug,  v=>v>GOALS.sug?'rgba(226,75,74,0.7)':'rgba(226,75,74,0.45)',  'g',  `Limit: ${GOALS.sug}g`);
+  chartInstances.sodium = simpleBar('sodiumChart',  t=>t.sod||0, GOALS.sod,  v=>v>GOALS.sod?'rgba(226,75,74,0.7)':'rgba(55,138,221,0.55)', 'mg', `Limit: ${GOALS.sod.toLocaleString()}mg`);
+  chartInstances.fiber  = simpleBar('fiberChart',   t=>t.fib||0, GOALS.fib,  v=>v>=GOALS.fib?'rgba(29,158,117,0.85)':'rgba(29,158,117,0.4)', 'g', `Goal: ${GOALS.fib}g`);
 
   // Total Macros stacked
   chartInstances.macros = new Chart(document.getElementById('macroChart'), {
@@ -3003,6 +3117,7 @@ function buildCharts(days, allFoods, weights) {
 
 // Track active group so renderHistory knows which sub-tab to default to
 let _chartRange = 'all'; // '7d' | '30d' | '3m' | '1y' | 'all'
+let _habitRangeMode = 'daily'; // 'daily' | 'monthly' | 'yearly'
 
 function switchChartRange(range, btn) {
   _chartRange = range;
@@ -3029,6 +3144,9 @@ function switchChartGroup(group) {
     const el = document.getElementById(`chartSubTabs-${g}`);
     if (el) el.classList.toggle('hidden', g !== group);
   });
+  // Swap range filter rows
+  document.getElementById('rangeTabsMain').classList.toggle('hidden', group === 'habits');
+  document.getElementById('rangeTabsHabits').classList.toggle('hidden', group !== 'habits');
   if (group === 'weight') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-weight')?.classList.add('active');
@@ -3089,49 +3207,229 @@ function switchHabitChartTab(btn) {
   renderHabitChart();
 }
 
+function switchHabitRange(mode, btn) {
+  _habitRangeMode = mode;
+  document.querySelectorAll('#rangeTabsHabits .chart-range-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderHabitChart();
+}
+
 function renderHabitChart() {
   const activeTab = document.querySelector('#chartSubTabs-habits .chart-tab.active');
-  const yearSel = document.getElementById('habitChartYear');
-  const canvas = document.getElementById('habitChart');
-  const legend = document.getElementById('habitChartLegend');
-  if (!canvas || !yearSel) return;
+  const canvas    = document.getElementById('habitChart');
+  const heatmap   = document.getElementById('habitHeatmap');
+  const wrap      = document.getElementById('habitChartWrap');
+  const legend    = document.getElementById('habitChartLegend');
+  const title     = document.getElementById('habitChartTitle');
+  const yearSel   = document.getElementById('habitChartYear');
+  if (!canvas) return;
+
   const selectedId = activeTab?.dataset.habitId || 'all';
-  const selectedYear = yearSel.value || new Date().getFullYear().toString();
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const habitsToShow = selectedId === 'all' ? _habits : _habits.filter(h => String(h.id) === selectedId);
-  const datasets = habitsToShow.map(h => {
-    const data = months.map((_, mi) => {
-      const monthStr = `${selectedYear}-${String(mi+1).padStart(2,'0')}`;
-      const logs = _habitLogs[h.id] || {};
-      return Object.entries(logs).filter(([d]) => d.startsWith(monthStr))
-        .filter(([,v]) => h.target_type === 'quantity' ? v >= (h.target_value||1) : v >= 1).length;
-    });
-    const [r,g,b] = hexToRgb(h.color);
-    return { label: h.name, data, borderColor: h.color, backgroundColor: `rgba(${r},${g},${b},0.1)`,
-      borderWidth: 2, pointBackgroundColor: h.color, pointRadius: 4, tension: 0.3, fill: habitsToShow.length === 1 };
-  });
+
   if (chartInstances['habit']) { chartInstances['habit'].destroy(); delete chartInstances['habit']; }
-  if (!datasets.length) {
-    if (legend) legend.innerHTML = '<span style="font-size:12px;color:var(--text-3);">No habits to show</span>';
-    return;
-  }
-  chartInstances['habit'] = new Chart(canvas.getContext('2d'), {
-    type: 'line',
-    data: { labels: months, datasets },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's' : ''}` }}},
-      scales: {
-        y: { beginAtZero: true, max: 31, ticks: { stepSize: 5, color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() }, grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }},
-        x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() }, grid: { display: false }}
-      }
+
+  // ── DAILY — last 30 days, one bar per day ──────────────────────
+  if (_habitRangeMode === 'daily') {
+    if (title) title.textContent = 'Habit completions — last 30 days';
+    if (yearSel) yearSel.style.display = 'none';
+    canvas.style.display = ''; wrap.style.display = '';
+    if (heatmap) heatmap.style.display = 'none';
+
+    const days = [];
+    const d = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const dd = new Date(d); dd.setDate(d.getDate() - i);
+      days.push(dd.toISOString().slice(0,10));
     }
-  });
-  if (legend) {
-    legend.innerHTML = habitsToShow.map(h =>
-      `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);"><div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>${h.name}</div>`
-    ).join('');
+    const labels = days.map(d => {
+      const dt = new Date(d + 'T12:00:00');
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    const datasets = habitsToShow.map(h => {
+      const logs = _habitLogs[h.id] || {};
+      const data = days.map(d => {
+        const val = logs[d] || 0;
+        return h.target_type === 'quantity'
+          ? (val >= (h.target_value||1) ? 1 : val > 0 ? val / (h.target_value||1) : 0)
+          : (val >= 1 ? 1 : 0);
+      });
+      const [r,g,b] = hexToRgb(h.color);
+      return { label: h.name, data,
+        backgroundColor: data.map(v => v >= 1 ? h.color : v > 0 ? `rgba(${r},${g},${b},0.35)` : `rgba(${r},${g},${b},0.08)`),
+        borderWidth: 0, borderRadius: 3 };
+    });
+
+    chartInstances['habit'] = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: ctx => {
+            const h = habitsToShow[ctx.datasetIndex];
+            const day = days[ctx.dataIndex];
+            const val = (_habitLogs[h.id]||{})[day] || 0;
+            if (h.target_type === 'quantity') return ` ${h.name}: ${val}/${h.target_value||1} ${h.target_unit||''}`;
+            return ` ${h.name}: ${val >= 1 ? 'Done' : 'Missed'}`;
+          }}}},
+        scales: {
+          y: { display: false, max: habitsToShow.length > 1 ? undefined : 1.1, stacked: habitsToShow.length > 1 },
+          x: { stacked: habitsToShow.length > 1,
+            ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10,
+              color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
+            grid: { display: false }}
+        }
+      }
+    });
   }
+
+  // ── MONTHLY — completions per month, line chart ────────────────
+  else if (_habitRangeMode === 'monthly') {
+    const year = yearSel?.value || new Date().getFullYear().toString();
+    if (title) title.textContent = `Habit completions by month — ${year}`;
+    if (yearSel) yearSel.style.display = '';
+    canvas.style.display = ''; wrap.style.display = '';
+    if (heatmap) heatmap.style.display = 'none';
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const datasets = habitsToShow.map(h => {
+      const data = months.map((_, mi) => {
+        const monthStr = `${year}-${String(mi+1).padStart(2,'0')}`;
+        const logs = _habitLogs[h.id] || {};
+        return Object.entries(logs)
+          .filter(([d]) => d.startsWith(monthStr))
+          .filter(([,v]) => h.target_type === 'quantity' ? v >= (h.target_value||1) : v >= 1).length;
+      });
+      const [r,g,b] = hexToRgb(h.color);
+      return { label: h.name, data, borderColor: h.color,
+        backgroundColor: `rgba(${r},${g},${b},0.1)`,
+        borderWidth: 2, pointBackgroundColor: h.color, pointRadius: 4,
+        tension: 0.3, fill: habitsToShow.length === 1 };
+    });
+
+    chartInstances['habit'] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels: months, datasets },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's' : ''}` }}},
+        scales: {
+          y: { beginAtZero: true, max: 31, ticks: { stepSize: 5,
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
+            grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }},
+          x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() }, grid: { display: false }}
+        }
+      }
+    });
+  }
+
+  // ── YEARLY — heatmap, GitHub-style ────────────────────────────
+  else if (_habitRangeMode === 'yearly') {
+    const year = yearSel?.value || new Date().getFullYear().toString();
+    if (title) title.textContent = `Habit completion heatmap — ${year}`;
+    if (yearSel) yearSel.style.display = '';
+    canvas.style.display = 'none'; wrap.style.display = 'none';
+    if (heatmap) { heatmap.style.display = 'block'; renderHabitHeatmap(habitsToShow, year); }
+  }
+
+  // Legend
+  if (legend) {
+    legend.innerHTML = habitsToShow.length > 1
+      ? habitsToShow.map(h =>
+          `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);">
+            <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>${h.name}
+          </div>`).join('')
+      : '';
+  }
+}
+
+function renderHabitHeatmap(habits, year) {
+  const heatmap = document.getElementById('habitHeatmap');
+  if (!heatmap) return;
+
+  // Build full year date map
+  const start = new Date(`${year}-01-01T12:00:00`);
+  const end   = new Date(`${year}-12-31T12:00:00`);
+  const today = new Date().toISOString().slice(0,10);
+
+  // Get all dates in the year
+  const allDates = [];
+  const d = new Date(start);
+  while (d <= end) {
+    allDates.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate() + 1);
+  }
+
+  // For each date calculate completion ratio across shown habits
+  const completionMap = {};
+  allDates.forEach(date => {
+    if (habits.length === 0) { completionMap[date] = 0; return; }
+    const done = habits.filter(h => {
+      const val = (_habitLogs[h.id]||{})[date] || 0;
+      return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+    }).length;
+    completionMap[date] = done / habits.length;
+  });
+
+  // Group by week columns
+  const SQ = 11, GAP = 2, WEEK = SQ + GAP;
+  const startDow = start.getDay(); // 0=Sun
+  const totalWeeks = Math.ceil((allDates.length + startDow) / 7);
+  const W = totalWeeks * WEEK + 24; // +24 for month labels
+  const H = 7 * WEEK + 20; // +20 for day labels
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthOffsets = {};
+
+  let squares = '';
+  allDates.forEach((date, i) => {
+    const col = Math.floor((i + startDow) / 7);
+    const row = (i + startDow) % 7;
+    const x = col * WEEK + 24;
+    const y = row * WEEK + 18;
+    const ratio = completionMap[date];
+    const isFuture = date > today;
+
+    // Track month label positions
+    const month = parseInt(date.slice(5,7)) - 1;
+    if (!monthOffsets[month]) monthOffsets[month] = x;
+
+    let fill;
+    if (isFuture) {
+      fill = 'var(--border)';
+    } else if (ratio === 0) {
+      fill = 'var(--border-med)';
+    } else if (habits.length === 1) {
+      // Single habit — use its color at full or partial opacity
+      const h = habits[0];
+      const [r,g,b] = hexToRgb(h.color);
+      fill = ratio >= 1 ? h.color : `rgba(${r},${g},${b},0.35)`;
+    } else {
+      // Multiple habits — green intensity based on completion ratio
+      const alpha = 0.15 + ratio * 0.85;
+      fill = `rgba(58,125,68,${alpha.toFixed(2)})`;
+    }
+
+    const dt = new Date(date + 'T12:00:00');
+    const label = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const pct = habits.length > 1 ? ` (${Math.round(ratio*100)}% complete)` : (ratio >= 1 ? ' ✓' : ' ✗');
+    squares += `<rect x="${x}" y="${y}" width="${SQ}" height="${SQ}" rx="2" fill="${fill}" opacity="1">
+      <title>${label}${pct}</title></rect>`;
+  });
+
+  // Month labels
+  let monthLabels = '';
+  Object.entries(monthOffsets).forEach(([m, x]) => {
+    monthLabels += `<text x="${x}" y="12" font-size="9" fill="var(--text-3)" font-family="DM Mono,monospace">${months[m]}</text>`;
+  });
+
+  // Day labels (Mon, Wed, Fri)
+  const dayLabels = [1,3,5].map(row =>
+    `<text x="0" y="${row * WEEK + 18 + SQ - 1}" font-size="9" fill="var(--text-3)" font-family="DM Mono,monospace">${['S','M','T','W','T','F','S'][row]}</text>`
+  ).join('');
+
+  heatmap.innerHTML = `<svg width="${W}" height="${H}" style="min-width:${W}px;">${monthLabels}${dayLabels}${squares}</svg>`;
 }
 
 function renderHistory() {
@@ -3676,11 +3974,8 @@ async function loadHabitsFromServer() {
 }
 
 async function loadHabitLogsFromServer() {
-  // Load last 30 days of logs
-  const from = new Date(); from.setDate(from.getDate() - 30);
-  const fromStr = from.toISOString().slice(0,10);
   try {
-    const rows = await api(`habit-logs?profile_id=${activeProfileId}&date_from=${fromStr}`);
+    const rows = await api(`habit-logs?profile_id=${activeProfileId}`);
     _habitLogs = {};
     rows.forEach(r => {
       if (!_habitLogs[r.habit_id]) _habitLogs[r.habit_id] = {};
