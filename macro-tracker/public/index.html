@@ -460,6 +460,8 @@
   /* Habit edit modal */
   .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); touch-action: none; }
   .habit-modal-overlay.hidden { display: none; }
+  .macro-breakdown-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); }
+  .macro-breakdown-overlay.hidden { display: none; }
   .habit-modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom,16px); width: 100%; max-width: 700px; max-height: 85vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .habit-modal-handle { width: 36px; height: 4px; background: var(--border-med); border-radius: 2px; margin: 12px auto 0; cursor: grab; }
   .habit-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
@@ -826,7 +828,7 @@
     </div>
 
     <!-- Macro breakdown modal -->
-    <div class="habit-modal-overlay hidden" id="macroBreakdownOverlay" onclick="if(event.target===this)closeMacroBreakdown();">
+    <div class="macro-breakdown-overlay hidden" id="macroBreakdownOverlay" onclick="if(event.target===this)closeMacroBreakdown();">
       <div class="habit-modal" id="macroBreakdownModal" style="max-height:80vh;">
         <div class="habit-modal-handle"></div>
         <div class="habit-modal-header">
@@ -2759,46 +2761,49 @@ async function logRecentFood(idx) {
 }
 
 function showMacroBreakdown(key, label, unit) {
-  const foods = getActiveFoods();
-  if (!foods.length) return;
+  // Always ensure any previously stuck overlay is cleared first
+  document.getElementById('macroBreakdownOverlay').classList.add('hidden');
+  document.body.classList.remove('modal-open');
 
-  // Map food key to actual food property
+  const foods = getActiveFoods();
+  if (!foods.length) { showToast('No foods logged yet'); return; }
+
   const keyMap = { cal:'cal', pro:'pro', carb:'carb', fat:'fat', satFat:'satFat', sug:'sug', sod:'sod', fib:'fib' };
   const prop = keyMap[key];
 
-  // Sort foods by this macro descending, filter out zeros
   const ranked = foods
     .map(f => ({ name: f.name, val: Math.round(f[prop] || 0), meal: f.meal || 'uncategorized' }))
     .filter(f => f.val > 0)
     .sort((a, b) => b.val - a.val);
 
-  const total = ranked.reduce((s, f) => s + f.val, 0);
+  if (!ranked.length) { showToast(`No ${label} logged today`); return; }
 
-  const mealColors = { breakfast: 'var(--blue)', lunch: 'var(--amber)', dinner: 'var(--pink)', snacks: 'var(--green)', uncategorized: 'var(--border-med)' };
-  const mealLabels = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks', uncategorized: '' };
+  const total = ranked.reduce((s, f) => s + f.val, 0);
+  const mealColors = { breakfast: 'var(--blue)', lunch: 'var(--amber)', dinner: 'var(--pink)', snacks: 'var(--green)' };
 
   document.getElementById('macroBreakdownTitle').textContent = `${label} breakdown`;
-  document.getElementById('macroBreakdownBody').innerHTML = ranked.length === 0
-    ? `<div style="font-size:13px;color:var(--text-3);text-align:center;padding:20px 0;">Nothing logged yet</div>`
-    : ranked.map(f => {
-        const pct = total > 0 ? Math.round((f.val / total) * 100) : 0;
-        const barW = total > 0 ? (f.val / ranked[0].val) * 100 : 0; // relative to max
-        const mealDot = f.meal && f.meal !== 'uncategorized'
-          ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${mealColors[f.meal]||'var(--border-med)'};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>`
-          : '';
-        return `<div style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-            <span style="font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px;">${mealDot}${f.name}</span>
-            <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);flex-shrink:0;">${f.val}${unit} <span style="color:var(--text-3);">(${pct}%)</span></span>
-          </div>
-          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-            <div style="height:100%;width:${barW}%;background:var(--blue);border-radius:2px;transition:width 0.3s ease;"></div>
-          </div>
-        </div>`;
-      }).join('');
+  document.getElementById('macroBreakdownBody').innerHTML = ranked.map(f => {
+    const pct = total > 0 ? Math.round((f.val / total) * 100) : 0;
+    const barW = total > 0 ? (f.val / ranked[0].val) * 100 : 0;
+    const dot = mealColors[f.meal]
+      ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${mealColors[f.meal]};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>`
+      : '';
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+        <span style="font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px;">${dot}${f.name}</span>
+        <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);flex-shrink:0;">${f.val}${unit} <span style="color:var(--text-3);">(${pct}%)</span></span>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+        <div style="height:100%;width:${barW}%;background:var(--blue);border-radius:2px;"></div>
+      </div>
+    </div>`;
+  }).join('');
 
-  document.getElementById('macroBreakdownOverlay').classList.remove('hidden');
-  document.body.classList.add('modal-open');
+  // Small delay so classList removal above has time to paint before re-opening
+  requestAnimationFrame(() => {
+    document.getElementById('macroBreakdownOverlay').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+  });
 }
 
 function closeMacroBreakdown() {
