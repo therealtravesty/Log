@@ -1,3 +1,14 @@
+async function fetchWithTimeout(url, options, ms = 20000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
@@ -35,7 +46,7 @@ Rules:
 - For custom build-your-own items (bowls, burritos), estimate the full assembled item as one entry
 - Do not split toppings/dressings unless they appear as explicitly separate line items on a receipt`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -81,7 +92,8 @@ Rules:
       return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response' }) };
     }
   } catch(e) {
-    return { statusCode: 500, body: JSON.stringify({ error: `JSON parse error: ${e.message}`, raw: raw.slice(0, 200) }) };
+    const msg = e.name === 'AbortError' ? 'Request timed out — try again' : `JSON parse error: ${e.message}`;
+    return { statusCode: 500, body: JSON.stringify({ error: msg }) };
   }
 
   // Ensure result is always an array
