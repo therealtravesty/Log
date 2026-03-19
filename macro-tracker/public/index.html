@@ -87,7 +87,7 @@
   /* Weight row */
   .weight-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); margin-bottom: 4px; }
   .weight-row label { font-size: 13px; color: var(--text-2); white-space: nowrap; }
-  .weight-input { width: 90px; height: 34px; font-size: 14px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; transition: border-color 0.15s; }
+  .weight-input { width: 90px; height: 34px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; transition: border-color 0.15s; }
   .weight-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
   .weight-unit { font-size: 13px; color: var(--text-3); }
   .weight-saved { font-size: 12px; color: var(--green-text); display: none; }
@@ -95,12 +95,11 @@
   /* Search */
   .search-area { margin-top: 1.25rem; border-top: 0.5px solid var(--border); padding-top: 1.25rem; }
   .search-wrap { display: flex; gap: 8px; align-items: flex-start; }
-  .search-textarea { flex: 1; min-height: 72px; font-size: 14px; padding: 10px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; resize: vertical; line-height: 1.5; transition: border-color 0.15s, background 0.15s; }
+  .search-textarea { flex: 1; min-height: 72px; font-size: 16px; padding: 10px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; resize: vertical; line-height: 1.5; transition: border-color 0.15s, background 0.15s; }
   .search-textarea:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .search-textarea::placeholder { color: var(--text-3); }
   @media (max-width: 600px) {
-    .search-textarea { font-size: 13px; }
-    .search-textarea:focus { font-size: 16px; }
+    .search-textarea { font-size: 16px; }
   }
   .lookup-btn { height: 40px; padding: 0 18px; font-size: 13px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
   .lookup-btn:hover { opacity: 0.82; }
@@ -212,9 +211,9 @@
   .settings-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 1rem; }
   .settings-field { display: flex; flex-direction: column; gap: 5px; }
   .settings-label { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
-  .settings-input { height: 36px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; transition: border-color 0.15s; width: 100%; }
+  .settings-input { height: 36px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; transition: border-color 0.15s; width: 100%; }
   .settings-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
-  .settings-select { height: 36px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; width: 100%; }
+  .settings-select { height: 36px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; cursor: pointer; width: 100%; }
   .settings-select:focus { border-color: rgba(0,0,0,0.3); font-size: 16px; }
   .settings-divider { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; margin-top: 4px; font-family: 'DM Mono', monospace; }
   .settings-result { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; padding-top: 1rem; border-top: 0.5px solid var(--border); }
@@ -245,7 +244,7 @@
   .profile-divider { font-size: 11px; color: var(--text-3); text-align: center; margin: 1rem 0; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; }
   .new-profile-form { display: flex; flex-direction: column; gap: 10px; }
   .new-profile-row { display: flex; gap: 8px; }
-  .new-profile-name { flex: 1; height: 38px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .new-profile-name { flex: 1; height: 38px; font-size: 16px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
   .new-profile-name:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
   .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
   .color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
@@ -304,9 +303,9 @@
   .exercise-name { flex: 1; font-size: 14px; }
   .exercise-burned { font-size: 13px; font-weight: 500; color: var(--green); font-family: 'DM Mono', monospace; }
   .exercise-add-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-  .exercise-input { flex: 1; min-width: 120px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
+  .exercise-input { flex: 1; min-width: 120px; height: 34px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
   .exercise-input:focus { font-size: 16px; }
-  .exercise-kcal-input { width: 80px; height: 34px; font-size: 13px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
+  .exercise-kcal-input { width: 80px; height: 34px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
   .exercise-kcal-input:focus { font-size: 16px; }
   /* Exercise lookup */
   .exercise-result { margin-top: 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); padding: 12px 14px; background: var(--bg); animation: fadeIn 0.2s ease; }
@@ -314,7 +313,7 @@
   .exercise-result-note { font-size: 12px; color: var(--text-3); margin-bottom: 10px; font-style: italic; }
   .exercise-result-kcal { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .exercise-result-kcal-label { font-size: 12px; color: var(--text-2); }
-  .exercise-result-kcal-input { width: 90px; height: 32px; font-size: 14px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
+  .exercise-result-kcal-input { width: 90px; height: 32px; font-size: 16px; padding: 0 10px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; }
   .exercise-result-kcal-input:focus { font-size: 16px; border-color: rgba(0,0,0,0.3); }
   .exercise-result-actions { display: flex; gap: 8px; }
   .exercise-add-btn { height: 34px; padding: 0 12px; font-size: 13px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: var(--radius); cursor: pointer; color: var(--text-2); white-space: nowrap; }
@@ -344,21 +343,21 @@
   .food-edit-form { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; padding: 8px 0 10px; border-top: 0.5px solid var(--border); margin-top: 4px; }
   .food-edit-field { display: flex; flex-direction: column; gap: 3px; }
   .food-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
-  .food-edit-input { height: 30px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
+  .food-edit-input { height: 30px; font-size: 16px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
   .food-edit-input:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .food-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 2px; }
   .food-edit-save { height: 30px; padding: 0 14px; font-size: 12px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; }
   .food-edit-cancel { height: 30px; padding: 0 12px; font-size: 12px; background: none; border: none; cursor: pointer; color: var(--text-3); text-decoration: underline; text-underline-offset: 2px; }
   .edit-btn { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 2px 5px; border-radius: 4px; }
   .edit-btn:hover { background: var(--bg); color: var(--text-2); }
-  .serving-input { font-size: 13px; }
+  .serving-input { font-size: 16px; }
   .serving-input:focus { font-size: 16px; }
 
   /* Editable result card macros */
   .result-edit-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-bottom: 14px; }
   .result-edit-field { display: flex; flex-direction: column; gap: 3px; }
   .result-edit-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace; }
-  .result-edit-input { height: 32px; font-size: 13px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
+  .result-edit-input { height: 32px; font-size: 16px; padding: 0 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: 'DM Mono', monospace; outline: none; width: 100%; }
   .result-edit-input:focus { border-color: rgba(0,0,0,0.3); font-size: 16px; }
 
   @media (max-width: 600px) {
@@ -464,9 +463,9 @@
   .habit-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
   .habit-modal-field { display: flex; flex-direction: column; gap: 6px; }
   .habit-modal-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; }
-  .habit-modal-input { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
+  .habit-modal-input { height: 40px; font-size: 16px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
   .habit-modal-input:focus { font-size: 16px; border-color: rgba(0,0,0,0.3); }
-  .habit-modal-select { height: 40px; font-size: 14px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
+  .habit-modal-select { height: 40px; font-size: 16px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; width: 100%; }
   .habit-modal-select:focus { font-size: 16px; }
   .habit-modal-save { height: 48px; width: 100%; font-size: 15px; font-weight: 600; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; margin-top: 4px; }
   .habit-modal-delete { height: 44px; width: 100%; font-size: 14px; font-weight: 500; background: none; color: var(--red-text); border: 0.5px solid var(--red-text); border-radius: var(--radius); cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; }
@@ -590,26 +589,28 @@
   <div class="loading-spinner"></div>
 </div>
 
-<div class="container"id="appContainer"style="display:none;">
-  <div class="tabs"style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-    <div style="display:flex;gap:4px;padding:4px;">
-      <button class="tab active"id="tab-goals"onclick="showView('goals', getTabDirection('goals'))">Goals</button>
-      <button class="tab"id="tab-today"onclick="showView('today', getTabDirection('today'))">Log</button>
-      <button class="tab"id="tab-habits"onclick="showView('habits', getTabDirection('habits'))">Habits</button>
-      <button class="tab"id="tab-history"onclick="showView('history', getTabDirection('history'))">History</button>
+<div class="container" id="appContainer" style="display:none;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;">
+    <div class="app-title">Lōg</div>
+    <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile">
+      <div class="profile-chip-avatar" id="profileChipAvatar"></div>
+      <span class="profile-chip-name" id="profileChipName"></span>
     </div>
-    <div class="profile-chip"onclick="showProfileScreen()"id="profileChip"title="Switch profile"style="margin-right:4px;">
-      <div class="profile-chip-avatar"id="profileChipAvatar"></div>
-      <span class="profile-chip-name"id="profileChipName"></span>
+  </div>
+  <div class="tabs" style="display:flex;align-items:center;width:100%;">
+    <div style="display:flex;gap:4px;padding:4px 4px 4px;">
+      <button class="tab active" id="tab-goals" onclick="showView('goals', getTabDirection('goals'))">Goals</button>
+      <button class="tab" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
+      <button class="tab" id="tab-habits" onclick="showView('habits', getTabDirection('habits'))">Habits</button>
+      <button class="tab" id="tab-history" onclick="showView('history', getTabDirection('history'))">History</button>
     </div>
   </div>
 
   <!-- TODAY -->
-  <div class="view active"id="view-today">
+  <div class="view active" id="view-today">
     <div class="header">
       <div class="header-top">
-        <div class="app-title">Lōg</div>
-        <div class="header-meta"id="headerMeta">2,850 kcal cut</div>
+        <div class="header-meta" id="headerMeta">2,850 kcal cut</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
         <div class="date-friendly"id="dateFriendly"></div>
@@ -735,13 +736,12 @@
   </div>
 
   <!-- HABITS -->
-  <div class="view"id="view-habits">
+  <div class="view" id="view-habits">
     <div class="history-header">
       <div>
-        <div class="history-title">Habits</div>
-        <div class="history-sub"id="habitsSub">Track your daily habits</div>
+        <div class="history-sub" id="habitsSub">Track your daily habits</div>
       </div>
-      <button class="ghost-btn"onclick="toggleAddHabitForm()">+ New habit</button>
+      <button class="ghost-btn" onclick="toggleAddHabitForm()">+ New habit</button>
     </div>
 
     <!-- Add habit form -->
@@ -859,13 +859,12 @@
 
   <!-- HISTORY -->
 
-  <div class="view"id="view-history">
+  <div class="view" id="view-history">
     <div class="history-header">
       <div>
-        <div class="history-title">History</div>
-        <div class="history-sub"id="historySubtitle"></div>
+        <div class="history-sub" id="historySubtitle"></div>
       </div>
-      <button class="ghost-btn"onclick="exportAll()">Export all CSV</button>
+      <button class="ghost-btn" onclick="exportAll()">Export all CSV</button>
     </div>
 
     <div class="stats-row">
@@ -881,28 +880,22 @@
     <div class="charts-section">
       <!-- Group tabs -->
       <div class="chart-group-tabs">
-        <button class="chart-group-tab active" onclick="switchChartGroup('body')">Body</button>
+        <button class="chart-group-tab active" onclick="switchChartGroup('weight')">Weight</button>
         <button class="chart-group-tab" onclick="switchChartGroup('nutrition')">Nutrition</button>
         <button class="chart-group-tab" onclick="switchChartGroup('habits')">Habits</button>
       </div>
-      <!-- Sub-tabs per group -->
-      <div class="chart-sub-tabs" id="chartSubTabs-body">
-        <button class="chart-tab active" onclick="switchChart('weight', event)">Weight</button>
-      </div>
+      <div class="chart-sub-tabs" id="chartSubTabs-weight"></div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-nutrition">
-        <button class="chart-tab active" onclick="switchChart('calories', event)">Calories</button>
+        <button class="chart-tab active" onclick="switchChart('macros', event)">Macros</button>
+        <button class="chart-tab" onclick="switchChart('calories', event)">Calories</button>
         <button class="chart-tab" onclick="switchChart('protein', event)">Protein</button>
         <button class="chart-tab" onclick="switchChart('carbs', event)">Carbs</button>
         <button class="chart-tab" onclick="switchChart('fat', event)">Fat</button>
-        <button class="chart-tab" onclick="switchChart('satfat', event)">Sat Fat</button>
         <button class="chart-tab" onclick="switchChart('sugar', event)">Sugar</button>
         <button class="chart-tab" onclick="switchChart('sodium', event)">Sodium</button>
         <button class="chart-tab" onclick="switchChart('fiber', event)">Fiber</button>
-        <button class="chart-tab" onclick="switchChart('macros', event)">Macros</button>
       </div>
-      <div class="chart-sub-tabs hidden" id="chartSubTabs-habits">
-        <!-- no sub-tabs needed, habits chart has its own selectors -->
-      </div>
+      <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
         <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
@@ -919,13 +912,13 @@
         <div class="chart-title">Daily carbs vs. 300g target</div>
         <div class="chart-wrap"><canvas id="carbChart"></canvas></div>
       </div>
-      <div class="chart-card"id="chart-fat">
-        <div class="chart-title">Daily total fat vs. 75g limit</div>
+      <div class="chart-card" id="chart-fat">
+        <div class="chart-title">Daily fat — total vs. saturated (stacked)</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--text-2);">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(212,83,126,0.85);display:inline-block;"></span>Total fat</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(216,90,48,0.85);display:inline-block;"></span>Sat fat</span>
+        </div>
         <div class="chart-wrap"><canvas id="fatChart"></canvas></div>
-      </div>
-      <div class="chart-card"id="chart-satfat">
-        <div class="chart-title">Daily saturated fat vs. 25g limit</div>
-        <div class="chart-wrap"><canvas id="satFatChart"></canvas></div>
       </div>
       <div class="chart-card"id="chart-sugar">
         <div class="chart-title">Daily sugar vs. 50g limit</div>
@@ -943,19 +936,13 @@
         <div class="chart-title">Total macros breakdown over time (kcal)</div>
         <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
       </div>
-      <div class="chart-card"id="chart-habits">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <div class="chart-title"style="margin-bottom:0;">Habit completions by month</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <select id="habitChartSelect"class="settings-select"style="height:30px;font-size:12px;padding:0 8px;width:auto;"onchange="renderHabitChart()">
-              <option value="all">All habits</option>
-            </select>
-            <select id="habitChartYear"class="settings-select"style="height:30px;font-size:12px;padding:0 8px;width:auto;"onchange="renderHabitChart()">
-            </select>
-          </div>
+      <div class="chart-card" id="chart-habits">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="chart-title" style="margin-bottom:0;">Habit completions by month</div>
+          <select id="habitChartYear" class="settings-select" style="height:28px;font-size:14px;padding:0 8px;width:auto;" onchange="renderHabitChart()"></select>
         </div>
         <div class="chart-wrap"><canvas id="habitChart"></canvas></div>
-        <div id="habitChartLegend"style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
+        <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
     </div>
 
@@ -966,7 +953,7 @@
   <div class="view"id="view-goals">
     <div class="header">
       <div class="header-top">
-        <div class="app-title">Goals &amp; Profile</div>
+        
         <div class="header-meta"id="headerMetaGoals"></div>
       </div>
     </div>
@@ -1974,7 +1961,7 @@ function renderWater() {
   const amountEl = document.getElementById('waterAmount');
   const goalEl   = document.getElementById('waterGoalLbl');
   const fillEl   = document.getElementById('waterFill');
-  if (amountEl) amountEl.textContent = oz + 'oz';
+  if (amountEl) amountEl.textContent = oz + ' oz';
   if (goalEl)   goalEl.textContent   = `of ${goal} oz goal`;
   if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)': 'var(--blue)'; }
 }
@@ -2376,11 +2363,22 @@ function buildCharts(days, allFoods, weights) {
   // Carbs — red when over target
   chartInstances.carbs = simpleBar('carbChart', t=>t.carb, GOALS.carb, v=>v>GOALS.carb?'rgba(226,75,74,0.7)':'rgba(239,159,39,0.75)', 'g', `Target: ${GOALS.carb}g`);
 
-  // Total Fat — red when over limit
-  chartInstances.fat = simpleBar('fatChart', t=>t.fat, GOALS.fat, v=>v>GOALS.fat?'rgba(226,75,74,0.7)':'rgba(212,83,126,0.75)', 'g', `Limit: ${GOALS.fat}g`);
-
-  // Saturated Fat — red when over limit
-  chartInstances.satfat = simpleBar('satFatChart', t=>t.satFat||0, GOALS.satFat, v=>v>GOALS.satFat?'rgba(226,75,74,0.7)':'rgba(216,90,48,0.75)', 'g', `Limit: ${GOALS.satFat}g`);
+  // Fat — stacked bar (sat fat + remaining fat), goal line
+  if (chartInstances.fat) chartInstances.fat.destroy();
+  chartInstances.fat = new Chart(document.getElementById('fatChart'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Sat fat', data: days.map(d => Math.round(totals(allFoods[d]).satFat||0)),
+        backgroundColor: 'rgba(216,90,48,0.85)', borderRadius: 0, stack: 'fat' },
+      { label: 'Other fat', data: days.map(d => { const t=totals(allFoods[d]); return Math.max(0,Math.round(t.fat-(t.satFat||0))); }),
+        backgroundColor: days.map(d => totals(allFoods[d]).fat>GOALS.fat?'rgba(226,75,74,0.75)':'rgba(212,83,126,0.75)'),
+        borderRadius: 4, stack: 'fat' },
+      goalLine(GOALS.fat),
+    ]},
+    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
+      tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ctx.dataset.label !== undefined ? ` ${ctx.dataset.label}: ${ctx.parsed.y}g` : '' }}},
+      scales: { ...chartDefaults.scales, x: { ...chartDefaults.scales.x, stacked: true }, y: { ...chartDefaults.scales.y, stacked: true }}}
+  });
 
   // Sugar — red when over limit
   chartInstances.sugar = simpleBar('sugarChart', t=>t.sug, GOALS.sug, v=>v>GOALS.sug?'rgba(226,75,74,0.7)':'rgba(226,75,74,0.45)', 'g', `Limit: ${GOALS.sug}g`);
@@ -2418,22 +2416,23 @@ function buildCharts(days, allFoods, weights) {
 }
 
 // Track active group so renderHistory knows which sub-tab to default to
-let _activeChartGroup = 'body';
+let _activeChartGroup = 'weight';
 
 function switchChartGroup(group) {
   _activeChartGroup = group;
-  // Update group tabs
   document.querySelectorAll('.chart-group-tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
-  // Show/hide sub-tab rows
-  ['body','nutrition','habits'].forEach(g => {
+  ['weight','nutrition','habits'].forEach(g => {
     const el = document.getElementById(`chartSubTabs-${g}`);
     if (el) el.classList.toggle('hidden', g !== group);
   });
-  // Activate the first sub-tab in the group, or the habits chart directly
-  if (group === 'habits') {
+  if (group === 'weight') {
+    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('chart-weight')?.classList.add('active');
+  } else if (group === 'habits') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-habits')?.classList.add('active');
+    populateHabitChartControls();
     renderHabitChart();
   } else {
     const firstBtn = document.querySelector(`#chartSubTabs-${group} .chart-tab`);
@@ -2456,102 +2455,70 @@ function switchChart(name, e) {
 }
 
 function populateHabitChartControls() {
-  const sel = document.getElementById('habitChartSelect');
   const yearSel = document.getElementById('habitChartYear');
-  if (!sel || !yearSel) return;
-
-  // Habit selector
-  sel.innerHTML = '<option value="all">All habits</option>'+
-    _habits.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
-
-  // Year selector from habit log dates
+  const subTabs = document.getElementById('chartSubTabs-habits');
+  if (!yearSel || !subTabs) return;
+  // Year selector
   const allDates = Object.values(_habitLogs).flatMap(d => Object.keys(d));
   const years = [...new Set(allDates.map(d => d.slice(0,4)))].sort().reverse();
   if (!years.length) years.push(new Date().getFullYear().toString());
   yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  // Per-habit sub-tabs
+  subTabs.innerHTML = [
+    `<button class="chart-tab active" data-habit-id="all" onclick="switchHabitChartTab(this)">All</button>`,
+    ..._habits.map(h =>
+      `<button class="chart-tab" data-habit-id="${h.id}" onclick="switchHabitChartTab(this)" style="border-left:3px solid ${h.color};">${h.name}</button>`)
+  ].join('');
+}
+
+function switchHabitChartTab(btn) {
+  document.querySelectorAll('#chartSubTabs-habits .chart-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderHabitChart();
 }
 
 function renderHabitChart() {
-  const sel = document.getElementById('habitChartSelect');
+  const activeTab = document.querySelector('#chartSubTabs-habits .chart-tab.active');
   const yearSel = document.getElementById('habitChartYear');
   const canvas = document.getElementById('habitChart');
   const legend = document.getElementById('habitChartLegend');
-  if (!canvas || !sel || !yearSel) return;
-
-  const selectedId = sel.value;
+  if (!canvas || !yearSel) return;
+  const selectedId = activeTab?.dataset.habitId || 'all';
   const selectedYear = yearSel.value || new Date().getFullYear().toString();
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  // Habits to show
-  const habitsToShow = selectedId === 'all'? _habits : _habits.filter(h => String(h.id) === selectedId);
-
-  // Build datasets — one per habit
+  const habitsToShow = selectedId === 'all' ? _habits : _habits.filter(h => String(h.id) === selectedId);
   const datasets = habitsToShow.map(h => {
     const data = months.map((_, mi) => {
       const monthStr = `${selectedYear}-${String(mi+1).padStart(2,'0')}`;
       const logs = _habitLogs[h.id] || {};
-      return Object.entries(logs).filter(([d]) => d.startsWith(monthStr)).filter(([,v]) => {
-        return h.target_type === 'quantity'? v >= (h.target_value||1) : v >= 1;
-      }).length;
+      return Object.entries(logs).filter(([d]) => d.startsWith(monthStr))
+        .filter(([,v]) => h.target_type === 'quantity' ? v >= (h.target_value||1) : v >= 1).length;
     });
     const [r,g,b] = hexToRgb(h.color);
-    return {
-      label: h.name,
-      data,
-      borderColor: h.color,
-      backgroundColor: `rgba(${r},${g},${b},0.1)`,
-      borderWidth: 2,
-      pointBackgroundColor: h.color,
-      pointRadius: 4,
-      tension: 0.3,
-      fill: habitsToShow.length === 1,
-    };
+    return { label: h.name, data, borderColor: h.color, backgroundColor: `rgba(${r},${g},${b},0.1)`,
+      borderWidth: 2, pointBackgroundColor: h.color, pointRadius: 4, tension: 0.3, fill: habitsToShow.length === 1 };
   });
-
-  // Destroy old chart
   if (chartInstances['habit']) { chartInstances['habit'].destroy(); delete chartInstances['habit']; }
-
   if (!datasets.length) {
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     if (legend) legend.innerHTML = '<span style="font-size:12px;color:var(--text-3);">No habits to show</span>';
     return;
   }
-
-  const ctx = canvas.getContext('2d');
-  chartInstances['habit'] = new Chart(ctx, {
+  chartInstances['habit'] = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: { labels: months, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's': ''} completed` }
-        }
-      },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} day${ctx.parsed.y !== 1 ? 's' : ''}` }}},
       scales: {
-        y: {
-          beginAtZero: true,
-          max: 31,
-          ticks: { stepSize: 5, color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
-          grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }
-        },
-        x: {
-          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() },
-          grid: { display: false }
-        }
+        y: { beginAtZero: true, max: 31, ticks: { stepSize: 5, color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() }, grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }},
+        x: { ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() }, grid: { display: false }}
       }
     }
   });
-
-  // Custom legend
   if (legend) {
     legend.innerHTML = habitsToShow.map(h =>
-      `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);">
-        <div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>
-        ${h.name}
-      </div>` ).join('');
+      `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);"><div style="width:10px;height:10px;border-radius:50%;background:${h.color};flex-shrink:0;"></div>${h.name}</div>`
+    ).join('');
   }
 }
 
@@ -3307,13 +3274,16 @@ function openHabitModal(habitId) {
   toggleEditQuantityFields();
   const cp = document.getElementById('editHabitColorPicker');
   cp.innerHTML = HABIT_COLORS.map(c =>
-    `<div class="habit-color-swatch${c===h.color?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>` ).join('');
-  const ip = document.getElementById('editHabitIconPicker');
-  if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
+    `<div class="habit-color-swatch${c.toLowerCase().trim()===(h.color||'#E05252').toLowerCase().trim()?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>` ).join('');
+  // Show modal immediately — defer heavy icon picker and calendar to next frame
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
   _retroMonthOffset = 0;
-  renderRetroCalendar(habitId);
+  requestAnimationFrame(() => {
+    const ip = document.getElementById('editHabitIconPicker');
+    if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
+    renderRetroCalendar(habitId);
+  });
 
   // Swipe down to dismiss — only triggers from handle, not while scrolling content
   const modal = document.getElementById('habitEditModal');
