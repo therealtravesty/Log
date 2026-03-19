@@ -605,8 +605,8 @@
   </div>
   <div class="tabs" style="display:flex;align-items:center;width:100%;">
     <div style="display:flex;gap:4px;padding:4px 4px 4px;">
-      <button class="tab active" id="tab-goals" onclick="showView('goals', getTabDirection('goals'))">Goals</button>
-      <button class="tab" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
+      <button class="tab" id="tab-goals" onclick="showView('goals', getTabDirection('goals'))">Goals</button>
+      <button class="tab active" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
       <button class="tab" id="tab-habits" onclick="showView('habits', getTabDirection('habits'))">Habits</button>
       <button class="tab" id="tab-history" onclick="showView('history', getTabDirection('history'))">History</button>
     </div>
@@ -1208,11 +1208,12 @@ async function selectProfile(id, profileData, isNew = false) {
       ? `Welcome, ${activeProfileData.name}!` : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
-  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
   await initSettings();
   setDate(todayStr());
-  showView('today'); // always land on Log for returning users
-  // Hide loading overlay
+  // Reveal app now that data is ready — prevents Log flashing before profile resolves
+  document.getElementById('appContainer').style.display = '';
+  showView('today');
   if (overlay) overlay.classList.add('hidden');
 }
 
@@ -1322,6 +1323,7 @@ async function bootProfiles() {
   }
   // No last profile or not found — show picker
   await renderProfileList();
+  document.getElementById('appContainer').style.display = '';
   document.getElementById('profileScreen').classList.remove('hidden');
 }
 // ── End profile system ───────────────────────────────────────────
@@ -1336,6 +1338,8 @@ let _weights   = {};
 let _water     = {};
 let _exercise  = {};
 let _savedMeals = [];
+let _customFoods = []; // user-saved custom food library
+let _customExercises = []; // user-saved exercise history
 let _habits = [];
 let _habitLogs = {};
 const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#607D8B','#546E7A','#455A64'];
@@ -1413,6 +1417,93 @@ async function loadSavedMealsFromServer() {
     const cached = cacheGet('savedMeals');
     if (cached) _savedMeals = cached;
   }
+}
+
+async function loadCustomFoodsFromServer() {
+  try {
+    const rows = await api(`custom-foods?profile_id=${activeProfileId}`);
+    _customFoods = (rows||[]).map(r => {
+      const f = r.foods?.[0] || {};
+      return { id: r.id, name: r.name.replace(/^\[cf\] /, ''),
+        cal: f.cal||0, pro: f.pro||0, carb: f.carb||0, fat: f.fat||0,
+        satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
+        servingLabel: f.servingLabel||'1 serving' };
+    });
+    cacheSet('customFoods', _customFoods);
+  } catch(e) {
+    const cached = cacheGet('customFoods');
+    if (cached) _customFoods = cached;
+  }
+}
+
+async function saveCustomFood(food) {
+  try {
+    await api('custom-foods', { method: 'POST', body: {
+      profile_id: activeProfileId, name: food.name,
+      cal: food.cal, pro: food.pro, carb: food.carb, fat: food.fat,
+      satFat: food.satFat||0, sug: food.sug||0, sod: food.sod||0, fib: food.fib||0,
+      servingLabel: food.servingLabel||'1 serving'
+    }});
+    await loadCustomFoodsFromServer();
+    showToast(`"${food.name}" saved to My Foods`);
+  } catch(e) { showToast('Could not save to My Foods'); }
+}
+
+async function deleteCustomFood(id, name) {
+  if (!confirm(`Remove "${name}" from My Foods?`)) return;
+  try {
+    await api(`custom-foods?id=${id}`, { method: 'DELETE' });
+    _customFoods = _customFoods.filter(f => f.id !== id);
+    cacheSet('customFoods', _customFoods);
+    renderCustomFoodsSection();
+    showToast('Removed from My Foods');
+  } catch(e) { showToast('Could not remove'); }
+}
+
+// ── Exercise internal database ───────────────────────────────────
+async function loadCustomExercisesFromServer() {
+  try {
+    const rows = await api(`custom-foods?profile_id=${activeProfileId}&type=exercise`);
+    _customExercises = (rows||[]).map(r => {
+      const f = r.foods?.[0] || {};
+      return { id: r.id, name: r.name.replace(/^\[ce\] /, ''), calories_burned: f.calories_burned||0, note: f.note||'' };
+    });
+    cacheSet('customExercises', _customExercises);
+  } catch(e) {
+    const cached = cacheGet('customExercises');
+    if (cached) _customExercises = cached;
+  }
+}
+
+async function saveCustomExercise(name, calories_burned, note) {
+  try {
+    await api('custom-foods', { method: 'POST', body: {
+      profile_id: activeProfileId, name,
+      _type: 'exercise', _calories_burned: calories_burned, _note: note||''
+    }});
+    await loadCustomExercisesFromServer(); // refresh cache
+  } catch(e) {} // silent — convenience feature
+}
+
+function findInternalExercise(query) {
+  if (!_customExercises || !_customExercises.length) return null;
+  const q = query.toLowerCase().trim();
+  // Exact match
+  let match = _customExercises.find(e => e.name.toLowerCase() === q);
+  if (match) return match;
+  // Contains match
+  match = _customExercises.find(e => {
+    const n = e.name.toLowerCase();
+    return q.includes(n) || n.includes(q);
+  });
+  if (match) return match;
+  // Word overlap — 2+ significant words
+  const qWords = q.split(/\s+/).filter(w => w.length > 2);
+  match = _customExercises.find(e => {
+    const eWords = e.name.toLowerCase().split(/\s+/);
+    return qWords.filter(w => eWords.includes(w)).length >= 2;
+  });
+  return match || null;
 }
 
 function dbRowToFood(r) {
@@ -1660,11 +1751,14 @@ function onDateChange() {
 function showView(name, direction) {
   const currentEl = document.querySelector('.view.active');
   const nextEl = document.getElementById('view-'+name);
-  if (!nextEl || nextEl === currentEl) return;
+  if (!nextEl) return;
 
+  // Always sync tab highlight even if view is already active
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   const tabEl = document.getElementById('tab-'+name);
   if (tabEl) tabEl.classList.add('active');
+
+  if (nextEl === currentEl) return; // view already shown, tab is now synced
 
   if (!direction || !currentEl) {
     // No animation (first load or no direction info)
@@ -1754,14 +1848,54 @@ function loadActiveWeight() {
   document.getElementById('weightInput').value = settingsWeight && settingsWeight > 50 ? settingsWeight : 183.0;
 }
 
-// Food lookup
+// Food lookup — checks internal saved foods first, then AI with brand priority
+function findInternalFood(query) {
+  if (!_customFoods || !_customFoods.length) return null;
+  const q = query.toLowerCase().trim();
+  // Exact match first
+  let match = _customFoods.find(f => f.name.toLowerCase() === q);
+  if (match) return match;
+  // Contains match — query contains the food name or vice versa
+  match = _customFoods.find(f => {
+    const n = f.name.toLowerCase();
+    return q.includes(n) || n.includes(q);
+  });
+  if (match) return match;
+  // Word overlap — at least 2 significant words in common
+  const qWords = q.split(/\s+/).filter(w => w.length > 2);
+  match = _customFoods.find(f => {
+    const fWords = f.name.toLowerCase().split(/\s+/);
+    return qWords.filter(w => fWords.includes(w)).length >= 2;
+  });
+  return match || null;
+}
+
 async function lookupFood(excludeSource = null) {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) { document.getElementById('searchInput').focus(); return; }
   const btn = document.getElementById('lookupBtn');
   const resultArea = document.getElementById('resultArea');
   btn.disabled = true;
+
+  // Priority 1: Check internal database first (unless explicitly retrying)
+  if (!excludeSource) {
+    const internal = findInternalFood(query);
+    if (internal) {
+      pendingFood = { id: Date.now(), name: internal.name,
+        cal: internal.cal, pro: internal.pro, carb: internal.carb, fat: internal.fat,
+        satFat: internal.satFat||0, sug: internal.sug||0, sod: internal.sod||0, fib: internal.fib||0 };
+      window._baseMacros = { ...pendingFood };
+      window._lastSource = 'Your saved foods';
+      window._internalMatch = internal; // track so we don't re-save on confirm
+      renderFoodResult(pendingFood, '1 serving', 'Your saved foods', true);
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  window._internalMatch = null;
   resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Looking up macros...</div>';
+
   try {
     const res = await fetch('/api/lookup', {
       method: 'POST',
@@ -1770,49 +1904,62 @@ async function lookupFood(excludeSource = null) {
     });
     if (!res.ok) throw new Error('Server error '+ res.status);
     const data = await res.json();
-    // Store base macros at 1x serving for scaling
     pendingFood = { id: Date.now(), name: data.name,
       cal: Math.round(data.calories), pro: Math.round(data.protein_g),
       carb: Math.round(data.carbs_g), fat: Math.round(data.fat_g),
       satFat: Math.round(data.sat_fat_g||0), sug: Math.round(data.sugar_g),
       sod: Math.round(data.sodium_mg||0), fib: Math.round(data.fiber_g||0) };
-    // Save base values for proportion scaling
     window._baseMacros = { ...pendingFood };
     const sourceText = data.note || 'USDA estimate';
     window._lastSource = sourceText;
     const servingLabel = data.serving_size || '1 serving';
-    resultArea.innerHTML = `<div class="result-card">
-      <div class="result-name">${data.name}</div>
-      <div class="result-source">
-        <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="result-source-badge"> ${sourceText}</span>
-          <button class="result-retry" onclick="lookupFood(window._lastSource)">Try different source</button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
-        <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-        <input id="re_servings"type="number"min="0.25"step="0.25"value="1"class="serving-input" style="width:64px;height:30px;font-size:16px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;" oninput="scaleServings(this.value)"/>
-        <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
-      </div>
-      <div class="result-edit-grid">
-        <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input"id="re_cal"type="number"value="${pendingFood.cal}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input"id="re_pro"type="number"value="${pendingFood.pro}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Carbs (g)</label><input class="result-edit-input"id="re_carb"type="number"value="${pendingFood.carb}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Fat (g)</label><input class="result-edit-input"id="re_fat"type="number"value="${pendingFood.fat}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sat Fat (g)</label><input class="result-edit-input"id="re_satFat"type="number"value="${pendingFood.satFat}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sugar (g)</label><input class="result-edit-input"id="re_sug"type="number"value="${pendingFood.sug}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Sodium (mg)</label><input class="result-edit-input"id="re_sod"type="number"value="${pendingFood.sod}"/></div>
-        <div class="result-edit-field"><label class="result-edit-label">Fiber (g)</label><input class="result-edit-input"id="re_fib"type="number"value="${pendingFood.fib}"/></div>
-      </div>
-      <div class="result-actions">
-        <button class="confirm-btn"onclick="confirmAdd()">+ Add to log</button>
-        <button class="discard-btn"onclick="discardResult()">Discard</button>
-      </div>
-    </div>`;
+    renderFoodResult(pendingFood, servingLabel, sourceText, false);
   } catch(e) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed: '+ e.message + '</div>';
   }
   btn.disabled = false;
+}
+
+function renderFoodResult(food, servingLabel, sourceText, isInternal) {
+  const resultArea = document.getElementById('resultArea');
+  const retryBtn = isInternal
+    ? `<button class="result-retry" onclick="lookupFood()">Search online instead</button>`
+    : `<button class="result-retry" onclick="lookupFood(window._lastSource)">Try different source</button>`;
+  resultArea.innerHTML = `<div class="result-card">
+      <div class="result-name">${food.name}</div>
+      <div class="result-source">
+        <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="result-source-badge">${isInternal ? 'Your saved foods' : sourceText}</span>
+          ${retryBtn}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
+        <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
+        <input id="re_servings" type="number" min="0.25" step="0.25" value="1" class="serving-input" style="width:64px;height:30px;font-size:16px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;" oninput="scaleServings(this.value)"/>
+        <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
+      </div>
+      <div class="result-edit-grid">
+        <div class="result-edit-field"><label class="result-edit-label">Calories</label><input class="result-edit-input" id="re_cal" type="number" value="${food.cal}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Protein (g)</label><input class="result-edit-input" id="re_pro" type="number" value="${food.pro}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Carbs (g)</label><input class="result-edit-input" id="re_carb" type="number" value="${food.carb}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fat (g)</label><input class="result-edit-input" id="re_fat" type="number" value="${food.fat}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sat Fat (g)</label><input class="result-edit-input" id="re_satFat" type="number" value="${food.satFat}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sugar (g)</label><input class="result-edit-input" id="re_sug" type="number" value="${food.sug}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Sodium (mg)</label><input class="result-edit-input" id="re_sod" type="number" value="${food.sod}"/></div>
+        <div class="result-edit-field"><label class="result-edit-label">Fiber (g)</label><input class="result-edit-input" id="re_fib" type="number" value="${food.fib}"/></div>
+      </div>
+      <div class="result-actions">
+        <button class="confirm-btn" onclick="confirmAdd()">+ Add to log</button>
+        <button class="discard-btn" onclick="discardResult()">Discard</button>
+        ${isInternal ? '' : '<span style="font-size:11px;color:var(--text-3);margin-left:auto;align-self:center;">Edits save automatically</span>'}
+      </div>
+    </div>`;
+}
+
+function discardResult() {
+  pendingFood = null;
+  document.getElementById('resultArea').innerHTML = '';
+  document.getElementById('searchInput').focus();
 }
 
 function scaleServings(val) {
@@ -1891,6 +2038,23 @@ async function confirmAdd() {
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
     await addFood(pendingFood, meal);
+    // Auto-save to internal database if macros were edited from the AI result
+    // Skip if this was already an internal match (no need to re-save)
+    if (!window._internalMatch) {
+      const orig = window._baseMacros;
+      const edited = pendingFood;
+      const wasEdited = orig && (orig.cal !== edited.cal || orig.pro !== edited.pro ||
+        orig.carb !== edited.carb || orig.fat !== edited.fat);
+      // Always save — accumulates a personal food database over time
+      saveCustomFood({ ...pendingFood }).catch(() => {});
+    } else {
+      // Update the internal entry if macros were changed from the saved version
+      const saved = window._internalMatch;
+      if (saved.cal !== pendingFood.cal || saved.pro !== pendingFood.pro ||
+          saved.carb !== pendingFood.carb || saved.fat !== pendingFood.fat) {
+        saveCustomFood({ ...pendingFood, id: undefined }).catch(() => {});
+      }
+    }
     pendingFood = null;
     document.getElementById('searchInput').value = '';
     document.getElementById('resultArea').innerHTML = '';
@@ -1900,10 +2064,40 @@ async function confirmAdd() {
   if (btn) { btn.textContent = '+ Add to log'; btn.disabled = false; }
 }
 
-function discardResult() {
-  pendingFood = null;
-  document.getElementById('resultArea').innerHTML = '';
-  document.getElementById('searchInput').focus();
+function renderCustomFoodsSection(filter = '') {
+  const area = document.getElementById('myFoodsArea');
+  if (!area) return;
+  const matches = filter
+    ? _customFoods.filter(f => f.name.toLowerCase().includes(filter.toLowerCase()))
+    : _customFoods;
+  if (!matches.length) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+  area.innerHTML = `
+    <div style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">My Foods</div>
+    ${matches.map(f => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:4px;cursor:pointer;" onclick="addCustomFoodToLog(${f.id})">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+          <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F</div>
+        </div>
+        <button onclick="event.stopPropagation();deleteCustomFood(${f.id},'${f.name.replace(/'/g,"\\'")})" style="background:none;border:none;color:var(--text-3);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:4px;flex-shrink:0;">×</button>
+      </div>`).join('')}`;
+}
+
+function addCustomFoodToLog(id) {
+  const f = _customFoods.find(f => f.id === id);
+  if (!f) return;
+  pendingFood = { id: Date.now(), name: f.name,
+    cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat,
+    satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
+    servingLabel: f.servingLabel||'1 serving', servingMult: 1 };
+  window._baseMacros = { ...pendingFood };
+  const meal = getActiveMealTab() || 'uncategorized';
+  addFood(pendingFood, meal).then(() => {
+    pendingFood = null;
+    renderToday();
+    showToast(`${f.name} added!`);
+  });
 }
 
 function toggleFoodEdit(foodId) {
@@ -1989,37 +2183,68 @@ async function lookupExercise() {
   const resultArea = document.getElementById('exerciseResultArea');
   btn.disabled = true;
   btn.textContent = '...';
+
+  // Priority 1: Check internal exercise history first
+  const internal = findInternalExercise(query);
+  if (internal) {
+    resultArea.innerHTML = `<div class="exercise-result">
+      <div class="exercise-result-name">${internal.name}</div>
+      <div class="exercise-result-note">Your logged history</div>
+      <div class="exercise-result-kcal">
+        <span class="exercise-result-kcal-label">Calories burned</span>
+        <input class="exercise-result-kcal-input" id="exerciseKcalResult" type="number" value="${internal.calories_burned}"/>
+        <span style="font-size:12px;color:var(--text-3);">kcal</span>
+      </div>
+      <div class="exercise-result-actions">
+        <button class="confirm-btn" onclick="confirmExercise('${internal.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
+        <button class="discard-btn" onclick="discardExercise()">Discard</button>
+        <button class="discard-btn" onclick="lookupExerciseOnline()" style="margin-left:auto;">Re-estimate</button>
+      </div>
+    </div>`;
+    btn.disabled = false;
+    btn.textContent = 'Look up';
+    return;
+  }
+
+  await lookupExerciseOnline();
+  btn.disabled = false;
+  btn.textContent = 'Look up';
+}
+
+async function lookupExerciseOnline() {
+  const query = document.getElementById('exerciseName').value.trim();
+  if (!query) return;
+  const resultArea = document.getElementById('exerciseResultArea');
   resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Estimating calories burned...</div>';
   try {
     const res = await fetch('/api/exercise-lookup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
     });
-    if (!res.ok) throw new Error('Server error '+ res.status);
+    if (!res.ok) throw new Error('Server error ' + res.status);
     const data = await res.json();
     resultArea.innerHTML = `<div class="exercise-result">
       <div class="exercise-result-name">${data.name}</div>
-      <div class="exercise-result-note"> ${data.note || 'MET-based estimate'}</div>
+      <div class="exercise-result-note">${data.note || 'MET-based estimate'}</div>
       <div class="exercise-result-kcal">
         <span class="exercise-result-kcal-label">Calories burned</span>
-        <input class="exercise-result-kcal-input"id="exerciseKcalResult"type="number"value="${data.calories_burned}"/>
+        <input class="exercise-result-kcal-input" id="exerciseKcalResult" type="number" value="${data.calories_burned}"/>
         <span style="font-size:12px;color:var(--text-3);">kcal</span>
       </div>
       <div class="exercise-result-actions">
-        <button class="confirm-btn"onclick="confirmExercise('${data.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
-        <button class="discard-btn"onclick="discardExercise()">Discard</button>
+        <button class="confirm-btn" onclick="confirmExercise('${data.name.replace(/'/g,"\\'")}')">+ Log exercise</button>
+        <button class="discard-btn" onclick="discardExercise()">Discard</button>
+        <span style="font-size:11px;color:var(--text-3);margin-left:auto;align-self:center;">Saves automatically</span>
       </div>
     </div>`;
   } catch(e) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed — you can still log manually below.</div>';
-    resultArea.innerHTML += `<div class="exercise-add-row"style="margin-top:8px;">
-      <input class="exercise-kcal-input"id="exerciseKcalManual"type="number"min="0"placeholder="kcal burned"/>
-      <button class="exercise-add-btn"onclick="addExerciseManual()">+ Add</button>
+    resultArea.innerHTML += `<div class="exercise-add-row" style="margin-top:8px;">
+      <input class="exercise-kcal-input" id="exerciseKcalManual" type="number" min="0" placeholder="kcal burned"/>
+      <button class="exercise-add-btn" onclick="addExerciseManual()">+ Add</button>
     </div>`;
   }
-  btn.disabled = false;
-  btn.textContent = 'Look up';
 }
 
 async function confirmExercise(name) {
@@ -2032,6 +2257,8 @@ async function confirmExercise(name) {
     if (!_exercise[activeDate]) _exercise[activeDate] = [];
     _exercise[activeDate].push({ id: saved?.id, name, calories_burned: kcal });
     cacheSet('exercise', _exercise);
+    // Auto-save to internal exercise database — updates if name already exists
+    saveCustomExercise(name, kcal, '').catch(() => {});
     document.getElementById('exerciseName').value = '';
     document.getElementById('exerciseResultArea').innerHTML = '';
     renderExercise(); renderNetBanner(); showToast('Exercise logged!');
@@ -2750,7 +2977,10 @@ function showToast(msg) {
 
 // Enter to lookup (Shift+Enter for newline)
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter'&& !e.shiftKey) { e.preventDefault(); lookupFood(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
+});
+document.getElementById('searchInput').addEventListener('input', e => {
+  renderCustomFoodsSection(e.target.value.trim());
 });
 
 // ── Welcome modal & home screen tip ─────────────────────────────
@@ -2762,13 +2992,11 @@ function initWelcome() {
     document.getElementById('hsTip').classList.remove('hidden');
   }
   if (!localStorage.getItem('macroWelcomeSeen')) {
-    // First ever visit — show welcome, keep app hidden until dismissed
+    // First ever visit — show welcome overlay, keep everything else hidden
     document.getElementById('welcomeOverlay').classList.remove('hidden');
-    // App container stays hidden until dismissWelcome() reveals it
-  } else {
-    // Returning user — show app immediately
-    document.getElementById('appContainer').style.display = '';
   }
+  // App container stays hidden until bootProfiles() resolves successfully
+  // This prevents the Log flash before the profile screen appears
 }
 
 function showApp() {
@@ -2789,7 +3017,7 @@ function maybeShowGoalsOverlay() {
 function dismissWelcome() {
   localStorage.setItem('macroWelcomeSeen', '1');
   document.getElementById('welcomeOverlay').classList.add('hidden');
-  showApp();
+  // Don't reveal appContainer here — bootProfiles will do it after data loads
   bootProfiles();
 }
 
