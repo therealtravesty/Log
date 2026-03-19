@@ -3095,12 +3095,12 @@ function buildCharts(days, allFoods, weights) {
     data: {
       labels,
       datasets: [
-        { label: 'Protein', data: days.map(d=>Math.round(totals(allFoods[d]).pro*4)),          backgroundColor: 'rgba(29,158,117,0.85)', borderRadius: 2 },
-        { label: 'Carbs',   data: days.map(d=>Math.round(totals(allFoods[d]).carb*4)),         backgroundColor: 'rgba(239,159,39,0.85)', borderRadius: 2 },
-        { label: 'Fat',     data: days.map(d=>Math.round(totals(allFoods[d]).fat*9)),           backgroundColor: 'rgba(212,83,126,0.85)', borderRadius: 2 },
-        { label: 'Sat Fat', data: days.map(d=>Math.round((totals(allFoods[d]).satFat||0)*9)),  backgroundColor: 'rgba(216,90,48,0.75)',  borderRadius: 2 },
-        { label: 'Sugar',   data: days.map(d=>Math.round(totals(allFoods[d]).sug*4)),          backgroundColor: 'rgba(226,75,74,0.65)',  borderRadius: 2 },
-        { label: 'Fiber',   data: days.map(d=>Math.round((totals(allFoods[d]).fib||0)*4)),     backgroundColor: 'rgba(29,158,117,0.4)',  borderRadius: 2 },
+        { label: 'Protein', data: foodData.map(b => avgMacro(b, t=>Math.round(t.pro*4))),         backgroundColor: 'rgba(29,158,117,0.85)', borderRadius: 2 },
+        { label: 'Carbs',   data: foodData.map(b => avgMacro(b, t=>Math.round(t.carb*4))),        backgroundColor: 'rgba(239,159,39,0.85)', borderRadius: 2 },
+        { label: 'Fat',     data: foodData.map(b => avgMacro(b, t=>Math.round(t.fat*9))),         backgroundColor: 'rgba(212,83,126,0.85)', borderRadius: 2 },
+        { label: 'Sat Fat', data: foodData.map(b => avgMacro(b, t=>Math.round((t.satFat||0)*9))), backgroundColor: 'rgba(216,90,48,0.75)',  borderRadius: 2 },
+        { label: 'Sugar',   data: foodData.map(b => avgMacro(b, t=>Math.round(t.sug*4))),         backgroundColor: 'rgba(226,75,74,0.65)',  borderRadius: 2 },
+        { label: 'Fiber',   data: foodData.map(b => avgMacro(b, t=>Math.round((t.fib||0)*4))),    backgroundColor: 'rgba(29,158,117,0.4)',  borderRadius: 2 },
       ]
     },
     options: {
