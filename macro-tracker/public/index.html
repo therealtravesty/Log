@@ -233,7 +233,7 @@
   .profile-screen { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
   .profile-screen.hidden { display: none; }
   .profile-box { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 420px; }
-  .profile-box-title { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .profile-box-title { font-size: 36px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.5px; }
   .profile-box-sub { font-size: 13px; color: var(--text-2); margin-bottom: 1.5rem; }
   .profile-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
   .profile-btn { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); cursor: pointer; transition: background 0.15s, border-color 0.15s; text-align: left; width: 100%; }
@@ -401,6 +401,7 @@
   /* Profile loading overlay */
   .loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity 0.25s; }
   .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-app-title { font-size: 36px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px; }
   .loading-avatar { width: 48px; height: 48px; border-radius: 50%; }
   .loading-name { font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
   .loading-spinner { width: 20px; height: 20px; border: 2px solid var(--border-med); border-top-color: var(--text-2); border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -490,7 +491,7 @@
 <div class="welcome-overlay hidden"id="welcomeOverlay">
   <div class="welcome-box">
     <img class="welcome-logo"src="/apple-touch-icon.png"alt="Lōg"onerror="this.style.display='none'"/>
-    <div class="welcome-title">Welcome to Lōg</div>
+    <div class="welcome-title">Welcome to L<span style="color:#3a7d44;">ō</span>g</div>
     <div class="welcome-sub">Your personal AI-powered nutrition tracker. Hit your goals one meal at a time. Here's how to get started:</div>
     <div class="welcome-steps">
       <div class="welcome-step">
@@ -565,7 +566,7 @@
 </div>
 <div class="profile-screen hidden"id="profileScreen">
   <div class="profile-box">
-    <div class="profile-box-title">Lōg</div>
+    <div class="profile-box-title">L<span style="color:#3a7d44;">ō</span>g</div>
     <div class="profile-box-sub">Who's logging today?</div>
     <div class="profile-list"id="profileList"></div>
     <div class="profile-divider">or create a new profile</div>
@@ -584,6 +585,7 @@
 
 <!-- Loading overlay — shown while switching profiles -->
 <div class="loading-overlay hidden"id="loadingOverlay">
+  <div class="loading-app-title">L<span style="color:#3a7d44;">ō</span>g</div>
   <div class="loading-avatar"id="loadingAvatar"></div>
   <div class="loading-name"id="loadingName"></div>
   <div class="loading-spinner"></div>
@@ -591,7 +593,7 @@
 
 <div class="container" id="appContainer" style="display:none;">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;">
-    <div class="app-title">Lōg</div>
+    <div class="app-title">L<span style="color:#3a7d44;">ō</span>g</div>
     <div class="profile-chip" onclick="showProfileScreen()" id="profileChip" title="Switch profile">
       <div class="profile-chip-avatar" id="profileChipAvatar"></div>
       <span class="profile-chip-name" id="profileChipName"></span>
