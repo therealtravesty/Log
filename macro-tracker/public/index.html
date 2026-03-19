@@ -1398,7 +1398,6 @@ async function loadAllFromServer() {
       if (!_allFoods[r.date]) _allFoods[r.date] = [];
       _allFoods[r.date].push(dbRowToFood(r));
     });
-    console.log(`[loadAllFromServer] loaded ${rows.length} rows from server`);
     cacheSet('allFoods', _allFoods);
   } catch(e) {
     console.warn('[loadAllFromServer] falling back to cache:', e.message);
@@ -1974,10 +1973,8 @@ async function lookupFoodFromImage(input) {
 
   try {
     const isScreenshot = file.type === 'image/png';
-    console.log('[img-lookup] file type:', file.type, 'size:', file.size, 'isScreenshot:', isScreenshot);
 
     const imageData = await resizeAndEncodeImage(file, 1024);
-    console.log('[img-lookup] encoded length:', imageData.length, 'approx KB:', Math.round(imageData.length * 0.75 / 1024));
     const mediaType = isScreenshot ? 'image/png' : 'image/jpeg';
 
     const res = await fetch('/api/lookup-image', {
@@ -1985,14 +1982,12 @@ async function lookupFoodFromImage(input) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageData, mediaType })
     });
-    console.log('[img-lookup] response status:', res.status);
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || `Server error ${res.status}`);
     }
     const items = await res.json();
-    console.log('[img-lookup] parsed items:', JSON.stringify(items));
 
     if (!items || !items.length) throw new Error('No items recognised in this image');
 
@@ -2017,7 +2012,6 @@ async function lookupFoodFromImage(input) {
       openImageScanModal();
     }
   } catch(e) {
-    console.error('[img-lookup] error:', e.message, e);
     const overlay = document.getElementById('imageScanOverlay');
     if (overlay && !overlay.classList.contains('hidden')) closeImageScanModal();
     resultArea.innerHTML = `<div class="err-msg">Image lookup failed: ${e.message}</div>`;
@@ -2491,7 +2485,10 @@ async function lookupExerciseOnline() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, weightKg })
     });
-    if (!res.ok) throw new Error('Server error ' + res.status);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Server error ${res.status}`);
+    }
     const data = await res.json();
     resultArea.innerHTML = `<div class="exercise-result">
       <div class="exercise-result-name">${data.name}</div>
@@ -2508,11 +2505,11 @@ async function lookupExerciseOnline() {
       </div>
     </div>`;
   } catch(e) {
-    resultArea.innerHTML = '<div class="err-msg">Lookup failed — you can still log manually below.</div>';
-    resultArea.innerHTML += `<div class="exercise-add-row" style="margin-top:8px;">
-      <input class="exercise-kcal-input" id="exerciseKcalManual" type="number" min="0" placeholder="kcal burned"/>
-      <button class="exercise-add-btn" onclick="addExerciseManual()">+ Add</button>
-    </div>`;
+    resultArea.innerHTML = `<div class="err-msg">${e.message || 'Lookup failed'} — you can still log manually below.</div>
+      <div class="exercise-add-row" style="margin-top:8px;">
+        <input class="exercise-kcal-input" id="exerciseKcalManual" type="number" min="0" placeholder="kcal burned"/>
+        <button class="exercise-add-btn" onclick="addExerciseManual()">+ Add</button>
+      </div>`;
   }
 }
 
