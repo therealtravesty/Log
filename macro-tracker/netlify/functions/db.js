@@ -2,14 +2,15 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 async function query(path, options = {}) {
+  const { prefer, headers: extraHeaders, ...fetchOptions } = options;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': options.prefer || 'return=representation',
-      ...(options.headers || {}),
+      'Prefer': prefer || 'return=representation',
+      ...(extraHeaders || {}),
     },
   });
   if (!res.ok) {

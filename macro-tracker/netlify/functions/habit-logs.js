@@ -17,7 +17,8 @@ exports.handler = async (event) => {
 
     if (method === 'POST') {
       const body = JSON.parse(event.body);
-      const result = await query('habit_logs', {
+      // Explicit upsert on the unique(habit_id, date) constraint
+      const result = await query('habit_logs?on_conflict=habit_id,date', {
         method: 'POST',
         body: JSON.stringify(body),
         prefer: 'resolution=merge-duplicates,return=representation',
