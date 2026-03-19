@@ -1775,6 +1775,7 @@ function setDate(d) {
   const friendlyEl = document.getElementById('dateFriendly');
   if (friendlyEl) friendlyEl.textContent = isToday ? 'Today — '+ friendly : friendly;
   document.getElementById('weightSectionTitle').textContent = isToday ? "Today's weight": "Weight for "+ friendly;
+  if (isToday) setMealTabByTime();
   loadActiveWeight();
   renderToday();
 }
@@ -1984,8 +1985,10 @@ async function lookupFoodFromImage(input) {
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `Server error ${res.status}`);
+      const rawErr = await res.text();
+      let msg = `Server error ${res.status}`;
+      try { msg = JSON.parse(rawErr).error || msg; } catch(_) { if (rawErr.length < 200) msg = rawErr; }
+      throw new Error(msg);
     }
     const items = await res.json();
 
@@ -2486,8 +2489,10 @@ async function lookupExerciseOnline() {
       body: JSON.stringify({ query, weightKg })
     });
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `Server error ${res.status}`);
+      const rawErr = await res.text();
+      let msg = `Server error ${res.status}`;
+      try { msg = JSON.parse(rawErr).error || msg; } catch(_) { if (rawErr.length < 200) msg = rawErr; }
+      throw new Error(msg);
     }
     const data = await res.json();
     resultArea.innerHTML = `<div class="exercise-result">
@@ -2648,6 +2653,16 @@ function selectMealTab(el) {
 function getActiveMealTab() {
   const active = document.querySelector('.meal-tab.active');
   return active ? active.dataset.meal : 'breakfast';
+}
+
+function setMealTabByTime() {
+  const hour = new Date().getHours();
+  const meal = hour < 11 ? 'breakfast'
+             : hour < 15 ? 'lunch'
+             : hour < 19 ? 'dinner'
+             : 'snacks';
+  const tab = document.querySelector(`.meal-tab[data-meal="${meal}"]`);
+  if (tab) selectMealTab(tab);
 }
 
 function toggleRecents() {
