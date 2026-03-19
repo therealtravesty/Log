@@ -280,12 +280,10 @@
   .recents-toggle-count { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .recents-toggle-arrow { font-size: 12px; color: var(--text-3); transition: transform 0.2s; display: inline-block; }
   .recents-toggle-arrow.open { transform: rotate(180deg); }
-  .recent-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
+
   .recent-item:last-child { border-bottom: none; }
   .recent-item:hover { opacity: 0.75; }
-  .recent-item-name { flex: 1; font-size: 13px; color: var(--text); }
-  .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
-  .recent-item-add { font-size: 18px; color: var(--text-3); flex-shrink: 0; line-height: 1; padding: 0 2px; }
+
   .meal-empty { font-size: 12px; color: var(--text-3); padding: 6px 0 4px; font-style: italic; }
 
   /* Water tracker */
@@ -415,7 +413,7 @@
   .recent-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: background 0.15s; }
   .recent-item:hover { background: var(--surface); border-color: var(--border-med); }
   .recent-item-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .recent-item-meta { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 55%; }
   .recent-item-add { font-size: 16px; color: var(--text-3); flex-shrink: 0; line-height: 1; }
   /* Offline indicator */
   .offline-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 500; background: var(--amber); color: #fff; font-size: 12px; font-weight: 500; text-align: center; padding: 6px 16px; font-family: 'DM Sans', system-ui, sans-serif; transform: translateY(-100%); transition: transform 0.3s ease; }
@@ -2422,9 +2420,11 @@ function renderRecentFoods() {
   area.style.display = 'block';
   if (countEl) countEl.textContent = `${_recentFoodsCache.length} items`;
   list.innerHTML = _recentFoodsCache.map((f, i) => {
-    const servingInfo = f.servingMult && f.servingMult !== 1
-      ? ` · ${f.servingMult}× ${f.servingLabel || 'serving'}` : (f.servingLabel && f.servingLabel !== '1 serving'? ` · ${f.servingLabel}` : '');
-    return ` <div class="recent-item"onclick="logRecentFood(${i})">
+    const mult = f.servingMult || 1;
+    const label = f.servingLabel || '1 serving';
+    const servingInfo = mult !== 1
+      ? ` · ${mult}× ${label}` : (label !== '1 serving' ? ` · ${label}` : '');
+    return `<div class="recent-item" onclick="logRecentFood(${i})">
       <span class="recent-item-name">${f.name}</span>
       <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${servingInfo}</span>
       <span class="recent-item-add">+</span>
@@ -2978,9 +2978,6 @@ function showToast(msg) {
 // Enter to lookup (Shift+Enter for newline)
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
-});
-document.getElementById('searchInput').addEventListener('input', e => {
-  renderCustomFoodsSection(e.target.value.trim());
 });
 
 // ── Welcome modal & home screen tip ─────────────────────────────
