@@ -10,8 +10,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Macros">
 <meta name="theme-color" content="#1a1a18">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Preconnect to external origins to cut DNS/TCP latency -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<!-- Fonts: load async, swap text immediately so layout doesn't block -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+<!-- Chart.js: defer so it doesn't block HTML parsing or rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
   :root {
     --bg: #f7f6f3; --surface: #ffffff;
@@ -415,26 +422,29 @@
   /* Header row — spacer must match card left section exactly */
   .habits-header-row { display: flex; align-items: flex-end; margin-bottom: 6px; padding: 0 12px; margin-top: -6px; }
   .habits-header-spacer { flex: 1; }
-  .habits-header-days { display: flex; gap: 4px; flex-shrink: 0; width: 170px; }
-  .habit-day-header { width: 30px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .habits-header-days { display: flex; gap: 5px; flex-shrink: 0; width: 220px; }
+  .habit-day-header { width: 40px; text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); line-height: 1.5; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .habit-day-header.today { color: var(--text); font-weight: 700; }
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
   /* Cards — no border, just subtle separator */
-  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 10px 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
+  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 8px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); }
   .habit-card:last-child { border-bottom: none; margin-bottom: 0; }
   .habit-card:hover { background: var(--bg); }
   .habits-cards-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
-  .habit-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .habit-icon-wrap { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
-  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
+  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 5px 8px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
   .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
-  .habit-squares { display: flex; gap: 4px; flex-shrink: 0; width: 170px; align-items: center; }
-  .habit-square { width: 30px; height: 30px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
+  .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 220px; align-items: center; }
+  .habit-square { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
   .habit-square:active { transform: scale(0.75); opacity: 0.85; }
-  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 7px 7px; transition: height 0.2s ease; }
+  .habit-square-fill { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 0 0 10px 10px; transition: height 0.2s ease; }
   .habit-square-val { position: relative; z-index: 1; }
-  .habit-square-arc { position: absolute; inset: 0; z-index: 1; }
+  .habit-square-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: habitRipple 0.35s cubic-bezier(0.4,0,0.2,1) forwards; pointer-events: none; }
+  @keyframes habitRipple { 0% { transform: scale(0); opacity: 0.7; } 100% { transform: scale(3); opacity: 0; } }
+  .habit-card.dragging { opacity: 0.4; }
+  .habit-card.drag-over { border-top: 2px solid var(--blue); }
   /* Habit edit modal */
   .habit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); touch-action: none; }
   .habit-modal-overlay.hidden { display: none; }
@@ -816,11 +826,21 @@
           <button class="habit-modal-save" onclick="saveEditedHabit()">Save changes</button>
           <div class="habit-modal-field" style="margin-top:4px;">
             <label class="habit-modal-label">Log past completions</label>
-            <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Tap any date to toggle completion. Retroactively fill in missed days.</div>
-            <div id="retroCalendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
-            <div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--text-3);">
-              <span>Su Mo Tu We Th Fr Sa</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <button onclick="shiftRetroMonth(-1)" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
+              <span id="retroMonthLabel" style="font-size:13px;font-weight:500;color:var(--text);"></span>
+              <button onclick="shiftRetroMonth(1)" id="retroNextBtn" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">›</button>
             </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Su</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Mo</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Tu</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">We</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Th</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Fr</div>
+              <div style="text-align:center;font-size:9px;color:var(--text-3);font-family:'DM Mono',monospace;">Sa</div>
+            </div>
+            <div id="retroCalendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
           </div>
           <button class="habit-modal-delete" onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
@@ -2890,7 +2910,7 @@ function renderHabits() {
 
       if (isQty) {
         // Arc style for all quantity squares — consistent across days
-        const radius = 10, circ = 2 * Math.PI * radius;
+        const radius = 14, circ = 2 * Math.PI * radius;
         const dash = pct * circ, gap = circ - dash;
         if (done) {
           // Completed — plain solid fill, same as boolean habits
@@ -2906,7 +2926,12 @@ function renderHabits() {
 
     const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
 
-    return `<div class="habit-card" onclick="openHabitModal(${h.id})"><div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div><div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div><div class="habit-squares">${squares}</div></div>`;
+    return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})">
+      <div class="habit-drag-handle" onmousedown="event.stopPropagation()" ontouchstart="startHabitDrag(event,${h.id})" style="padding:4px 6px 4px 0;cursor:grab;color:var(--text-3);font-size:14px;flex-shrink:0;" onclick="event.stopPropagation()">⠿</div>
+      <div class="habit-icon-wrap" style="background:${fadeBg};">${habitIconSvg(iconKey, h.color, 18)}</div>
+      <div class="habit-name-section"><span class="habit-name-pill" style="background:${fadeBg};">${h.name}</span>${streakLabel}</div>
+      <div class="habit-squares">${squares}</div>
+    </div>`;
   }).join('');
 
   updateHabitsSub();
@@ -2928,9 +2953,83 @@ function updateHabitsSub() {
     : `${_habits.length} habit${_habits.length===1?'':'s'} tracked`;
 }
 
+// ── Habit drag reorder ────────────────────────────────────────────
+let _dragHabitId = null, _dragStartY = 0, _dragEl = null;
+
+function startHabitDrag(e, habitId) {
+  e.stopPropagation();
+  _dragHabitId = habitId;
+  _dragEl = e.currentTarget.closest('.habit-card');
+  _dragStartY = e.touches[0].clientY;
+  _dragEl.classList.add('dragging');
+  if (navigator.vibrate) navigator.vibrate(20);
+
+  const onMove = ev => {
+    ev.preventDefault();
+    const y = ev.touches[0].clientY;
+    const cards = [...document.querySelectorAll('.habit-card:not(.dragging)')];
+    cards.forEach(c => c.classList.remove('drag-over'));
+    const target = cards.find(c => {
+      const r = c.getBoundingClientRect();
+      return y >= r.top && y <= r.bottom;
+    });
+    if (target) target.classList.add('drag-over');
+  };
+
+  const onEnd = async ev => {
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    _dragEl.classList.remove('dragging');
+    const overEl = document.querySelector('.habit-card.drag-over');
+    if (overEl) {
+      overEl.classList.remove('drag-over');
+      const targetId = parseInt(overEl.dataset.habitId);
+      await reorderHabit(_dragHabitId, targetId);
+    }
+    _dragHabitId = null; _dragEl = null;
+  };
+
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd, { once: true });
+}
+
+async function reorderHabit(fromId, toId) {
+  if (fromId === toId) return;
+  const fromIdx = _habits.findIndex(h => h.id === fromId);
+  const toIdx   = _habits.findIndex(h => h.id === toId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  // Reorder in memory
+  const [moved] = _habits.splice(fromIdx, 1);
+  _habits.splice(toIdx, 0, moved);
+  // Update sort_order for all
+  _habits.forEach((h, i) => { h.sort_order = i; });
+  cacheSet('habits', _habits);
+  renderHabits();
+  // Persist to server
+  try {
+    await Promise.all(_habits.map((h, i) =>
+      api(`habits?id=${h.id}`, { method: 'PATCH', body: { sort_order: i } })
+    ));
+  } catch(e) { showToast('Could not save order'); }
+}
+function habitTapFeedback(squareEl, color) {
+  if (navigator.vibrate) navigator.vibrate(10);
+  const ripple = document.createElement('div');
+  const size = squareEl.offsetWidth;
+  ripple.className = 'habit-square-ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:0;top:0;background:${color};`;
+  squareEl.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+}
+
 async function incrementHabitQty(habitId, date, target) {
   const current = (_habitLogs[habitId]||{})[date] || 0;
   const newVal = current >= target ? 0 : current + 1;
+  if (newVal > 0) {
+    const h = _habits.find(h => h.id === habitId);
+    const sq = event?.target?.closest('.habit-square');
+    if (sq && h) habitTapFeedback(sq, h.color);
+  }
   await writeHabitLog(habitId, date, newVal);
 }
 
@@ -2995,6 +3094,11 @@ function calcHabitStreak() {
 async function toggleHabit(habitId, date) {
   const current = (_habitLogs[habitId]||{})[date] || 0;
   const newVal = current >= 1 ? 0 : 1;
+  if (newVal === 1) {
+    const h = _habits.find(h => h.id === habitId);
+    const sq = event?.target?.closest('.habit-square');
+    if (sq && h) habitTapFeedback(sq, h.color);
+  }
   await writeHabitLog(habitId, date, newVal);
 }
 
@@ -3028,47 +3132,69 @@ const HABIT_ICON_GROUPS = [
   { label: 'Life & Hobbies',   keys: ['sun','camera','art','plant','home','dog','money','phone','travel','fire','check','clock'] },
 ];
 
+let _retroHabitId = null;
+let _retroMonthOffset = 0; // 0 = current month, -1 = last month, etc.
+
 function renderRetroCalendar(habitId) {
+  _retroHabitId = habitId;
   const cal = document.getElementById('retroCalendar');
   if (!cal) return;
   const h = _habits.find(h => h.id === habitId);
   if (!h) return;
 
-  // Show last 35 days in a 7-column grid
+  // Determine which month to show
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() + _retroMonthOffset, 1);
+  const year  = target.getFullYear();
+  const month = target.getMonth(); // 0-indexed
+
+  // Update label
+  const label = document.getElementById('retroMonthLabel');
+  if (label) label.textContent = target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Disable next button if already on current month
+  const nextBtn = document.getElementById('retroNextBtn');
+  if (nextBtn) nextBtn.style.opacity = _retroMonthOffset >= 0 ? '0.3' : '1';
+
+  // Build all days in this month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days = [];
-  for (let i = 34; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
-    days.push(`${y}-${m}-${day}`);
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push(`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
   }
 
-  // Pad start to align with weekday
-  const firstDay = new Date(days[0] + 'T12:00:00').getDay();
-  const pads = Array(firstDay).fill(null);
+  // Pad start to align with Sunday
+  const firstDow = new Date(year, month, 1).getDay();
+  const pads = Array(firstDow).fill(null);
 
   const [r,g,b] = hexToRgb(h.color);
+  const todayStr_ = todayStr();
 
   cal.innerHTML = [...pads.map(() => '<div></div>'), ...days.map(d => {
     const val  = (_habitLogs[h.id]||{})[d] || 0;
     const done = h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
-    const isToday = d === todayStr();
-    const dt = new Date(d + 'T12:00:00');
-    const label = dt.getDate();
-    return `<div onclick="toggleRetroDate(${h.id},'${d}')"
+    const isToday = d === todayStr_;
+    const isFuture = d > todayStr_;
+    const dayNum = parseInt(d.slice(8));
+    return `<div ${isFuture ? '' : `onclick="toggleRetroDate(${h.id},'${d}')"`}
       style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;
-      font-size:11px;font-weight:${isToday?'700':'400'};cursor:pointer;
-      background:${done ? h.color : `rgba(${r},${g},${b},0.12)`};
-      color:${done ? '#fff' : `rgba(${r},${g},${b},0.9)`};
+      font-size:11px;font-weight:${isToday?'700':'400'};
+      cursor:${isFuture?'default':'pointer'};
+      background:${isFuture ? 'transparent' : done ? h.color : `rgba(${r},${g},${b},0.12)`};
+      color:${isFuture ? 'var(--border-med)' : done ? '#fff' : `rgba(${r},${g},${b},0.9)`};
       outline:${isToday ? `1.5px solid ${h.color}` : 'none'};
       transition:transform 0.08s;"
-      onmousedown="this.style.transform='scale(0.88)'" onmouseup="this.style.transform=''"
-      >${label}</div>`;
+      onmousedown="${isFuture?'':''`this.style.transform='scale(0.88)'`}" 
+      onmouseup="this.style.transform=''"
+      >${dayNum}</div>`;
   })].join('');
+}
 
-  // Day labels row above
-  const dayLabels = document.querySelector('#retroCalendar + div span');
-  if (dayLabels) dayLabels.textContent = 'Su Mo Tu We Th Fr Sa';
+function shiftRetroMonth(dir) {
+  // Don't go forward past current month
+  if (dir > 0 && _retroMonthOffset >= 0) return;
+  _retroMonthOffset += dir;
+  if (_retroHabitId) renderRetroCalendar(_retroHabitId);
 }
 
 async function toggleRetroDate(habitId, date) {
@@ -3079,7 +3205,7 @@ async function toggleRetroDate(habitId, date) {
   const done = h.target_type === 'quantity' ? current >= target : current >= 1;
   const newVal = done ? 0 : (h.target_type === 'quantity' ? target : 1);
   await writeHabitLog(habitId, date, newVal);
-  renderRetroCalendar(habitId); // re-render calendar to show update
+  renderRetroCalendar(habitId);
 }
 function renderIconPicker(containerId, selectedKey, onclickFn) {
   const el = document.getElementById(containerId);
@@ -3141,28 +3267,44 @@ function openHabitModal(habitId) {
   if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
+  _retroMonthOffset = 0;
   renderRetroCalendar(habitId);
 
-  // Swipe down to dismiss
+  // Swipe down to dismiss — only triggers from handle, not while scrolling content
   const modal = document.getElementById('habitEditModal');
-  let startY = 0, isDragging = false;
-  modal._touchStart = e => { startY = e.touches[0].clientY; isDragging = true; };
+  const handle = modal.querySelector('.habit-modal-handle');
+  let startY = 0, startScrollTop = 0, isDragging = false, gestureDir = null;
+
+  modal._touchStart = e => {
+    startY = e.touches[0].clientY;
+    startScrollTop = modal.scrollTop;
+    isDragging = true;
+    gestureDir = null;
+  };
   modal._touchMove = e => {
     if (!isDragging) return;
     const delta = e.touches[0].clientY - startY;
-    if (delta > 0 && modal.scrollTop === 0) {
-      modal.style.transform = `translateY(${delta}px)`;
+    // Lock gesture direction on first 8px of movement
+    if (!gestureDir) {
+      if (Math.abs(delta) > 8) gestureDir = delta > 0 ? 'down' : 'up';
+      return;
+    }
+    // Only intercept downward drag when at top of scroll
+    if (gestureDir === 'down' && startScrollTop === 0 && modal.scrollTop === 0) {
+      modal.style.transform = `translateY(${Math.max(0, delta)}px)`;
       e.preventDefault();
     }
   };
   modal._touchEnd = e => {
+    if (!isDragging) return;
     isDragging = false;
     const delta = e.changedTouches[0].clientY - startY;
-    if (delta > 120) {
+    if (gestureDir === 'down' && startScrollTop === 0 && delta > 100) {
       closeHabitModal();
     } else {
       modal.style.transform = '';
     }
+    gestureDir = null;
   };
   modal.addEventListener('touchstart', modal._touchStart, { passive: true });
   modal.addEventListener('touchmove', modal._touchMove, { passive: false });
