@@ -1939,7 +1939,12 @@ async function lookupFood(excludeSource = null) {
       headers: { 'Content-Type': 'application/json'},
       body: JSON.stringify({ query, excludeSource })
     });
-    if (!res.ok) throw new Error('Server error '+ res.status);
+    if (!res.ok) {
+      const rawErr = await res.text();
+      let msg = `Server error ${res.status}`;
+      try { msg = JSON.parse(rawErr).error || msg; } catch(_) { if (rawErr.length < 200) msg = rawErr; }
+      throw new Error(msg);
+    }
     const data = await res.json();
     pendingFood = { id: Date.now(), name: data.name,
       cal: Math.round(data.calories), pro: Math.round(data.protein_g),
