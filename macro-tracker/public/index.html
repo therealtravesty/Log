@@ -603,6 +603,18 @@
 <!-- Offline indicator -->
 <div class="offline-bar"id="offlineBar"> Offline — changes will sync when connection returns</div>
 
+<!-- Macro breakdown modal — top level so it works from any tab -->
+<div class="macro-breakdown-overlay hidden" id="macroBreakdownOverlay" onclick="if(event.target===this)closeMacroBreakdown();">
+  <div class="habit-modal" id="macroBreakdownModal" style="max-height:80vh;">
+    <div class="habit-modal-handle"></div>
+    <div class="habit-modal-header">
+      <span class="habit-modal-title" id="macroBreakdownTitle">Breakdown</span>
+      <button class="habit-modal-close" onclick="closeMacroBreakdown()">×</button>
+    </div>
+    <div class="habit-modal-body" id="macroBreakdownBody" style="padding:12px 20px 20px;"></div>
+  </div>
+</div>
+
 <!-- Loading overlay — shown while switching profiles -->
 <div class="loading-overlay hidden"id="loadingOverlay">
   <div class="loading-app-title">L<span style="color:#3a7d44;">ō</span>g</div>
@@ -824,18 +836,6 @@
       </div>
       <div class="habits-cards-wrap">
         <div id="habitsGrid"><div class="empty-msg"style="padding:1.25rem;">No habits yet — tap "+ New habit"to get started!</div></div>
-      </div>
-    </div>
-
-    <!-- Macro breakdown modal -->
-    <div class="macro-breakdown-overlay hidden" id="macroBreakdownOverlay" onclick="if(event.target===this)closeMacroBreakdown();">
-      <div class="habit-modal" id="macroBreakdownModal" style="max-height:80vh;">
-        <div class="habit-modal-handle"></div>
-        <div class="habit-modal-header">
-          <span class="habit-modal-title" id="macroBreakdownTitle">Breakdown</span>
-          <button class="habit-modal-close" onclick="closeMacroBreakdown()">×</button>
-        </div>
-        <div class="habit-modal-body" id="macroBreakdownBody" style="padding:12px 20px 20px;"></div>
       </div>
     </div>
 
