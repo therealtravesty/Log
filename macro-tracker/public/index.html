@@ -2296,7 +2296,7 @@ function renderExercise() {
   c.innerHTML = items.map(e => `<div class="exercise-row">
     <span class="exercise-name">${e.name}</span>
     <span class="exercise-burned">−${e.calories_burned} kcal</span>
-    <button class="del-btn"onclick="removeExercise(${e.id})"></button>
+    <button class="del-btn" onclick="removeExercise(${e.id})" title="Remove">×</button>
   </div>`).join('');
 }
 
@@ -2367,7 +2367,7 @@ function renderSavedMeals() {
         <div class="saved-meal-sub">${m.foods.length} items · ${t.cal} kcal · ${t.pro}g P</div>
       </div>
       <button class="saved-meal-log-btn"onclick="logSavedMeal(${m.id})">+ Log</button>
-      <button class="del-btn"onclick="deleteSavedMeal(${m.id})"></button>
+      <button class="del-btn" onclick="deleteSavedMeal(${m.id})" title="Remove">×</button>
     </div>`;
   }).join('');
 }
@@ -2503,8 +2503,8 @@ function renderToday() {
             <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
           </span>
           <span class="food-kcal">${f.cal} kcal</span>
-          <button class="edit-btn"onclick="toggleFoodEdit(${f.id})"title="Edit macros"></button>
-          <button class="del-btn"onclick="delFood(${f.id})"></button>
+          <button class="edit-btn" onclick="toggleFoodEdit(${f.id})" title="Edit macros">✎</button>
+          <button class="del-btn" onclick="delFood(${f.id})" title="Remove">×</button>
         </div>
         <div id="food-edit-${f.id}"style="display:none;">
           <div class="food-edit-form"style="display:block;padding:10px 0 12px;">
