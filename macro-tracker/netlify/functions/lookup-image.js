@@ -4,13 +4,19 @@ exports.handler = async (event) => {
   const { imageData, mediaType } = JSON.parse(event.body || '{}');
   if (!imageData) return { statusCode: 400, body: JSON.stringify({ error: 'Missing image data' }) };
 
+  // Guard: base64 PNG screenshots can be large — reject if over 5MB encoded
+  const approxBytes = imageData.length * 0.75;
+  if (approxBytes > 5 * 1024 * 1024) {
+    return { statusCode: 413, body: JSON.stringify({ error: 'Image too large — try a smaller screenshot' }) };
+  }
+
   const prompt = `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
 
 The image may contain: a nutrition label, a restaurant order receipt/confirmation, a menu screenshot, a plate of food, or packaged products.
 
 CATEGORIZATION RULES:
 - "entree": main dish, primary protein source, or any item that is the focal point of a meal (bowls, sandwiches, burgers, pasta, wraps, salads as mains)
-- "side": smaller accompaniment (chips, fries, soup, bread, fruit cup, small salad)  
+- "side": smaller accompaniment (chips, fries, soup, bread, fruit cup, small salad)
 - "drink": any beverage including smoothies, juices, sodas, protein shakes
 - "other": sauces, dressings, toppings, or extras logged separately
 
@@ -23,11 +29,11 @@ Return ONLY a raw JSON array, no markdown, no explanation:
 [{"name":"exact item name with size/quantity","category":"entree|side|drink|other","serving_size":"description of one serving","note":"source used","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}]
 
 Rules:
+- ALWAYS return an array even if there is only one item
 - Return one object per distinct food/drink item
-- If only one item is visible, still return an array with one element
 - Round all numbers to nearest integer
 - For custom build-your-own items (bowls, burritos), estimate the full assembled item as one entry
-- Do not split toppings/dressings into separate entries unless they appear as explicitly separate line items on a receipt`;
+- Do not split toppings/dressings unless they appear as explicitly separate line items on a receipt`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -51,15 +57,36 @@ Rules:
 
   if (!res.ok) {
     const err = await res.text();
-    return { statusCode: 500, body: JSON.stringify({ error: err }) };
+    return { statusCode: 500, body: JSON.stringify({ error: `API error ${res.status}: ${err}` }) };
   }
 
   const data = await res.json();
   const raw = (data.content || []).map(b => b.text || '').join('').trim();
-  const s = raw.indexOf('['), e = raw.lastIndexOf(']');
-  if (s === -1) return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response' }) };
 
-  const parsed = JSON.parse(raw.slice(s, e + 1));
+  // Try array first, fall back to single object wrapped in array
+  let parsed;
+  const arrStart = raw.indexOf('[');
+  const objStart = raw.indexOf('{');
+
+  try {
+    if (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) {
+      // Looks like an array
+      const e = raw.lastIndexOf(']');
+      parsed = JSON.parse(raw.slice(arrStart, e + 1));
+    } else if (objStart !== -1) {
+      // Model returned a single object — wrap it
+      const e = raw.lastIndexOf('}');
+      parsed = [JSON.parse(raw.slice(objStart, e + 1))];
+    } else {
+      return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response' }) };
+    }
+  } catch(e) {
+    return { statusCode: 500, body: JSON.stringify({ error: `JSON parse error: ${e.message}`, raw: raw.slice(0, 200) }) };
+  }
+
+  // Ensure result is always an array
+  if (!Array.isArray(parsed)) parsed = [parsed];
+
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
