@@ -53,7 +53,7 @@
 
   .header { margin-bottom: 1.5rem; }
   .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px; }
-  .app-title { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .app-title { font-size: 36px; font-weight: 600; letter-spacing: -0.5px; }
   .header-meta { font-size: 13px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .date-label { font-size: 13px; color: var(--text-2); }
 
@@ -149,6 +149,9 @@
   .chart-group-tabs { display: flex; gap: 0; margin-bottom: 0; background: var(--bg); border-radius: 10px; padding: 3px; border: 0.5px solid var(--border); width: fit-content; }
   .chart-group-tab { font-size: 13px; font-weight: 500; padding: 6px 20px; border-radius: 8px; border: none; background: none; cursor: pointer; color: var(--text-2); font-family: 'DM Sans', system-ui, sans-serif; transition: background 0.15s, color 0.15s; }
   .chart-group-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .chart-range-tabs { display: flex; gap: 4px; margin: 8px 0 10px; }
+  .chart-range-tab { font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 0.5px solid var(--border-med); background: none; cursor: pointer; color: var(--text-3); font-family: 'DM Mono', monospace; transition: background 0.15s, color 0.15s; }
+  .chart-range-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .chart-sub-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 10px 0 12px; min-height: 28px; }
   .chart-sub-tabs.hidden { display: none; }
   .chart-tab:not(.active):hover { background: var(--bg); }
@@ -373,7 +376,7 @@
   .welcome-overlay.hidden { display: none; }
   .welcome-box { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 440px; }
   .welcome-logo { width: 64px; height: 64px; border-radius: 16px; margin-bottom: 1.25rem; }
-  .welcome-title { font-size: 22px; font-weight: 500; letter-spacing: -0.3px; margin-bottom: 6px; }
+  .welcome-title { font-size: 36px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 6px; }
   .welcome-sub { font-size: 14px; color: var(--text-2); margin-bottom: 1.75rem; line-height: 1.5; }
   .welcome-steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 1.75rem; }
   .welcome-step { display: flex; align-items: flex-start; gap: 14px; }
@@ -433,13 +436,13 @@
   .habit-day-tick { width: 3px; height: 3px; border-radius: 50%; background: var(--border-med); margin-top: 2px; }
   .habit-day-header.today .habit-day-tick { background: var(--text); }
   /* Cards — no border, just subtle separator */
-  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 7px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .habit-card { background: var(--surface); border-radius: var(--radius-lg); padding: 7px 10px; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.15s; border: none; border-bottom: 0.5px solid var(--border); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .habit-card:last-child { border-bottom: none; margin-bottom: 0; }
   .habit-card:hover { background: var(--bg); }
   .habits-cards-wrap { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
   .habit-icon-wrap { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .habit-name-section { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
-  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 5px 8px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
+  .habit-name-pill { font-size: 13px; font-weight: 500; padding: 5px 6px; border-radius: 8px; white-space: normal; word-break: break-word; display: block; line-height: 1.3; color: var(--text); }
   .habit-streak-lbl { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; padding-left: 2px; }
   .habit-squares { display: flex; gap: 5px; flex-shrink: 0; width: 160px; align-items: center; }
   .habit-square { width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'DM Mono', monospace; position: relative; overflow: hidden; flex-shrink: 0; -webkit-tap-highlight-color: transparent; user-select: none; transition: transform 0.08s cubic-bezier(0.34,1.56,0.64,1), opacity 0.08s; }
@@ -483,6 +486,7 @@
   .habit-icon-btn.selected svg { stroke: var(--text); }
   /* Swipe indicator */
   body.modal-open { overflow: hidden; }
+  body.dragging-habit { overflow: hidden; touch-action: none; }
 </style>
 </head>
 <body>
@@ -806,11 +810,11 @@
           <input type="hidden"id="editHabitId"/>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Name</label>
-            <input class="habit-modal-input"id="editHabitName"type="text"maxlength="40"/>
+            <input class="habit-modal-input" id="editHabitName" type="text" maxlength="40" onblur="autoSaveHabit()" onkeydown="if(event.key==='Enter')this.blur()"/>
           </div>
           <div class="habit-modal-field">
             <label class="habit-modal-label">Type</label>
-            <select class="habit-modal-select"id="editHabitType"onchange="toggleEditQuantityFields()">
+            <select class="habit-modal-select" id="editHabitType" onchange="toggleEditQuantityFields();autoSaveHabit()">
               <option value="boolean">Simple (done / not done)</option>
               <option value="quantity">Quantity (tap to increment)</option>
             </select>
@@ -818,11 +822,11 @@
           <div id="editQuantityFields"style="display:none;flex-direction:column;gap:12px;">
             <div class="habit-modal-field">
               <label class="habit-modal-label">Daily target</label>
-              <input class="habit-modal-input"id="editHabitTarget"type="number"min="1"placeholder="e.g. 8"/>
+              <input class="habit-modal-input" id="editHabitTarget" type="number" min="1" placeholder="e.g. 8" onblur="autoSaveHabit()"/>
             </div>
             <div class="habit-modal-field">
               <label class="habit-modal-label">Unit</label>
-              <input class="habit-modal-input"id="editHabitUnit"type="text"placeholder="e.g. glasses, pages, miles"/>
+              <input class="habit-modal-input" id="editHabitUnit" type="text" placeholder="e.g. glasses, pages, miles" onblur="autoSaveHabit()"/>
             </div>
           </div>
           <div class="habit-modal-field">
@@ -833,8 +837,7 @@
             <label class="habit-modal-label">Icon</label>
             <div class="habit-icon-picker"id="editHabitIconPicker"></div>
           </div>
-          <button class="habit-modal-save"onclick="saveEditedHabit()">Save changes</button>
-          <div class="habit-modal-field"style="margin-top:4px;">
+          <div class="habit-modal-field" style="margin-top:4px;">
             <label class="habit-modal-label">Log past completions</label>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <button onclick="shiftRetroMonth(-1)" style="background:none;border:0.5px solid var(--border-med);border-radius:8px;width:32px;height:32px;cursor:pointer;color:var(--text-2);font-size:16px;">‹</button>
@@ -898,6 +901,14 @@
         <button class="chart-tab" onclick="switchChart('fiber', event)">Fiber</button>
       </div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
+      <!-- Time range filter — sits just above the chart -->
+      <div class="chart-range-tabs">
+        <button class="chart-range-tab" onclick="switchChartRange('7d', this)">7D</button>
+        <button class="chart-range-tab" onclick="switchChartRange('30d', this)">30D</button>
+        <button class="chart-range-tab" onclick="switchChartRange('3m', this)">3M</button>
+        <button class="chart-range-tab" onclick="switchChartRange('1y', this)">1Y</button>
+        <button class="chart-range-tab active" onclick="switchChartRange('all', this)">All</button>
+      </div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
         <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
@@ -1768,18 +1779,19 @@ async function lookupFood(excludeSource = null) {
     // Save base values for proportion scaling
     window._baseMacros = { ...pendingFood };
     const sourceText = data.note || 'USDA estimate';
+    window._lastSource = sourceText;
     const servingLabel = data.serving_size || '1 serving';
     resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${data.name}</div>
       <div class="result-source">
         <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="result-source-badge"> ${sourceText}</span>
-          <button class="result-retry"onclick="lookupFood(${JSON.stringify(sourceText)})">Try different source</button>
+          <button class="result-retry" onclick="lookupFood(window._lastSource)">Try different source</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
         <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-        <input id="re_servings"type="number"min="0.25"step="0.25"value="1"class="serving-input"style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"oninput="scaleServings(this.value)"/>
+        <input id="re_servings"type="number"min="0.25"step="0.25"value="1"class="serving-input" style="width:64px;height:30px;font-size:16px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;" oninput="scaleServings(this.value)"/>
         <span style="font-size:12px;color:var(--text-3);">× ${servingLabel}</span>
       </div>
       <div class="result-edit-grid">
@@ -2276,7 +2288,7 @@ function renderToday() {
             <!-- Serving multiplier -->
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
               <span style="font-size:12px;color:var(--text-2);white-space:nowrap;">Serving size</span>
-              <input id="fe_servings_${f.id}"type="number"min="0.25"step="0.25"value="${f.servingMult || 1}"class="serving-input"style="width:64px;height:30px;font-size:13px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;"oninput="scaleEditServings(${f.id}, this.value)"/>
+              <input id="fe_servings_${f.id}"type="number"min="0.25"step="0.25"value="${f.servingMult || 1}"class="serving-input" style="width:64px;height:30px;font-size:16px;padding:0 8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:'DM Mono',monospace;outline:none;" oninput="scaleEditServings(${f.id}, this.value)"/>
               <span style="font-size:12px;color:var(--text-3);">× ${f.servingLabel || '1 serving'}</span>
             </div>
             <!-- Macro inputs -->
@@ -2346,8 +2358,10 @@ function buildCharts(days, allFoods, weights) {
     });
   }
 
-  // Weight
-  const wDays = days.filter(d => weights[d]);
+  // Weight — use ALL weight entries filtered by active range
+  const cutoff = getChartRangeCutoff();
+  const allWeightDays = Object.keys(weights).sort();
+  const wDays = (cutoff ? allWeightDays.filter(d => d >= cutoff) : allWeightDays).filter(d => weights[d]);
   if (wDays.length) {
     chartInstances.weight = new Chart(document.getElementById('weightChart'), {
       type: 'line',
@@ -2418,7 +2432,24 @@ function buildCharts(days, allFoods, weights) {
 }
 
 // Track active group so renderHistory knows which sub-tab to default to
-let _activeChartGroup = 'weight';
+let _chartRange = 'all'; // '7d' | '30d' | '3m' | '1y' | 'all'
+
+function switchChartRange(range, btn) {
+  _chartRange = range;
+  document.querySelectorAll('.chart-range-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderHistory();
+}
+
+function getChartRangeCutoff() {
+  if (_chartRange === 'all') return null;
+  const d = new Date();
+  if (_chartRange === '7d')  d.setDate(d.getDate() - 7);
+  if (_chartRange === '30d') d.setDate(d.getDate() - 30);
+  if (_chartRange === '3m')  d.setMonth(d.getMonth() - 3);
+  if (_chartRange === '1y')  d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().slice(0, 10);
+}
 
 function switchChartGroup(group) {
   _activeChartGroup = group;
@@ -2460,11 +2491,20 @@ function populateHabitChartControls() {
   const yearSel = document.getElementById('habitChartYear');
   const subTabs = document.getElementById('chartSubTabs-habits');
   if (!yearSel || !subTabs) return;
+
   // Year selector
   const allDates = Object.values(_habitLogs).flatMap(d => Object.keys(d));
   const years = [...new Set(allDates.map(d => d.slice(0,4)))].sort().reverse();
   if (!years.length) years.push(new Date().getFullYear().toString());
   yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  // Auto-select year based on range filter
+  const cutoff = getChartRangeCutoff();
+  if (cutoff) {
+    const cutoffYear = cutoff.slice(0,4);
+    if (years.includes(cutoffYear)) yearSel.value = cutoffYear;
+  }
+
   // Per-habit sub-tabs
   subTabs.innerHTML = [
     `<button class="chart-tab active" data-habit-id="all" onclick="switchHabitChartTab(this)">All</button>`,
@@ -2527,7 +2567,9 @@ function renderHabitChart() {
 function renderHistory() {
   const all = _allFoods;
   const weights = _weights;
-  const days = Object.keys(all).sort();
+  const cutoff = getChartRangeCutoff();
+  const allDays = Object.keys(all).sort();
+  const days = cutoff ? allDays.filter(d => d >= cutoff) : allDays;
   const daysRev = [...days].reverse();
 
   document.getElementById('historySubtitle').textContent = days.length ? `${days.length} day${days.length===1?'':'s'} tracked` : '';
@@ -2979,6 +3021,7 @@ function startHabitDrag(e, habitId) {
   if (!_dragEl) return;
   if (navigator.vibrate) navigator.vibrate(30);
   _dragEl.classList.add('drag-lifted');
+  document.body.classList.add('dragging-habit');
 
   const onMove = ev => {
     ev.preventDefault();
@@ -2994,6 +3037,7 @@ function startHabitDrag(e, habitId) {
 
   const onEnd = async () => {
     document.removeEventListener('touchmove', onMove);
+    document.body.classList.remove('dragging-habit');
     if (!_dragEl) return;
     _dragEl.classList.remove('drag-lifted');
     const overEl = document.querySelector('.habit-card.drag-over');
@@ -3099,12 +3143,19 @@ function calcHabitStreak() {
   if (!_habits.length) return 0;
   let streak = 0;
   const check = new Date();
+  const todayD = todayStr();
+  // If today isn't fully complete yet, start counting from yesterday
+  const todayAllDone = _habits.every(h => {
+    const val = (_habitLogs[h.id]||{})[todayD] || 0;
+    return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
+  });
+  if (!todayAllDone) check.setDate(check.getDate() - 1);
   while (streak < 365) {
     const y = check.getFullYear(), m = String(check.getMonth()+1).padStart(2,'0'), day = String(check.getDate()).padStart(2,'0');
     const d = `${y}-${m}-${day}`;
     const allDone = _habits.every(h => {
       const val = (_habitLogs[h.id]||{})[d] || 0;
-      return h.target_type === 'quantity'? val >= (h.target_value||1) : val >= 1;
+      return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
     });
     if (allDone) { streak++; check.setDate(check.getDate()-1); } else break;
   }
@@ -3257,6 +3308,7 @@ function selectHabitIcon(el) {
 function selectEditHabitIcon(el) {
   document.querySelectorAll('#editHabitIconPicker .habit-icon-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
+  autoSaveHabit();
 }
 
 function toggleHabitQuantityFields() {
@@ -3281,10 +3333,11 @@ function openHabitModal(habitId) {
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
   _retroMonthOffset = 0;
+  // Two-frame defer: icons first, calendar second — modal feels instant
   requestAnimationFrame(() => {
     const ip = document.getElementById('editHabitIconPicker');
     if (ip) renderIconPicker('editHabitIconPicker', h.icon || 'check', 'selectEditHabitIcon');
-    renderRetroCalendar(habitId);
+    requestAnimationFrame(() => renderRetroCalendar(habitId));
   });
 
   // Swipe down to dismiss — only triggers from handle, not while scrolling content
@@ -3342,6 +3395,29 @@ function closeHabitModal(e) {
 function selectEditHabitColor(el) {
   document.querySelectorAll('#editHabitColorPicker .habit-color-swatch').forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
+  autoSaveHabit();
+}
+
+function autoSaveHabit() {
+  const id = parseInt(document.getElementById('editHabitId').value);
+  if (!id) return;
+  const name = document.getElementById('editHabitName').value.trim();
+  if (!name) return;
+  const color  = document.querySelector('#editHabitColorPicker .habit-color-swatch.selected')?.dataset.color;
+  const icon   = document.querySelector('#editHabitIconPicker .habit-icon-btn.selected')?.dataset.icon;
+  const type   = document.getElementById('editHabitType').value;
+  const target = parseFloat(document.getElementById('editHabitTarget').value) || 1;
+  const unit   = document.getElementById('editHabitUnit').value.trim();
+  const h = _habits.find(h => h.id === id);
+  if (!h) return;
+  const updates = {
+    name, color: color||h.color, icon: icon||h.icon,
+    target_type: type, target_value: type==='quantity' ? target : 1, target_unit: unit
+  };
+  Object.assign(h, updates);
+  cacheSet('habits', _habits);
+  renderHabits();
+  api(`habits?id=${id}`, { method: 'PATCH', body: updates }).catch(() => {});
 }
 
 function toggleEditQuantityFields() {
