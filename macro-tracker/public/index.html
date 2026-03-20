@@ -252,8 +252,8 @@
   .new-profile-row { display: flex; gap: 8px; }
   .new-profile-name { flex: 1; height: 38px; font-size: 16px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
   .new-profile-name:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
-  .color-picker { display: grid; grid-template-columns: repeat(5, 28px); gap: 8px; }
-  .color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+  .color-picker { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+  .color-swatch { width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; min-width: 0; }
   .color-swatch.selected { border-color: var(--text); transform: scale(1.15); }
   .create-btn { height: 38px; padding: 0 18px; font-size: 13px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
   .create-btn:hover { opacity: 0.82; }
@@ -493,7 +493,7 @@
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
-  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 6px; }
+  .habit-color-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 6px; }
   .habit-color-swatch { width: 100%; aspect-ratio: 1; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.2); }
   .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
@@ -1260,7 +1260,7 @@ let activeProfileId = null;
 let activeProfileData = null;
 
 // Cache keys (per profile, per device — for fast local reads)
-function lsKey(k) { return `${k}_${activeProfileId}`; }
+function lsKey(k) { return `v2_${k}_${activeProfileId}`; }
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(lsKey(k))||'null'); } catch(e) { return null; } }
 function cacheSet(k, v) {
   try {
@@ -1431,7 +1431,7 @@ let _customFoods = []; // user-saved custom food library
 let _customExercises = []; // user-saved exercise history
 let _habits = [];
 let _habitLogs = {};
-const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#607D8B','#546E7A','#455A64','#37474F'];
+const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#A0522D','#607D8B','#455A64','#37474F','#F06292','#81C784','#64B5F6'];
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -4322,12 +4322,19 @@ async function toggleRetroDate(habitId, date) {
 function renderIconPicker(containerId, selectedKey, onclickFn) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = HABIT_ICON_GROUPS.map(g =>
-    `<div style="margin-bottom:10px;">
-      <div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">${g.label}</div>
-      <div class="habit-icon-picker">${g.keys.map(k =>
-        `<button class="habit-icon-btn${k===selectedKey?' selected':''}" data-icon="${k}" onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>` ).join('')}</div>
-    </div>` ).join('');
+  el.innerHTML = '';
+  // Render one group per setTimeout chunk — modal is scrollable immediately
+  HABIT_ICON_GROUPS.forEach((g, i) => {
+    setTimeout(() => {
+      if (!document.getElementById(containerId)) return; // modal closed
+      const div = document.createElement('div');
+      div.style.marginBottom = '10px';
+      div.innerHTML = `<div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;margin-bottom:6px;">${g.label}</div>
+        <div class="habit-icon-picker">${g.keys.map(k =>
+          `<button class="habit-icon-btn${k===selectedKey?' selected':''}" data-icon="${k}" onclick="${onclickFn}(this)">${habitIconSvg(k,'currentColor',18)}</button>`).join('')}</div>`;
+      el.appendChild(div);
+    }, i * 32); // ~2 frames apart — smooth progressive render
+  });
 }
 
 function initHabitForm() {
