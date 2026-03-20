@@ -927,8 +927,8 @@
                 <div style="font-size:12px;color:var(--text-3);margin-top:2px;">If off, missing this habit won't break your streak</div>
               </div>
               <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;margin-left:12px;">
-                <input type="checkbox" id="editHabitImportant" onchange="autoSaveHabit()" style="opacity:0;width:0;height:0;">
-                <span id="editHabitImportantTrack" style="position:absolute;inset:0;border-radius:13px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="document.getElementById('editHabitImportant').click()"></span>
+                <input type="checkbox" id="editHabitImportant" style="opacity:0;width:0;height:0;position:absolute;">
+                <span id="editHabitImportantTrack" style="position:absolute;inset:0;border-radius:13px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="toggleHabitImportant()"></span>
                 <span id="editHabitImportantThumb" style="position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
               </label>
             </div>
@@ -4478,6 +4478,17 @@ function selectEditHabitColor(el) {
   autoSaveHabit();
 }
 
+function toggleHabitImportant() {
+  const cb = document.getElementById('editHabitImportant');
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  const track = document.getElementById('editHabitImportantTrack');
+  const thumb = document.getElementById('editHabitImportantThumb');
+  if (track) track.style.background = cb.checked ? 'var(--green)' : 'var(--border-med)';
+  if (thumb) thumb.style.transform  = cb.checked ? 'translateX(18px)' : 'translateX(0)';
+  autoSaveHabit();
+}
+
 function autoSaveHabit() {
   const id = parseInt(document.getElementById('editHabitId').value);
   if (!id) return;
@@ -4493,14 +4504,16 @@ function autoSaveHabit() {
   const updates = {
     name, color: color||h.color, icon: icon||h.icon,
     target_type: type, target_value: type==='quantity' ? target : 1, target_unit: unit,
-    important: document.getElementById('editHabitImportant')?.checked !== false
+    important: document.getElementById('editHabitImportant')?.checked ?? true
   };
-  // Update toggle visuals
+  // Update toggle visuals (if toggled directly via toggleHabitImportant, already updated)
   const isImp = updates.important;
   const track = document.getElementById('editHabitImportantTrack');
   const thumb = document.getElementById('editHabitImportantThumb');
-  if (track) track.style.background = isImp ? 'var(--green)' : 'var(--border-med)';
-  if (thumb) thumb.style.transform = isImp ? 'translateX(18px)' : 'translateX(0)';
+  if (track && track.style.background === '') { // only update if not already set
+    track.style.background = isImp ? 'var(--green)' : 'var(--border-med)';
+    if (thumb) thumb.style.transform = isImp ? 'translateX(18px)' : 'translateX(0)';
+  }
   Object.assign(h, updates);
   cacheSet('habits', _habits);
   renderHabits();
