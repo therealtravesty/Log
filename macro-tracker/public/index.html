@@ -493,8 +493,8 @@
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
-  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 26px); gap: 8px; margin-top: 6px; justify-content: center; }
-  .habit-color-swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 6px; }
+  .habit-color-swatch { width: 100%; aspect-ratio: 1; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.2); }
   .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .habit-icon-btn { width: 38px; height: 38px; border-radius: 8px; border: 0.5px solid var(--border-med); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
@@ -4037,7 +4037,8 @@ function updateHabitsSub() {
 let _dragHabitId = null, _dragEl = null, _longPressTimer = null, _lpStartY = 0;
 
 function habitLongPressStart(e, habitId) {
-  // Don't trigger if tapping a square
+  // Don't trigger if modal is open or tapping a square
+  if (document.body.classList.contains('modal-open')) return;
   if (e.target.closest('.habit-square')) return;
   _lpStartY = e.touches[0].clientY;
   _longPressTimer = setTimeout(() => {
