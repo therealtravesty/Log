@@ -920,6 +920,19 @@
             </div>
             <div id="retroCalendar"style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
           </div>
+          <div class="habit-modal-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--text);">Count toward streak</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px;">If off, missing this habit won't break your streak</div>
+              </div>
+              <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;margin-left:12px;">
+                <input type="checkbox" id="editHabitImportant" onchange="autoSaveHabit()" style="opacity:0;width:0;height:0;">
+                <span id="editHabitImportantTrack" style="position:absolute;inset:0;border-radius:13px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="document.getElementById('editHabitImportant').click()"></span>
+                <span id="editHabitImportantThumb" style="position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+              </label>
+            </div>
+          </div>
           <button class="habit-modal-delete"onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
       </div>
@@ -4188,11 +4201,13 @@ function getLast5Days() {
 
 function calcHabitStreak() {
   if (!_habits.length) return 0;
+  // Only habits marked as important (default true) count toward streak
+  const important = _habits.filter(h => h.important !== false);
+  if (!important.length) return 0;
   let streak = 0;
   const check = new Date();
   const todayD = todayStr();
-  // If today isn't fully complete yet, start counting from yesterday
-  const todayAllDone = _habits.every(h => {
+  const todayAllDone = important.every(h => {
     const val = (_habitLogs[h.id]||{})[todayD] || 0;
     return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
   });
@@ -4200,7 +4215,7 @@ function calcHabitStreak() {
   while (streak < 365) {
     const y = check.getFullYear(), m = String(check.getMonth()+1).padStart(2,'0'), day = String(check.getDate()).padStart(2,'0');
     const d = `${y}-${m}-${day}`;
-    const allDone = _habits.every(h => {
+    const allDone = important.every(h => {
       const val = (_habitLogs[h.id]||{})[d] || 0;
       return h.target_type === 'quantity' ? val >= (h.target_value||1) : val >= 1;
     });
@@ -4226,7 +4241,8 @@ function writeHabitLog(habitId, date, value) {
   } else {
     _habitLogs[habitId][date] = value;
   }
-  cacheSet('habitLogs', _habitLogs);
+  // Do NOT write to cache here — partial in-memory state could overwrite full server data.
+  // Cache is only written by loadHabitLogsFromServer after a full fetch.
   // Defer render by one frame so the ripple animation plays before DOM replacement
   requestAnimationFrame(() => renderHabits());
   // Fire server in background — don't await
@@ -4385,6 +4401,14 @@ function openHabitModal(habitId) {
   const cp = document.getElementById('editHabitColorPicker');
   cp.innerHTML = HABIT_COLORS.map(c =>
     `<div class="habit-color-swatch${c.toLowerCase().trim()===(h.color||'#E05252').toLowerCase().trim()?' selected':''}" style="background:${c}" data-color="${c}" onclick="selectEditHabitColor(this)"></div>` ).join('');
+  // Populate importance toggle
+  const importantCb = document.getElementById('editHabitImportant');
+  const track = document.getElementById('editHabitImportantTrack');
+  const thumb = document.getElementById('editHabitImportantThumb');
+  const isImportant = h.important !== false; // default true
+  if (importantCb) importantCb.checked = isImportant;
+  if (track) track.style.background = isImportant ? 'var(--green)' : 'var(--border-med)';
+  if (thumb) thumb.style.transform = isImportant ? 'translateX(18px)' : 'translateX(0)';
   // Show modal immediately — defer heavy icon picker and calendar to next frame
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -4468,8 +4492,15 @@ function autoSaveHabit() {
   if (!h) return;
   const updates = {
     name, color: color||h.color, icon: icon||h.icon,
-    target_type: type, target_value: type==='quantity' ? target : 1, target_unit: unit
+    target_type: type, target_value: type==='quantity' ? target : 1, target_unit: unit,
+    important: document.getElementById('editHabitImportant')?.checked !== false
   };
+  // Update toggle visuals
+  const isImp = updates.important;
+  const track = document.getElementById('editHabitImportantTrack');
+  const thumb = document.getElementById('editHabitImportantThumb');
+  if (track) track.style.background = isImp ? 'var(--green)' : 'var(--border-med)';
+  if (thumb) thumb.style.transform = isImp ? 'translateX(18px)' : 'translateX(0)';
   Object.assign(h, updates);
   cacheSet('habits', _habits);
   renderHabits();
