@@ -4037,8 +4037,9 @@ function updateHabitsSub() {
 let _dragHabitId = null, _dragEl = null, _longPressTimer = null, _lpStartY = 0;
 
 function habitLongPressStart(e, habitId) {
-  // Don't trigger if modal is open or tapping a square
+  // Don't trigger if any modal is open or tapping a square
   if (document.body.classList.contains('modal-open')) return;
+  if (!document.getElementById('habitEditOverlay').classList.contains('hidden')) return;
   if (e.target.closest('.habit-square')) return;
   _lpStartY = e.touches[0].clientY;
   _longPressTimer = setTimeout(() => {
@@ -4057,6 +4058,9 @@ function habitLongPressCancel() {
 }
 
 function startHabitDrag(e, habitId) {
+  // Final check — modal may have opened during the 450ms long press timer
+  if (document.body.classList.contains('modal-open')) return;
+  if (!document.getElementById('habitEditOverlay').classList.contains('hidden')) return;
   _dragHabitId = habitId;
   _dragEl = document.querySelector(`.habit-card[data-habit-id="${habitId}"]`);
   if (!_dragEl) return;
@@ -4368,6 +4372,8 @@ function toggleHabitQuantityFields() {
 }
 
 function openHabitModal(habitId) {
+  // Cancel any in-progress long press so drag can't fire after modal opens
+  habitLongPressCancel();
   const h = _habits.find(h => h.id === habitId);
   if (!h) return;
   document.getElementById('editHabitId').value = habitId;
