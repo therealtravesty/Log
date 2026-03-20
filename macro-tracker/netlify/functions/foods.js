@@ -9,7 +9,7 @@ exports.handler = async (event) => {
       // Get all food logs for a profile, optionally filtered by date
       const { profile_id, date } = params;
       if (!profile_id) return err('Missing profile_id', 400);
-      let path = `food_logs?profile_id=eq.${profile_id}&order=created_at.asc`;
+      let path = `food_logs?profile_id=eq.${profile_id}&order=created_at.desc&limit=10000`;
       if (date) path += `&date=eq.${date}`;
       const rows = await query(path);
       return ok(rows);

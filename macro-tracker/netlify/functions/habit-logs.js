@@ -8,13 +8,11 @@ exports.handler = async (event) => {
     if (method === 'GET') {
       const { profile_id, date_from, date_to } = params;
       if (!profile_id) return err('Missing profile_id', 400);
-      let path = `habit_logs?profile_id=eq.${profile_id}&order=date.asc`;
+      // Use limit=10000 in query string — more reliable than Range header across Supabase tiers
+      let path = `habit_logs?profile_id=eq.${profile_id}&order=date.desc&limit=10000`;
       if (date_from) path += `&date=gte.${date_from}`;
       if (date_to)   path += `&date=lte.${date_to}`;
-      // Request all rows — Supabase default limit is 1000, override to get full history
-      const rows = await query(path, {
-        headers: { 'Range-Unit': 'items', 'Range': '0-9999' }
-      });
+      const rows = await query(path);
       return ok(rows);
     }
 

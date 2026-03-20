@@ -8,7 +8,7 @@ exports.handler = async (event) => {
     if (method === 'GET') {
       const { profile_id, date } = params;
       if (!profile_id) return err('Missing profile_id', 400);
-      let path = `exercise_logs?profile_id=eq.${profile_id}&order=created_at.asc`;
+      let path = `exercise_logs?profile_id=eq.${profile_id}&order=created_at.desc&limit=10000`;
       if (date) path += `&date=eq.${date}`;
       const rows = await query(path);
       return ok(rows);
