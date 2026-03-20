@@ -8,8 +8,7 @@ exports.handler = async (event) => {
     if (method === 'GET') {
       const { profile_id, date_from, date_to } = params;
       if (!profile_id) return err('Missing profile_id', 400);
-      // Use limit=10000 in query string — more reliable than Range header across Supabase tiers
-      let path = `habit_logs?profile_id=eq.${profile_id}&order=date.desc&limit=10000`;
+      let path = `habit_logs?profile_id=eq.${profile_id}&order=date.asc&limit=1000000`;
       if (date_from) path += `&date=gte.${date_from}`;
       if (date_to)   path += `&date=lte.${date_to}`;
       const rows = await query(path);
@@ -18,7 +17,6 @@ exports.handler = async (event) => {
 
     if (method === 'POST') {
       const body = JSON.parse(event.body);
-      // Explicit upsert on the unique(habit_id, date) constraint
       const result = await query('habit_logs?on_conflict=habit_id,date', {
         method: 'POST',
         body: JSON.stringify(body),

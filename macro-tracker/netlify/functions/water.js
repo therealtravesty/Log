@@ -8,7 +8,7 @@ exports.handler = async (event) => {
     if (method === 'GET') {
       const { profile_id, date } = params;
       if (!profile_id) return err('Missing profile_id', 400);
-      let path = `water_logs?profile_id=eq.${profile_id}&order=date.desc&limit=10000`;
+      let path = `water_logs?profile_id=eq.${profile_id}&order=date.asc&limit=1000000`;
       if (date) path += `&date=eq.${date}`;
       const rows = await query(path);
       return ok(rows);
