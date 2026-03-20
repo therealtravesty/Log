@@ -11,7 +11,10 @@ exports.handler = async (event) => {
       let path = `habit_logs?profile_id=eq.${profile_id}&order=date.asc`;
       if (date_from) path += `&date=gte.${date_from}`;
       if (date_to)   path += `&date=lte.${date_to}`;
-      const rows = await query(path);
+      // Request all rows — Supabase default limit is 1000, override to get full history
+      const rows = await query(path, {
+        headers: { 'Range-Unit': 'items', 'Range': '0-9999' }
+      });
       return ok(rows);
     }
 
