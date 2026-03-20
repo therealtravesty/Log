@@ -10,7 +10,7 @@ exports.handler = async (event) => {
       if (!profile_id) return err('Missing profile_id', 400);
       let path = `water_logs?profile_id=eq.${profile_id}&order=date.asc`;
       if (date) path += `&date=eq.${date}`;
-      const rows = await query(path);
+      const rows = await query(path, { headers: { 'Range-Unit': 'items', 'Range': '0-9999' } });
       return ok(rows);
     }
 
