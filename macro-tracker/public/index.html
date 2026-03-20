@@ -252,7 +252,7 @@
   .new-profile-row { display: flex; gap: 8px; }
   .new-profile-name { flex: 1; height: 38px; font-size: 16px; padding: 0 12px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; }
   .new-profile-name:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); }
-  .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-picker { display: grid; grid-template-columns: repeat(5, 28px); gap: 8px; }
   .color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .color-swatch.selected { border-color: var(--text); transform: scale(1.15); }
   .create-btn { height: 38px; padding: 0 18px; font-size: 13px; font-weight: 500; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
@@ -492,7 +492,7 @@
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
-  .habit-color-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 26px); gap: 8px; margin-top: 6px; }
   .habit-color-swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.2); }
   .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
@@ -612,6 +612,18 @@
       <button class="habit-modal-close" onclick="closeMacroBreakdown()">×</button>
     </div>
     <div class="habit-modal-body" id="macroBreakdownBody" style="padding:12px 20px 20px;"></div>
+  </div>
+</div>
+
+<!-- Image scan review modal — top level so it works from Log tab -->
+<div class="macro-breakdown-overlay hidden" id="imageScanOverlay" onclick="if(event.target===this)closeImageScanModal();">
+  <div class="habit-modal" id="imageScanModal" style="max-height:90vh;">
+    <div class="habit-modal-handle"></div>
+    <div class="habit-modal-header">
+      <span class="habit-modal-title" id="imageScanTitle">Recognized items</span>
+      <button class="habit-modal-close" onclick="closeImageScanModal()">×</button>
+    </div>
+    <div class="habit-modal-body" id="imageScanBody"></div>
   </div>
 </div>
 
@@ -1402,7 +1414,7 @@ let _customFoods = []; // user-saved custom food library
 let _customExercises = []; // user-saved exercise history
 let _habits = [];
 let _habitLogs = {};
-const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#607D8B','#546E7A','#455A64'];
+const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0','#2BBCD4','#3B9AE8','#4A6FE3','#7B5CE8','#B85CE8','#E85CAD','#E85C7B','#CD853F','#607D8B','#546E7A','#455A64','#37474F'];
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
@@ -2087,9 +2099,13 @@ function openImageScanModal() {
 
   overlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
+  addSwipeToDismiss(document.getElementById('imageScanModal'), closeImageScanModal);
 }
 
 function closeImageScanModal() {
+  const modal = document.getElementById('imageScanModal');
+  removeSwipeToDismiss(modal);
+  modal.style.transform = '';
   document.getElementById('imageScanOverlay').classList.add('hidden');
   document.body.classList.remove('modal-open');
   _scannedItems = [];
@@ -2801,14 +2817,65 @@ function showMacroBreakdown(key, label, unit) {
 
   // Small delay so classList removal above has time to paint before re-opening
   requestAnimationFrame(() => {
+    const modal = document.getElementById('macroBreakdownModal');
     document.getElementById('macroBreakdownOverlay').classList.remove('hidden');
     document.body.classList.add('modal-open');
+    addSwipeToDismiss(modal, closeMacroBreakdown);
   });
 }
 
 function closeMacroBreakdown() {
+  const modal = document.getElementById('macroBreakdownModal');
+  removeSwipeToDismiss(modal);
+  modal.style.transform = '';
   document.getElementById('macroBreakdownOverlay').classList.add('hidden');
   document.body.classList.remove('modal-open');
+}
+
+// ── Reusable swipe-down-to-dismiss for bottom-sheet modals ──────
+function addSwipeToDismiss(modalEl, closeFn) {
+  let startY = 0, startScrollTop = 0, isDragging = false, gestureDir = null;
+
+  modalEl._swipeTouchStart = e => {
+    startY = e.touches[0].clientY;
+    startScrollTop = modalEl.scrollTop;
+    isDragging = true;
+    gestureDir = null;
+  };
+  modalEl._swipeTouchMove = e => {
+    if (!isDragging) return;
+    const delta = e.touches[0].clientY - startY;
+    if (!gestureDir) {
+      if (Math.abs(delta) > 8) gestureDir = delta > 0 ? 'down' : 'up';
+      return;
+    }
+    if (gestureDir === 'down' && startScrollTop === 0 && modalEl.scrollTop === 0) {
+      modalEl.style.transform = `translateY(${Math.max(0, delta)}px)`;
+      e.preventDefault();
+    }
+  };
+  modalEl._swipeTouchEnd = e => {
+    if (!isDragging) return;
+    isDragging = false;
+    const delta = e.changedTouches[0].clientY - startY;
+    if (gestureDir === 'down' && startScrollTop === 0 && delta > 100) {
+      modalEl.style.transform = '';
+      closeFn();
+    } else {
+      modalEl.style.transform = '';
+    }
+    gestureDir = null;
+  };
+
+  modalEl.addEventListener('touchstart', modalEl._swipeTouchStart, { passive: true });
+  modalEl.addEventListener('touchmove', modalEl._swipeTouchMove, { passive: false });
+  modalEl.addEventListener('touchend', modalEl._swipeTouchEnd, { passive: true });
+}
+
+function removeSwipeToDismiss(modalEl) {
+  if (modalEl._swipeTouchStart) modalEl.removeEventListener('touchstart', modalEl._swipeTouchStart);
+  if (modalEl._swipeTouchMove) modalEl.removeEventListener('touchmove', modalEl._swipeTouchMove);
+  if (modalEl._swipeTouchEnd)  modalEl.removeEventListener('touchend', modalEl._swipeTouchEnd);
 }
 
 function renderCoachingBlurb(t) {
