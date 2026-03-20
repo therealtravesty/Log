@@ -265,7 +265,8 @@
 
   /* Meal sections */
   .meal-section { margin-bottom: 0.5rem; }
-  .meal-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; }
+  .meal-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; gap: 8px; }
+  .meal-color-bar { width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0; }
   .meal-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.1px; }
   .meal-kcal { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; }
   .meal-save-btn { font-size: 11px; color: var(--text-3); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
@@ -492,7 +493,7 @@
   /* Add habit form */
   .add-habit-form { background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
   .add-habit-form.hidden { display: none; }
-  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 26px); gap: 8px; margin-top: 6px; }
+  .habit-color-picker { display: grid; grid-template-columns: repeat(6, 26px); gap: 8px; margin-top: 6px; justify-content: center; }
   .habit-color-swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s; }
   .habit-color-swatch.selected { border-color: var(--text); transform: scale(1.2); }
   .habit-icon-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
@@ -1261,7 +1262,23 @@ let activeProfileData = null;
 // Cache keys (per profile, per device — for fast local reads)
 function lsKey(k) { return `${k}_${activeProfileId}`; }
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(lsKey(k))||'null'); } catch(e) { return null; } }
-function cacheSet(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
+function cacheSet(k, v) {
+  try {
+    localStorage.setItem(lsKey(k), JSON.stringify(v));
+  } catch(e) {
+    // QuotaExceededError — clear large caches to make room, prioritise critical data
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      try {
+        // Remove largest caches first — food history and habit logs are rebuilt from server
+        ['allFoods','habitLogs','exercise','weights'].forEach(key => {
+          localStorage.removeItem(lsKey(key));
+        });
+        // Retry once after clearing
+        localStorage.setItem(lsKey(k), JSON.stringify(v));
+      } catch(e2) {} // if still fails, proceed without cache
+    }
+  }
+}
 
 async function selectProfile(id, profileData, isNew = false) {
   activeProfileId = id;
@@ -2795,7 +2812,7 @@ function showMacroBreakdown(key, label, unit) {
   if (!ranked.length) { showToast(`No ${label} logged today`); return; }
 
   const total = ranked.reduce((s, f) => s + f.val, 0);
-  const mealColors = { breakfast: 'var(--blue)', lunch: 'var(--amber)', dinner: 'var(--pink)', snacks: 'var(--green)' };
+  const mealColors = { breakfast: 'var(--blue)', lunch: 'var(--amber)', dinner: 'var(--green)', snacks: 'var(--pink)' };
 
   document.getElementById('macroBreakdownTitle').textContent = `${label} breakdown`;
   document.getElementById('macroBreakdownBody').innerHTML = ranked.map(f => {
@@ -2968,9 +2985,11 @@ function renderToday() {
     c.innerHTML = MEALS.map(meal => {
       const mf = foods.filter(f => (f.meal||'uncategorized') === meal);
       const mt = totals(mf);
+      const MEAL_COLORS = { breakfast:'var(--blue)', lunch:'var(--amber)', dinner:'var(--green)', snacks:'var(--pink)' };
       return `<div class="meal-section">
         <div class="meal-header">
-          <span class="meal-title">${MEAL_LABELS[meal]}</span>
+          <div class="meal-color-bar" style="background:${MEAL_COLORS[meal]};"></div>
+          <span class="meal-title" style="flex:1;">${MEAL_LABELS[meal]}</span>
           <span style="display:flex;align-items:center;gap:8px;">
             ${mf.length ? `<button class="meal-save-btn"onclick="saveMeal('${meal}')">Save meal</button>` : ''}
             <span class="meal-kcal">${mf.length ? mt.cal+'kcal': '—'}</span>
@@ -3151,6 +3170,13 @@ function buildCharts(days, allFoods, weights) {
     : '';
 
   Object.values(chartInstances).forEach(c => c.destroy());
+  // Clear cached canvas dimensions so Chart.js renders at correct size after rebuild
+  document.querySelectorAll('.chart-wrap canvas').forEach(canvas => {
+    canvas.style.width = '';
+    canvas.style.height = '';
+    canvas.removeAttribute('width');
+    canvas.removeAttribute('height');
+  });
   chartInstances = {};
 
   function goalLine(val) {
@@ -4129,10 +4155,15 @@ async function loadHabitLogsFromServer() {
       if (!_habitLogs[r.habit_id]) _habitLogs[r.habit_id] = {};
       _habitLogs[r.habit_id][r.date] = r.value;
     });
+    // Clear stale cache before writing — prevents partial/old data surviving
+    localStorage.removeItem(lsKey('habitLogs'));
     cacheSet('habitLogs', _habitLogs);
   } catch(e) {
-    const cached = cacheGet('habitLogs');
-    if (cached) _habitLogs = cached;
+    // Server failed — fall back to cache only if we have nothing in memory
+    if (!Object.keys(_habitLogs).length) {
+      const cached = cacheGet('habitLogs');
+      if (cached) _habitLogs = cached;
+    }
   }
 }
 
