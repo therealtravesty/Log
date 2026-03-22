@@ -98,7 +98,7 @@
   /* Search */
   .search-area { margin-top: 1.25rem; border-top: 0.5px solid var(--border); padding-top: 1.25rem; }
   .search-wrap { display: flex; gap: 8px; align-items: flex-start; }
-  .search-textarea { flex: 1; min-height: 72px; font-size: 16px; padding: 10px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; resize: vertical; line-height: 1.5; transition: border-color 0.15s, background 0.15s; }
+  .search-textarea { flex: 1; min-height: 96px; font-size: 16px; padding: 10px 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; outline: none; resize: vertical; line-height: 1.5; transition: border-color 0.15s, background 0.15s; }
   .search-textarea:focus { border-color: rgba(0,0,0,0.3); background: var(--surface); font-size: 16px; }
   .search-textarea::placeholder { color: var(--text-3); }
   @media (max-width: 600px) {
@@ -664,6 +664,8 @@
         <div style="display:flex;align-items:center;gap:10px;">
           <input type="date"id="datePicker"style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;"onchange="onDateChange()"/>
           <button onclick="setDate(todayStr())"style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
+          <button onclick="shiftDay(-1)"style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">‹ Prev</button>
+          <button onclick="shiftDay(1)" id="nextDayBtn" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Next ›</button>
           <span id="pastDayBadge"style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
         </div>
       </div>
@@ -727,10 +729,13 @@
           <button class="meal-tab"data-meal="snacks"onclick="selectMealTab(this)">Snacks</button>
         </div>
         <div class="search-wrap">
-          <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..."></textarea>
+          <div style="position:relative;flex:1;display:flex;">
+            <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..." style="width:100%;padding-right:28px;" oninput="document.getElementById('searchClearBtn').style.display=this.value?'block':'none'"></textarea>
+            <button onclick="clearSearchInput()" id="searchClearBtn" style="display:none;position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;">×</button>
+          </div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
             <button class="lookup-btn"id="lookupBtn"onclick="lookupFood()">Look up</button>
-            <button class="ghost-btn" onclick="document.getElementById('foodImageInput').click()" style="display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;height:36px;white-space:nowrap;">
+            <button class="lookup-btn" onclick="document.getElementById('foodImageInput').click()" style="display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;white-space:nowrap;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               Upload photo
             </button>
@@ -754,6 +759,28 @@
           <span class="recents-toggle-arrow"id="recentChevron">▼</span>
         </div>
         <div id="recentFoodsList"style="display:none;padding-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- Drinks -->
+    <div class="water-card" id="drinksCard">
+      <div class="water-row" style="justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text);">Alcoholic drinks</span>
+          <span id="drinkCount" style="font-size:20px;font-weight:500;font-family:'DM Mono',monospace;">0</span>
+          <span style="font-size:11px;color:var(--text-3);">today</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="water-btn" onclick="addDrink()" style="font-weight:600;">+1</button>
+          <button class="water-btn" onclick="removeDrink()">−1</button>
+        </div>
+      </div>
+      <!-- Recent drink entries for today -->
+      <div id="drinksList" style="margin-top:8px;"></div>
+      <!-- Add named drink -->
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <input id="drinkNameInput" placeholder="Name (optional, e.g. IPA, wine)" style="flex:1;height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;outline:none;" onkeydown="if(event.key==='Enter')addDrink()"/>
+        <button class="water-btn" onclick="addDrink()" style="white-space:nowrap;">Add drink</button>
       </div>
     </div>
 
@@ -957,6 +984,7 @@
       <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val"id="statWeight">—</div><div class="stat-sub">lbs</div></div>
       <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val"id="statStreak">0</div><div class="stat-sub"id="statStreakSub">days in a row</div></div>
       <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val"id="statHabitStreak">—</div><div class="stat-sub"id="statHabitStreakSub">days all done</div></div>
+      <div class="stat-card"><div class="stat-label">Avg drinks/wk</div><div class="stat-val"id="statAvgDrinks">—</div><div class="stat-sub">last 4 weeks</div></div>
     </div>
 
     <!-- Charts -->
@@ -966,6 +994,7 @@
         <button class="chart-group-tab active" onclick="switchChartGroup('weight')">Weight</button>
         <button class="chart-group-tab" onclick="switchChartGroup('nutrition')">Nutrition</button>
         <button class="chart-group-tab" onclick="switchChartGroup('habits')">Habits</button>
+        <button class="chart-group-tab" onclick="switchChartGroup('drinks')">Drinks</button>
       </div>
       <div class="chart-sub-tabs" id="chartSubTabs-weight"></div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-nutrition">
@@ -979,7 +1008,10 @@
         <button class="chart-tab" onclick="switchChart('fiber', event)">Fiber</button>
       </div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
-      <!-- Time range filter — sits just above the chart -->
+      <div class="chart-sub-tabs hidden" id="chartSubTabs-drinks">
+        <button class="chart-tab active" onclick="switchDrinksView('daily', this)">Daily</button>
+        <button class="chart-tab" onclick="switchDrinksView('weekly', this)">Weekly avg</button>
+      </div>
       <!-- Time range filter for weight/nutrition -->
       <div class="chart-range-tabs" id="rangeTabsMain">
         <button class="chart-range-tab" onclick="switchChartRange('7d', this)">7D</button>
@@ -1042,6 +1074,10 @@
         <div class="chart-wrap" id="habitChartWrap"><canvas id="habitChart"></canvas></div>
         <div id="habitHeatmap" style="display:none;overflow-x:auto;padding-bottom:4px;"></div>
         <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
+      </div>
+      <div class="chart-card" id="chart-drinks">
+        <div class="chart-title" id="drinksChartTitle">Drinks — last 60 days</div>
+        <div class="chart-wrap"><canvas id="drinksChart"></canvas></div>
       </div>
     </div>
 
@@ -1178,7 +1214,7 @@ async function onConnectionRestored() {
   await flushOfflineQueue();
   if (activeProfileId) {
     await Promise.all([
-      loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(),
+      loadAllFromServer(), loadWeightsFromServer(), loadDrinksFromServer(),
       loadExerciseFromServer(), loadSavedMealsFromServer(),
       loadHabitsFromServer(), loadHabitLogsFromServer()
     ]);
@@ -1310,7 +1346,7 @@ async function selectProfile(id, profileData, isNew = false) {
       ? `Welcome, ${activeProfileData.name}!` : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
-  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadWaterFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadDrinksFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
   await initSettings();
   setDate(todayStr());
   // Reveal app now that data is ready — prevents Log flashing before profile resolves
@@ -1438,6 +1474,7 @@ let activeDate = '';
 let _allFoods  = {};
 let _weights   = {};
 let _water     = {};
+let _drinks    = {}; // { 'YYYY-MM-DD': [{id, name, time}] }
 let _exercise  = {};
 let _savedMeals = [];
 let _customFoods = []; // user-saved custom food library
@@ -1492,6 +1529,21 @@ async function loadWaterFromServer() {
   } catch(e) {
     const cached = cacheGet('water');
     if (cached) _water = cached;
+  }
+}
+
+async function loadDrinksFromServer() {
+  try {
+    const rows = await api(`drinks?profile_id=${activeProfileId}`);
+    _drinks = {};
+    (rows || []).forEach(r => {
+      if (!_drinks[r.date]) _drinks[r.date] = [];
+      _drinks[r.date].push({ id: r.id, name: r.name || '', time: r.time || '' });
+    });
+    cacheSet('drinks', _drinks);
+  } catch(e) {
+    const cached = cacheGet('drinks');
+    if (cached) _drinks = cached;
   }
 }
 
@@ -1843,6 +1895,25 @@ function setDate(d) {
   if (isToday) setMealTabByTime();
   loadActiveWeight();
   renderToday();
+}
+
+function clearSearchInput() {
+  const ta = document.getElementById('searchInput');
+  const btn = document.getElementById('searchClearBtn');
+  if (ta) { ta.value = ''; ta.focus(); }
+  if (btn) btn.style.display = 'none';
+}
+
+function shiftDay(dir) {
+  const current = new Date(activeDate + 'T12:00:00');
+  current.setDate(current.getDate() + dir);
+  const newDate = current.toISOString().slice(0, 10);
+  // Don't go past today
+  if (newDate > todayStr()) return;
+  setDate(newDate);
+  // Hide next button when on today
+  const nextBtn = document.getElementById('nextDayBtn');
+  if (nextBtn) nextBtn.style.opacity = newDate >= todayStr() ? '0.35' : '1';
 }
 
 function onDateChange() {
@@ -2299,7 +2370,20 @@ function discardResult() {
 
 function scaleServings(val) {
   const mult = parseFloat(val);
-  if (!mult || mult <= 0 || !window._baseMacros) return;
+  if (!mult || mult <= 0) return;
+  // If _baseMacros not set yet, capture current field values as the 1x base
+  if (!window._baseMacros) {
+    window._baseMacros = {
+      cal:    parseFloat(document.getElementById('re_cal')?.value) || 0,
+      pro:    parseFloat(document.getElementById('re_pro')?.value) || 0,
+      carb:   parseFloat(document.getElementById('re_carb')?.value) || 0,
+      fat:    parseFloat(document.getElementById('re_fat')?.value) || 0,
+      satFat: parseFloat(document.getElementById('re_satFat')?.value) || 0,
+      sug:    parseFloat(document.getElementById('re_sug')?.value) || 0,
+      sod:    parseFloat(document.getElementById('re_sod')?.value) || 0,
+      fib:    parseFloat(document.getElementById('re_fib')?.value) || 0,
+    };
+  }
   const b = window._baseMacros;
   document.getElementById('re_cal').value    = Math.round(b.cal    * mult);
   document.getElementById('re_pro').value    = Math.round(b.pro    * mult);
@@ -2507,6 +2591,51 @@ function renderWater() {
   if (amountEl) amountEl.textContent = oz + ' oz';
   if (goalEl)   goalEl.textContent   = `of ${goal} oz goal`;
   if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)': 'var(--blue)'; }
+}
+
+// ── Drinks ───────────────────────────────────────────────────────
+async function addDrink() {
+  const nameInput = document.getElementById('drinkNameInput');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const entry = { id: Date.now(), name, time };
+  if (!_drinks[activeDate]) _drinks[activeDate] = [];
+  _drinks[activeDate].push(entry);
+  if (nameInput) nameInput.value = '';
+  renderDrinks();
+  try {
+    await api('drinks', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, name, time } });
+  } catch(e) {}
+}
+
+async function removeDrink(id) {
+  if (!_drinks[activeDate]?.length) return;
+  if (id) {
+    _drinks[activeDate] = _drinks[activeDate].filter(d => d.id !== id);
+  } else {
+    // Remove most recent if no id given
+    _drinks[activeDate].pop();
+  }
+  renderDrinks();
+  if (id) {
+    try { await api(`drinks?id=${id}`, { method: 'DELETE' }); } catch(e) {}
+  }
+}
+
+function renderDrinks() {
+  const drinks = _drinks[activeDate] || [];
+  const countEl = document.getElementById('drinkCount');
+  const listEl  = document.getElementById('drinksList');
+  if (countEl) countEl.textContent = drinks.length;
+  if (!listEl) return;
+  if (!drinks.length) { listEl.innerHTML = ''; return; }
+  listEl.innerHTML = drinks.map(d =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-top:0.5px solid var(--border);">
+      <span style="font-size:12px;color:var(--text-2);">${d.name || 'Drink'} <span style="color:var(--text-3);font-family:'DM Mono',monospace;">${d.time}</span></span>
+      <button onclick="removeDrink(${d.id})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px;padding:0 4px;">×</button>
+    </div>`
+  ).join('');
 }
 
 // ── Exercise ─────────────────────────────────────────────────────
@@ -3056,7 +3185,7 @@ function renderToday() {
   }
 
   renderNetBanner();
-  renderWater();
+  renderDrinks();
   renderExercise();
   renderSavedMeals();
   renderRecentFoods();
@@ -3314,21 +3443,25 @@ function switchChartGroup(group) {
   _activeChartGroup = group;
   document.querySelectorAll('.chart-group-tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
-  ['weight','nutrition','habits'].forEach(g => {
+  ['weight','nutrition','habits','drinks'].forEach(g => {
     const el = document.getElementById(`chartSubTabs-${g}`);
     if (el) el.classList.toggle('hidden', g !== group);
   });
-  // Swap range filter rows
-  document.getElementById('rangeTabsMain').classList.toggle('hidden', group === 'habits');
+  document.getElementById('rangeTabsMain').classList.toggle('hidden', group === 'habits' || group === 'drinks');
   document.getElementById('rangeTabsHabits').classList.toggle('hidden', group !== 'habits');
   if (group === 'weight') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-weight')?.classList.add('active');
+    requestAnimationFrame(() => chartInstances.weight?.resize());
   } else if (group === 'habits') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-habits')?.classList.add('active');
     populateHabitChartControls();
     renderHabitChart();
+  } else if (group === 'drinks') {
+    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('chart-drinks')?.classList.add('active');
+    renderDrinksChart();
   } else {
     const firstBtn = document.querySelector(`#chartSubTabs-${group} .chart-tab`);
     if (firstBtn) firstBtn.click();
@@ -3337,16 +3470,19 @@ function switchChartGroup(group) {
 
 function switchChart(name, e) {
   const ev = e || event;
-  // Update sub-tabs within the active group only
   const activeSubTabs = document.querySelector('.chart-sub-tabs:not(.hidden)');
   if (activeSubTabs) {
     activeSubTabs.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
     if (ev?.target) ev.target.classList.add('active');
   }
-  // Show the right chart card
   document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
   document.getElementById('chart-'+name)?.classList.add('active');
-  if (name === 'habits') renderHabitChart();
+  if (name === 'habits') {
+    renderHabitChart();
+  } else {
+    // Force resize so Chart.js renders into the now-visible canvas
+    requestAnimationFrame(() => chartInstances[name]?.resize());
+  }
 }
 
 function populateHabitChartControls() {
@@ -3606,6 +3742,80 @@ function renderHabitHeatmap(habits, year) {
   heatmap.innerHTML = `<svg width="${W}" height="${H}" style="min-width:${W}px;">${monthLabels}${dayLabels}${squares}</svg>`;
 }
 
+// ── Drinks chart ─────────────────────────────────────────────────
+let _drinksView = 'daily'; // 'daily' | 'weekly'
+
+function switchDrinksView(view, btn) {
+  _drinksView = view;
+  document.querySelectorAll('#chartSubTabs-drinks .chart-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderDrinksChart();
+}
+
+function renderDrinksChart() {
+  const canvas = document.getElementById('drinksChart');
+  const title  = document.getElementById('drinksChartTitle');
+  if (!canvas) return;
+
+  // Build date range — last 60 days for daily, last 26 weeks for weekly
+  const allDates = Object.keys(_drinks).sort();
+  if (!allDates.length) {
+    if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
+  canvas.removeAttribute('width'); canvas.removeAttribute('height');
+
+  if (_drinksView === 'daily') {
+    if (title) title.textContent = 'Drinks per day — last 60 days';
+    const days = [];
+    const d = new Date();
+    for (let i = 59; i >= 0; i--) {
+      const dd = new Date(d); dd.setDate(d.getDate() - i);
+      days.push(dd.toISOString().slice(0,10));
+    }
+    const labels = days.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    const data   = days.map(d => (_drinks[d] || []).length);
+    chartInstances.drinks = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: data.map(v => v > 0 ? 'rgba(212,83,126,0.75)' : 'rgba(212,83,126,0.1)'), borderRadius: 4 }] },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
+        tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} drink${ctx.parsed.y !== 1 ? 's' : ''}` }}},
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
+                  x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
+    });
+  } else {
+    // Weekly averages — last 26 weeks
+    if (title) title.textContent = 'Drinks per week — last 26 weeks';
+    const weeks = {};
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 182);
+    const cutoffStr = cutoff.toISOString().slice(0,10);
+    Object.entries(_drinks).forEach(([date, entries]) => {
+      if (date < cutoffStr) return;
+      const dt = new Date(date + 'T12:00:00');
+      const jan1 = new Date(dt.getFullYear(), 0, 1);
+      const wn = Math.ceil(((dt - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      const key = `${dt.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+      if (!weeks[key]) weeks[key] = { count: 0, firstDay: date };
+      weeks[key].count += entries.length;
+    });
+    const keys = Object.keys(weeks).sort();
+    const labels = keys.map(k => { const dt = new Date(weeks[k].firstDay+'T12:00:00'); return 'Wk '+dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}); });
+    const data   = keys.map(k => weeks[k].count);
+    chartInstances.drinks = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: 'rgba(212,83,126,0.75)', borderRadius: 4 }] },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
+        tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} drink${ctx.parsed.y !== 1 ? 's' : ''} this week` }}},
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
+                  x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
+    });
+  }
+  requestAnimationFrame(() => chartInstances.drinks?.resize());
+}
+
 function renderHistory() {
   const all = _allFoods;
   const weights = _weights;
@@ -3637,9 +3847,10 @@ function renderHistory() {
   if (calSub) calSub.textContent = `goal: ${GOALS.cal.toLocaleString()}`;
   if (proSub) proSub.textContent = `goal: ${GOALS.pro}g`;
 
-  // Streak calculation
+  // Streak calculation — start from yesterday (today may not be complete yet)
   let streak = 0;
   const check = new Date();
+  check.setDate(check.getDate() - 1);
   while (true) {
     const y = check.getFullYear();
     const m = String(check.getMonth()+1).padStart(2,'0');
@@ -3660,16 +3871,23 @@ function renderHistory() {
 
   buildCharts(days, all, weights);
 
-  // Re-assert which chart is visible after rebuild — Chart.js needs visible canvas to render
+  // Re-assert which chart is visible, then force Chart.js to resize into the now-visible canvas
   const group = _activeChartGroup || 'weight';
+  document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
   if (group === 'weight') {
-    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-weight')?.classList.add('active');
+    requestAnimationFrame(() => chartInstances.weight?.resize());
   } else if (group === 'nutrition') {
     const activeSubTab = document.querySelector('#chartSubTabs-nutrition .chart-tab.active');
     const chartName = activeSubTab ? activeSubTab.getAttribute('onclick').match(/switchChart\('([^']+)'/)?.[1] : 'macros';
-    document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
-    document.getElementById('chart-' + (chartName || 'macros'))?.classList.add('active');
+    const activeCard = document.getElementById('chart-' + (chartName || 'macros'));
+    activeCard?.classList.add('active');
+    requestAnimationFrame(() => {
+      const inst = chartInstances[chartName || 'macros'];
+      inst?.resize();
+    });
+  } else {
+    document.getElementById('chart-weight')?.classList.add('active');
   }
 
   populateHabitChartControls();
@@ -3682,6 +3900,17 @@ function renderHistory() {
     const hs = calcHabitStreak();
     habitStreakEl.textContent = hs > 0 ? hs : '—';
     if (habitStreakSub) habitStreakSub.textContent = hs >= 7 ? 'on fire!': hs >= 3 ? 'keep it up': 'days all done';
+  }
+
+  // Avg drinks/week stat — last 4 weeks
+  const drinksStatEl = document.getElementById('statAvgDrinks');
+  if (drinksStatEl) {
+    const cutoff4w = new Date(); cutoff4w.setDate(cutoff4w.getDate() - 28);
+    const cutoffStr = cutoff4w.toISOString().slice(0,10);
+    const totalDrinks = Object.entries(_drinks)
+      .filter(([d]) => d >= cutoffStr)
+      .reduce((sum, [,entries]) => sum + entries.length, 0);
+    drinksStatEl.textContent = (totalDrinks / 4).toFixed(1);
   }
 
   document.getElementById('historyList').innerHTML = daysRev.map(d => {
