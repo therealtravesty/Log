@@ -661,12 +661,14 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
         <div class="date-friendly"id="dateFriendly"></div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <input type="date"id="datePicker"style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;"onchange="onDateChange()"/>
-          <button onclick="setDate(todayStr())"style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
-          <button onclick="shiftDay(-1)"style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">‹ Prev</button>
-          <button onclick="shiftDay(1)" id="nextDayBtn" style="height:32px;padding:0 12px;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Next ›</button>
-          <span id="pastDayBadge"style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;">Editing past day</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="date"id="datePicker"style="height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;outline:none;cursor:pointer;flex:1;min-width:0;"onchange="onDateChange()"/>
+          <span id="pastDayBadge"style="display:none;font-size:12px;padding:3px 10px;border-radius:20px;background:var(--amber);color:#fff;font-family:'DM Sans',system-ui,sans-serif;white-space:nowrap;">Editing past day</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="shiftDay(-1)"style="height:32px;flex:1;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">‹ Prev</button>
+          <button onclick="setDate(todayStr())"style="height:32px;flex:1;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Today</button>
+          <button onclick="shiftDay(1)" id="nextDayBtn" style="height:32px;flex:1;font-size:12px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);cursor:pointer;color:var(--text-2);font-family:'DM Sans',system-ui,sans-serif;">Next ›</button>
         </div>
       </div>
     </div>
@@ -1646,20 +1648,27 @@ async function addFood(food, meal) {
   const mealVal = meal || pendingMeal || 'uncategorized';
   const row = {
     profile_id: activeProfileId, date: activeDate, food_id: food.id,
-    name: food.name, cal: food.cal, pro: food.pro, carb: food.carb,
-    fat: food.fat, sat_fat: food.satFat||0, sug: food.sug, sod: food.sod||0, fib: food.fib||0,
+    name: food.name || '',
+    cal:     Math.round(food.cal    || 0),
+    pro:     Math.round(food.pro    || 0),
+    carb:    Math.round(food.carb   || 0),
+    fat:     Math.round(food.fat    || 0),
+    sat_fat: Math.round(food.satFat || 0),
+    sug:     Math.round(food.sug    || 0),
+    sod:     Math.round(food.sod    || 0),
+    fib:     Math.round(food.fib    || 0),
     meal: mealVal,
     serving_mult:  food.servingMult  || 1,
     serving_label: food.servingLabel || '1 serving',
     is_drink: food.isDrink || false,
-    base_cal:     food.baseCal     || food.cal,
-    base_pro:     food.basePro     || food.pro,
-    base_carb:    food.baseCarb    || food.carb,
-    base_fat:     food.baseFat     || food.fat,
-    base_sat_fat: food.baseSatFat  || food.satFat||0,
-    base_sug:     food.baseSug     || food.sug||0,
-    base_sod:     food.baseSod     || food.sod||0,
-    base_fib:     food.baseFib     || food.fib||0,
+    base_cal:     Math.round(food.baseCal     || food.cal    || 0),
+    base_pro:     Math.round(food.basePro     || food.pro    || 0),
+    base_carb:    Math.round(food.baseCarb    || food.carb   || 0),
+    base_fat:     Math.round(food.baseFat     || food.fat    || 0),
+    base_sat_fat: Math.round(food.baseSatFat  || food.satFat || 0),
+    base_sug:     Math.round(food.baseSug     || food.sug    || 0),
+    base_sod:     Math.round(food.baseSod     || food.sod    || 0),
+    base_fib:     Math.round(food.baseFib     || food.fib    || 0),
   };
   const result = await api('foods', { method: 'POST', body: row });
   const saved = Array.isArray(result) ? result[0] : result;
@@ -2783,10 +2792,12 @@ async function logSavedMeal(id) {
   const targetMeal = getActiveMealTab() || 'uncategorized';
   try {
     for (const f of meal.foods) {
-      await addFood({ ...f, id: Date.now() + Math.random() }, targetMeal);
+      // Strip dbId so each food gets a fresh DB insert, not a collision with the original
+      const { dbId, ...foodData } = f;
+      await addFood({ ...foodData, id: Date.now() + Math.random() }, targetMeal);
     }
     renderToday(); showToast('Logged: '+ meal.name);
-  } catch(e) { showToast('Could not log meal'); }
+  } catch(e) { showToast('Could not log meal — '+ e.message); }
 }
 
 async function deleteSavedMeal(id) {
