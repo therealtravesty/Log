@@ -1263,7 +1263,14 @@ async function api(path, options = {}) {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     body: options.body != null ? JSON.stringify(options.body) : undefined,
   }).then(async res => {
-    if (!res.ok) throw new Error('API error '+ res.status);
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `API error ${res.status}`;
+      try { msg = JSON.parse(errText).error || msg; } catch(_) { if (errText.length < 200) msg = errText; }
+      const serverErr = new Error(msg);
+      serverErr.isServerError = true; // flag so we don't enqueue server rejections
+      throw serverErr;
+    }
     const text = await res.text();
     return text ? JSON.parse(text) : null;
   });
@@ -1275,7 +1282,8 @@ async function api(path, options = {}) {
   try {
     return await doFetch();
   } catch(e) {
-    if (isWrite) {
+    // Only enqueue for offline/network errors — not server-side rejections
+    if (isWrite && !e.isServerError) {
       await enqueueRequest('/api/'+ path, method, options.body ?? null);
       return options.body ? { ...options.body, offline: true } : { offline: true };
     }
@@ -2792,12 +2800,14 @@ async function logSavedMeal(id) {
   const targetMeal = getActiveMealTab() || 'uncategorized';
   try {
     for (const f of meal.foods) {
-      // Strip dbId so each food gets a fresh DB insert, not a collision with the original
       const { dbId, ...foodData } = f;
       await addFood({ ...foodData, id: Date.now() + Math.random() }, targetMeal);
     }
     renderToday(); showToast('Logged: '+ meal.name);
-  } catch(e) { showToast('Could not log meal — '+ e.message); }
+  } catch(e) {
+    console.error('[logSavedMeal] error:', e.message);
+    showToast('Could not log meal — '+ e.message);
+  }
 }
 
 async function deleteSavedMeal(id) {
