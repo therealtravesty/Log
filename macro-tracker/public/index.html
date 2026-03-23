@@ -762,28 +762,6 @@
       </div>
     </div>
 
-    <!-- Drinks -->
-    <div class="water-card" id="drinksCard">
-      <div class="water-row" style="justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:13px;font-weight:600;color:var(--text);">Alcoholic drinks</span>
-          <span id="drinkCount" style="font-size:20px;font-weight:500;font-family:'DM Mono',monospace;">0</span>
-          <span style="font-size:11px;color:var(--text-3);">today</span>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="water-btn" onclick="addDrink()" style="font-weight:600;">+1</button>
-          <button class="water-btn" onclick="removeDrink()">−1</button>
-        </div>
-      </div>
-      <!-- Recent drink entries for today -->
-      <div id="drinksList" style="margin-top:8px;"></div>
-      <!-- Add named drink -->
-      <div style="display:flex;gap:6px;margin-top:8px;">
-        <input id="drinkNameInput" placeholder="Name (optional, e.g. IPA, wine)" style="flex:1;height:32px;font-size:13px;padding:0 10px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;outline:none;" onkeydown="if(event.key==='Enter')addDrink()"/>
-        <button class="water-btn" onclick="addDrink()" style="white-space:nowrap;">Add drink</button>
-      </div>
-    </div>
-
     <!-- Exercise -->
     <div class="card"style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
@@ -817,6 +795,10 @@
 
     <div class="footer-actions">
       <button class="ghost-btn danger"onclick="resetDay()">Reset this day</button>
+      <div id="drinkCountPill" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text-2);background:var(--surface);border:0.5px solid var(--border-med);border-radius:20px;padding:4px 10px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--pink);display:inline-block;flex-shrink:0;"></span>
+        <span id="drinkCountLabel">0 drinks</span>
+      </div>
       <button class="ghost-btn"onclick="exportDay()">Export this day</button>
     </div>
   </div>
@@ -984,7 +966,6 @@
       <div class="stat-card"><div class="stat-label">Current weight</div><div class="stat-val"id="statWeight">—</div><div class="stat-sub">lbs</div></div>
       <div class="stat-card"><div class="stat-label">Logging streak</div><div class="stat-val"id="statStreak">0</div><div class="stat-sub"id="statStreakSub">days in a row</div></div>
       <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val"id="statHabitStreak">—</div><div class="stat-sub"id="statHabitStreakSub">days all done</div></div>
-      <div class="stat-card"><div class="stat-label">Avg drinks/wk</div><div class="stat-val"id="statAvgDrinks">—</div><div class="stat-sub">last 4 weeks</div></div>
     </div>
 
     <!-- Charts -->
@@ -1076,7 +1057,7 @@
         <div id="habitChartLegend" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;"></div>
       </div>
       <div class="chart-card" id="chart-drinks">
-        <div class="chart-title" id="drinksChartTitle">Drinks — last 60 days</div>
+        <div class="chart-title" id="drinksChartTitle">Drinks per day — last 60 days</div>
         <div class="chart-wrap"><canvas id="drinksChart"></canvas></div>
       </div>
     </div>
@@ -1214,7 +1195,7 @@ async function onConnectionRestored() {
   await flushOfflineQueue();
   if (activeProfileId) {
     await Promise.all([
-      loadAllFromServer(), loadWeightsFromServer(), loadDrinksFromServer(),
+      loadAllFromServer(), loadWeightsFromServer(),
       loadExerciseFromServer(), loadSavedMealsFromServer(),
       loadHabitsFromServer(), loadHabitLogsFromServer()
     ]);
@@ -1346,7 +1327,7 @@ async function selectProfile(id, profileData, isNew = false) {
       ? `Welcome, ${activeProfileData.name}!` : `Welcome back, ${activeProfileData.name}!`;
     overlay.classList.remove('hidden');
   }
-  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadDrinksFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
+  await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
   await initSettings();
   setDate(todayStr());
   // Reveal app now that data is ready — prevents Log flashing before profile resolves
@@ -1474,7 +1455,6 @@ let activeDate = '';
 let _allFoods  = {};
 let _weights   = {};
 let _water     = {};
-let _drinks    = {}; // { 'YYYY-MM-DD': [{id, name, time}] }
 let _exercise  = {};
 let _savedMeals = [];
 let _customFoods = []; // user-saved custom food library
@@ -1532,21 +1512,6 @@ async function loadWaterFromServer() {
   }
 }
 
-async function loadDrinksFromServer() {
-  try {
-    const rows = await api(`drinks?profile_id=${activeProfileId}`);
-    _drinks = {};
-    (rows || []).forEach(r => {
-      if (!_drinks[r.date]) _drinks[r.date] = [];
-      _drinks[r.date].push({ id: r.id, name: r.name || '', time: r.time || '' });
-    });
-    cacheSet('drinks', _drinks);
-  } catch(e) {
-    const cached = cacheGet('drinks');
-    if (cached) _drinks = cached;
-  }
-}
-
 async function loadExerciseFromServer() {
   try {
     const rows = await api(`exercise?profile_id=${activeProfileId}`);
@@ -1589,7 +1554,7 @@ async function loadCustomFoodsFromServer() {
   }
 }
 
-async function saveCustomFood(food) {
+async function saveCustomFood(food, silent = false) {
   try {
     await api('custom-foods', { method: 'POST', body: {
       profile_id: activeProfileId, name: food.name,
@@ -1598,8 +1563,8 @@ async function saveCustomFood(food) {
       servingLabel: food.servingLabel||'1 serving'
     }});
     await loadCustomFoodsFromServer();
-    showToast(`"${food.name}" saved to My Foods`);
-  } catch(e) { showToast('Could not save to My Foods'); }
+    if (!silent) showToast(`"${food.name}" saved to My Foods`);
+  } catch(e) { if (!silent) showToast('Could not save to My Foods'); }
 }
 
 async function deleteCustomFood(id, name) {
@@ -1667,6 +1632,7 @@ function dbRowToFood(r) {
     meal: r.meal || 'uncategorized',
     servingMult: r.serving_mult || 1,
     servingLabel: r.serving_label || '1 serving',
+    isDrink: r.is_drink || false,
     baseCal: r.base_cal || r.cal, basePro: r.base_pro || r.pro,
     baseCarb: r.base_carb || r.carb, baseFat: r.base_fat || r.fat,
     baseSatFat: r.base_sat_fat || r.sat_fat, baseSug: r.base_sug || r.sug,
@@ -1685,6 +1651,7 @@ async function addFood(food, meal) {
     meal: mealVal,
     serving_mult:  food.servingMult  || 1,
     serving_label: food.servingLabel || '1 serving',
+    is_drink: food.isDrink || false,
     base_cal:     food.baseCal     || food.cal,
     base_pro:     food.basePro     || food.pro,
     base_carb:    food.baseCarb    || food.carb,
@@ -1892,6 +1859,9 @@ function setDate(d) {
   const friendlyEl = document.getElementById('dateFriendly');
   if (friendlyEl) friendlyEl.textContent = isToday ? 'Today — '+ friendly : friendly;
   document.getElementById('weightSectionTitle').textContent = isToday ? "Today's weight": "Weight for "+ friendly;
+  // Dim Next button when on today — can't go forward
+  const nextBtn = document.getElementById('nextDayBtn');
+  if (nextBtn) nextBtn.style.opacity = isToday ? '0.35' : '1';
   if (isToday) setMealTabByTime();
   loadActiveWeight();
   renderToday();
@@ -2058,9 +2028,9 @@ async function lookupFood(excludeSource = null) {
         cal: internal.cal, pro: internal.pro, carb: internal.carb, fat: internal.fat,
         satFat: internal.satFat||0, sug: internal.sug||0, sod: internal.sod||0, fib: internal.fib||0 };
       window._baseMacros = { ...pendingFood };
-      window._lastSource = 'Your saved foods';
+      window._lastSource = 'Previously saved';
       window._internalMatch = internal; // track so we don't re-save on confirm
-      renderFoodResult(pendingFood, '1 serving', 'Your saved foods', true);
+      renderFoodResult(pendingFood, internal.servingLabel || '1 serving', 'Previously saved', true);
       btn.disabled = false;
       return;
     }
@@ -2329,13 +2299,13 @@ function resizeAndEncodeImage(file, maxPx) {
 function renderFoodResult(food, servingLabel, sourceText, isInternal) {
   const resultArea = document.getElementById('resultArea');
   const retryBtn = isInternal
-    ? `<button class="result-retry" onclick="lookupFood()">Search online instead</button>`
+    ? `<button class="result-retry" onclick="lookupFood('internal')">Search online instead</button>`
     : `<button class="result-retry" onclick="lookupFood(window._lastSource)">Try different source</button>`;
   resultArea.innerHTML = `<div class="result-card">
       <div class="result-name">${food.name}</div>
       <div class="result-source">
         <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="result-source-badge">${isInternal ? 'Your saved foods' : sourceText}</span>
+          <span class="result-source-badge">${isInternal ? 'Previously saved' : sourceText}</span>
           ${retryBtn}
         </div>
       </div>
@@ -2359,7 +2329,43 @@ function renderFoodResult(food, servingLabel, sourceText, isInternal) {
         <button class="discard-btn" onclick="discardResult()">Discard</button>
         ${isInternal ? '' : '<span style="font-size:11px;color:var(--text-3);margin-left:auto;align-self:center;">Edits save automatically</span>'}
       </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);">
+        <span style="font-size:12px;color:var(--text-2);flex:1;">Count as alcoholic drink</span>
+        <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;">
+          <input type="checkbox" id="re_is_drink" style="opacity:0;width:0;height:0;position:absolute;" onchange="updateDrinkToggle(this)">
+          <span id="re_drink_track" style="position:absolute;inset:0;border-radius:11px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="document.getElementById('re_is_drink').click()"></span>
+          <span id="re_drink_thumb" style="position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
+        </label>
+      </div>
     </div>`;
+  // Auto-detect alcoholic drink from food name
+  const drinkKeywords = /\b(beer|lager|ale|ipa|stout|porter|pilsner|wine|champagne|prosecco|cider|mead|sake|soju|spirits?|whiskey|whisky|bourbon|scotch|rum|vodka|gin|tequila|mezcal|brandy|cognac|liqueur|shot|cocktail|margarita|mojito|martini|spritz|hard\s+seltzer|white\s+claw|truly|smirnoff|hard\s+lemonade|sangria|mule|negroni|daiquiri|mimosa|bellini)\b/i;
+  const isDrink = drinkKeywords.test(food.name);
+  const cb = document.getElementById('re_is_drink');
+  if (cb && isDrink) {
+    cb.checked = true;
+    updateDrinkToggle(cb);
+  }
+}
+
+function renderDrinkCount() {
+  const drinks = (getActiveFoods()).filter(f => f.isDrink);
+  const pill  = document.getElementById('drinkCountPill');
+  const label = document.getElementById('drinkCountLabel');
+  if (!pill || !label) return;
+  if (drinks.length > 0) {
+    pill.style.display = 'flex';
+    label.textContent = `${drinks.length} drink${drinks.length !== 1 ? 's' : ''}`;
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+function updateDrinkToggle(cb) {
+  const track = document.getElementById('re_drink_track');
+  const thumb  = document.getElementById('re_drink_thumb');
+  if (track) track.style.background = cb.checked ? 'var(--pink)' : 'var(--border-med)';
+  if (thumb) thumb.style.transform  = cb.checked ? 'translateX(18px)' : 'translateX(0)';
 }
 
 function discardResult() {
@@ -2453,6 +2459,7 @@ async function confirmAdd() {
     }
   }
   const meal = getActiveMealTab() || 'uncategorized';
+  pendingFood.isDrink = document.getElementById('re_is_drink')?.checked || false;
   const btn = document.querySelector('.confirm-btn');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
@@ -2465,13 +2472,14 @@ async function confirmAdd() {
       const wasEdited = orig && (orig.cal !== edited.cal || orig.pro !== edited.pro ||
         orig.carb !== edited.carb || orig.fat !== edited.fat);
       // Always save — accumulates a personal food database over time
-      saveCustomFood({ ...pendingFood }).catch(() => {});
+      saveCustomFood({ ...pendingFood }, true).catch(() => {});
     } else {
       // Update the internal entry if macros were changed from the saved version
       const saved = window._internalMatch;
       if (saved.cal !== pendingFood.cal || saved.pro !== pendingFood.pro ||
           saved.carb !== pendingFood.carb || saved.fat !== pendingFood.fat) {
-        saveCustomFood({ ...pendingFood, id: undefined }).catch(() => {});
+        // Use saved name for exact server-side dedup match
+        saveCustomFood({ ...pendingFood, name: saved.name }, true).catch(() => {});
       }
     }
     pendingFood = null;
@@ -2591,51 +2599,6 @@ function renderWater() {
   if (amountEl) amountEl.textContent = oz + ' oz';
   if (goalEl)   goalEl.textContent   = `of ${goal} oz goal`;
   if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = pct >= 100 ? 'var(--green)': 'var(--blue)'; }
-}
-
-// ── Drinks ───────────────────────────────────────────────────────
-async function addDrink() {
-  const nameInput = document.getElementById('drinkNameInput');
-  const name = nameInput ? nameInput.value.trim() : '';
-  const now = new Date();
-  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const entry = { id: Date.now(), name, time };
-  if (!_drinks[activeDate]) _drinks[activeDate] = [];
-  _drinks[activeDate].push(entry);
-  if (nameInput) nameInput.value = '';
-  renderDrinks();
-  try {
-    await api('drinks', { method: 'POST', body: { profile_id: activeProfileId, date: activeDate, name, time } });
-  } catch(e) {}
-}
-
-async function removeDrink(id) {
-  if (!_drinks[activeDate]?.length) return;
-  if (id) {
-    _drinks[activeDate] = _drinks[activeDate].filter(d => d.id !== id);
-  } else {
-    // Remove most recent if no id given
-    _drinks[activeDate].pop();
-  }
-  renderDrinks();
-  if (id) {
-    try { await api(`drinks?id=${id}`, { method: 'DELETE' }); } catch(e) {}
-  }
-}
-
-function renderDrinks() {
-  const drinks = _drinks[activeDate] || [];
-  const countEl = document.getElementById('drinkCount');
-  const listEl  = document.getElementById('drinksList');
-  if (countEl) countEl.textContent = drinks.length;
-  if (!listEl) return;
-  if (!drinks.length) { listEl.innerHTML = ''; return; }
-  listEl.innerHTML = drinks.map(d =>
-    `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-top:0.5px solid var(--border);">
-      <span style="font-size:12px;color:var(--text-2);">${d.name || 'Drink'} <span style="color:var(--text-3);font-family:'DM Mono',monospace;">${d.time}</span></span>
-      <button onclick="removeDrink(${d.id})" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px;padding:0 4px;">×</button>
-    </div>`
-  ).join('');
 }
 
 // ── Exercise ─────────────────────────────────────────────────────
@@ -3185,7 +3148,7 @@ function renderToday() {
   }
 
   renderNetBanner();
-  renderDrinks();
+  renderDrinkCount();
   renderExercise();
   renderSavedMeals();
   renderRecentFoods();
@@ -3742,8 +3705,8 @@ function renderHabitHeatmap(habits, year) {
   heatmap.innerHTML = `<svg width="${W}" height="${H}" style="min-width:${W}px;">${monthLabels}${dayLabels}${squares}</svg>`;
 }
 
-// ── Drinks chart ─────────────────────────────────────────────────
-let _drinksView = 'daily'; // 'daily' | 'weekly'
+// ── Drinks chart (reads from food log is_drink flag) ─────────────
+let _drinksView = 'daily';
 
 function switchDrinksView(view, btn) {
   _drinksView = view;
@@ -3756,17 +3719,15 @@ function renderDrinksChart() {
   const canvas = document.getElementById('drinksChart');
   const title  = document.getElementById('drinksChartTitle');
   if (!canvas) return;
-
-  // Build date range — last 60 days for daily, last 26 weeks for weekly
-  const allDates = Object.keys(_drinks).sort();
-  if (!allDates.length) {
-    if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-    return;
-  }
-
   if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
   canvas.removeAttribute('width'); canvas.removeAttribute('height');
+
+  // Build daily drink counts from food logs
+  const dailyCounts = {};
+  Object.entries(_allFoods).forEach(([date, foods]) => {
+    const n = (foods || []).filter(f => f.isDrink).length;
+    if (n > 0) dailyCounts[date] = n;
+  });
 
   if (_drinksView === 'daily') {
     if (title) title.textContent = 'Drinks per day — last 60 days';
@@ -3777,7 +3738,7 @@ function renderDrinksChart() {
       days.push(dd.toISOString().slice(0,10));
     }
     const labels = days.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-    const data   = days.map(d => (_drinks[d] || []).length);
+    const data   = days.map(d => dailyCounts[d] || 0);
     chartInstances.drinks = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: { labels, datasets: [{ data, backgroundColor: data.map(v => v > 0 ? 'rgba(212,83,126,0.75)' : 'rgba(212,83,126,0.1)'), borderRadius: 4 }] },
@@ -3787,19 +3748,18 @@ function renderDrinksChart() {
                   x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
     });
   } else {
-    // Weekly averages — last 26 weeks
     if (title) title.textContent = 'Drinks per week — last 26 weeks';
     const weeks = {};
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 182);
     const cutoffStr = cutoff.toISOString().slice(0,10);
-    Object.entries(_drinks).forEach(([date, entries]) => {
+    Object.entries(dailyCounts).forEach(([date, n]) => {
       if (date < cutoffStr) return;
-      const dt = new Date(date + 'T12:00:00');
+      const dt = new Date(date+'T12:00:00');
       const jan1 = new Date(dt.getFullYear(), 0, 1);
       const wn = Math.ceil(((dt - jan1) / 86400000 + jan1.getDay() + 1) / 7);
       const key = `${dt.getFullYear()}-W${String(wn).padStart(2,'0')}`;
       if (!weeks[key]) weeks[key] = { count: 0, firstDay: date };
-      weeks[key].count += entries.length;
+      weeks[key].count += n;
     });
     const keys = Object.keys(weeks).sort();
     const labels = keys.map(k => { const dt = new Date(weeks[k].firstDay+'T12:00:00'); return 'Wk '+dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}); });
@@ -3902,16 +3862,7 @@ function renderHistory() {
     if (habitStreakSub) habitStreakSub.textContent = hs >= 7 ? 'on fire!': hs >= 3 ? 'keep it up': 'days all done';
   }
 
-  // Avg drinks/week stat — last 4 weeks
-  const drinksStatEl = document.getElementById('statAvgDrinks');
-  if (drinksStatEl) {
-    const cutoff4w = new Date(); cutoff4w.setDate(cutoff4w.getDate() - 28);
-    const cutoffStr = cutoff4w.toISOString().slice(0,10);
-    const totalDrinks = Object.entries(_drinks)
-      .filter(([d]) => d >= cutoffStr)
-      .reduce((sum, [,entries]) => sum + entries.length, 0);
-    drinksStatEl.textContent = (totalDrinks / 4).toFixed(1);
-  }
+
 
   document.getElementById('historyList').innerHTML = daysRev.map(d => {
     const foods = all[d], t = totals(foods);
