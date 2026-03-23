@@ -16,10 +16,44 @@ exports.handler = async (event) => {
 
     if (method === 'POST') {
       const body = JSON.parse(event.body);
-      const meal = body.meal || 'uncategorized';
+      // Only send columns that exist in the standard food_logs schema
+      // base_* columns are optional extras — omit them to avoid schema mismatch errors
+      const row = {
+        profile_id:    body.profile_id,
+        date:          body.date,
+        food_id:       body.food_id,
+        name:          body.name,
+        cal:           body.cal,
+        pro:           body.pro,
+        carb:          body.carb,
+        fat:           body.fat,
+        sat_fat:       body.sat_fat || 0,
+        sug:           body.sug || 0,
+        sod:           body.sod || 0,
+        fib:           body.fib || 0,
+        meal:          body.meal || 'uncategorized',
+        serving_mult:  body.serving_mult  || 1,
+        serving_label: body.serving_label || '1 serving',
+        is_drink:      body.is_drink || false,
+      };
+      // Include base_* columns only if present — won't break if columns don't exist yet
+      // They should be added to Supabase via: ALTER TABLE food_logs ADD COLUMN IF NOT EXISTS base_cal int, ...
+      if (body.base_cal !== undefined) {
+        Object.assign(row, {
+          base_cal:     body.base_cal,
+          base_pro:     body.base_pro,
+          base_carb:    body.base_carb,
+          base_fat:     body.base_fat,
+          base_sat_fat: body.base_sat_fat || 0,
+          base_sug:     body.base_sug     || 0,
+          base_sod:     body.base_sod     || 0,
+          base_fib:     body.base_fib     || 0,
+        });
+      }
       const result = await query('food_logs', {
         method: 'POST',
-        body: JSON.stringify({ ...body, meal }),
+        body: JSON.stringify(row),
+        prefer: 'return=representation',
       });
       return ok(result);
     }
