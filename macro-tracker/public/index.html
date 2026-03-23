@@ -1655,7 +1655,7 @@ function getActiveFoods() { return _allFoods[activeDate] || []; }
 async function addFood(food, meal) {
   const mealVal = meal || pendingMeal || 'uncategorized';
   const row = {
-    profile_id: activeProfileId, date: activeDate, food_id: food.id,
+    profile_id: activeProfileId, date: activeDate, food_id: Math.floor(food.id) || null,
     name: food.name || '',
     cal:     Math.round(food.cal    || 0),
     pro:     Math.round(food.pro    || 0),
@@ -2799,9 +2799,10 @@ async function logSavedMeal(id) {
   if (!meal) return;
   const targetMeal = getActiveMealTab() || 'uncategorized';
   try {
+    let seq = 0;
     for (const f of meal.foods) {
       const { dbId, ...foodData } = f;
-      await addFood({ ...foodData, id: Date.now() + Math.random() }, targetMeal);
+      await addFood({ ...foodData, id: Date.now() + (seq++) }, targetMeal);
     }
     renderToday(); showToast('Logged: '+ meal.name);
   } catch(e) {
