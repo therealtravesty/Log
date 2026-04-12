@@ -122,6 +122,7 @@ exports.handler = async (event) => {
             sug:    Number(body.sug)    || 0,
             sod:    Number(body.sod)    || 0,
             fib:    Number(body.fib)    || 0,
+            isDrink: body.isDrink === true,
             servingLabel: body.servingLabel || '1 serving',
           }],
         };
@@ -135,10 +136,23 @@ exports.handler = async (event) => {
         return json(200, inserted);
       } catch (e) {
         // 23505 = unique_violation — name already exists for this profile.
-        // Treat as success so the frontend's auto-learn is idempotent and
-        // doesn't surface a "Could not save" toast on every repeat log.
+        // Update the existing row's payload so edits propagate to the library.
         if (e.code === '23505' || e.status === 409) {
-          return json(200, []);
+          try {
+            const updated = await sb(
+              `custom_foods?profile_id=eq.${encodeURIComponent(row.profile_id)}&name=eq.${encodeURIComponent(row.name)}`,
+              {
+                method: 'PATCH',
+                body: JSON.stringify({ foods: row.foods }),
+                headers: { Prefer: 'return=representation' },
+              }
+            );
+            return json(200, updated || []);
+          } catch (e2) {
+            // If the update also fails, swallow so the user's primary action
+            // (logging the food) doesn't error out.
+            return json(200, []);
+          }
         }
         throw e;
       }
