@@ -100,7 +100,10 @@ exports.handler = async (event) => {
       );
       if (!sRes.ok) {
         const errText = await sRes.text();
-        return json(sRes.status, { error: 'Strava API error', detail: errText.slice(0, 300) });
+        const userMsg = sRes.status === 429
+          ? 'Strava rate limit reached. Wait 15 minutes and try again.'
+          : `Strava API error ${sRes.status}`;
+        return json(sRes.status, { error: userMsg, detail: errText.slice(0, 300) });
       }
       const pageData = await sRes.json();
       if (!Array.isArray(pageData) || !pageData.length) break;
@@ -108,20 +111,48 @@ exports.handler = async (event) => {
       if (pageData.length < 200) break;
     }
 
-    // For activities missing summary calories, fetch detail in parallel.
-    // Some activity types (weight training, walks) only expose calories via detail.
-    await Promise.all(allActivities.map(async a => {
-      if (a.calories && a.calories > 0) return;
-      try {
-        const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
-          headers: { Authorization: `Bearer ${access}` },
-        });
-        if (dRes.ok) {
-          const detail = await dRes.json();
-          if (detail.calories) a.calories = detail.calories;
+    // For activities missing summary calories, fetch detail. Strava's rate
+    // limit is 200/15min, so we throttle aggressively:
+    //   - Only fetch detail for activities in the LAST 30 DAYS. Older
+    //     activities use whatever the summary endpoint gave us. The coach
+    //     mostly cares about recent trends, and stale historical workouts
+    //     showing 0 cal is acceptable for v1.
+    //   - Concurrency limit of 5 — runs in batches with a tiny delay between
+    //     batches to stay well under the rate ceiling even with 30-50 fetches.
+    const detailCutoffDate = (() => {
+      const d = new Date(); d.setDate(d.getDate() - 30);
+      return d.toISOString().slice(0, 10);
+    })();
+    const needDetail = allActivities.filter(a => {
+      if (a.calories && a.calories > 0) return false;
+      const date = (a.start_date_local || '').slice(0, 10);
+      return date >= detailCutoffDate;
+    });
+    const CONCURRENCY = 5;
+    const BATCH_DELAY_MS = 250;
+    for (let i = 0; i < needDetail.length; i += CONCURRENCY) {
+      const batch = needDetail.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(async a => {
+        try {
+          const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
+            headers: { Authorization: `Bearer ${access}` },
+          });
+          if (dRes.ok) {
+            const detail = await dRes.json();
+            if (detail.calories) a.calories = detail.calories;
+          } else if (dRes.status === 429) {
+            // Bail entirely on rate limit — partial data is better than nothing
+            throw new Error('Strava rate limit hit during detail fetch');
+          }
+        } catch(e) {
+          if (e.message && e.message.includes('rate limit')) throw e;
+          /* leave at 0 on other failures */
         }
-      } catch(_) { /* leave at 0 on failure */ }
-    }));
+      })).catch(e => { throw e; });
+      if (i + CONCURRENCY < needDetail.length) {
+        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+      }
+    }
 
     // Upsert into exercise_logs. The partial unique index on
     // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
