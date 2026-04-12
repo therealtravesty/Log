@@ -77,7 +77,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}');
     const profile_id = body.profile_id;
-    const days = Math.min(parseInt(body.days) || 90, 365);
+    const days = Math.min(parseInt(body.days) || 14, 365);
     if (!profile_id) return json(400, { error: 'profile_id required' });
 
     const rows = await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}&select=*`);
@@ -111,25 +111,12 @@ exports.handler = async (event) => {
       if (pageData.length < 200) break;
     }
 
-    // For activities missing summary calories, fetch detail. Strava's rate
-    // limit is 200/15min, so we throttle aggressively:
-    //   - Only fetch detail for activities in the LAST 30 DAYS. Older
-    //     activities use whatever the summary endpoint gave us. The coach
-    //     mostly cares about recent trends, and stale historical workouts
-    //     showing 0 cal is acceptable for v1.
-    //   - Concurrency limit of 5 — runs in batches with a tiny delay between
-    //     batches to stay well under the rate ceiling even with 30-50 fetches.
-    const detailCutoffDate = (() => {
-      const d = new Date(); d.setDate(d.getDate() - 30);
-      return d.toISOString().slice(0, 10);
-    })();
-    const needDetail = allActivities.filter(a => {
-      if (a.calories && a.calories > 0) return false;
-      const date = (a.start_date_local || '').slice(0, 10);
-      return date >= detailCutoffDate;
-    });
-    const CONCURRENCY = 5;
-    const BATCH_DELAY_MS = 250;
+    // Fetch detail for activities missing summary calories. With a 14-day
+    // window (~40-50 activities for a heavy trainer), we throttle to 8 concurrent
+    // to stay safely under both the rate limit (200/15min) and the Netlify
+    // function timeout (10s). Light throttling, no cutoff date.
+    const needDetail = allActivities.filter(a => !(a.calories && a.calories > 0));
+    const CONCURRENCY = 8;
     for (let i = 0; i < needDetail.length; i += CONCURRENCY) {
       const batch = needDetail.slice(i, i + CONCURRENCY);
       await Promise.all(batch.map(async a => {
@@ -140,18 +127,9 @@ exports.handler = async (event) => {
           if (dRes.ok) {
             const detail = await dRes.json();
             if (detail.calories) a.calories = detail.calories;
-          } else if (dRes.status === 429) {
-            // Bail entirely on rate limit — partial data is better than nothing
-            throw new Error('Strava rate limit hit during detail fetch');
           }
-        } catch(e) {
-          if (e.message && e.message.includes('rate limit')) throw e;
-          /* leave at 0 on other failures */
-        }
-      })).catch(e => { throw e; });
-      if (i + CONCURRENCY < needDetail.length) {
-        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
-      }
+        } catch(_) { /* leave at 0 on failure */ }
+      }));
     }
 
     // Upsert into exercise_logs. The partial unique index on
