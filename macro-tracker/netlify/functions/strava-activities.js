@@ -80,7 +80,8 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || '{}');
     const profile_id = body.profile_id;
-    const days = Math.min(parseInt(body.days) || 7, 365);
+    const dateParam = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : null;
+    const days = Math.min(parseInt(body.days) || 14, 365);
     if (!profile_id) return json(400, { error: 'profile_id required' });
 
     const rows = await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}&select=*`);
@@ -95,12 +96,25 @@ exports.handler = async (event) => {
       log('token refreshed');
     }
 
+    // Compute the time window. Two modes:
+    //   date: a single calendar day with 12hr buffers on each side for TZ
+    //   days: trailing N days from now (no detail fetches — too slow for windows)
+    let after, before;
+    if (dateParam) {
+      const dayMid = Math.floor(new Date(dateParam + 'T00:00:00Z').getTime() / 1000);
+      after = dayMid - 12 * 3600;
+      before = dayMid + 36 * 3600;
+    } else {
+      after = Math.floor(Date.now() / 1000) - days * 86400;
+      before = null;
+    }
+
     // Pull activities for the requested window, paginating until empty.
-    const after = Math.floor(Date.now() / 1000) - days * 86400;
     const allActivities = [];
     for (let page = 1; page <= 10; page++) {
+      const beforeParam = before ? `&before=${before}` : '';
       const sRes = await fetch(
-        `https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=200&page=${page}`,
+        `https://www.strava.com/api/v3/athlete/activities?after=${after}${beforeParam}&per_page=200&page=${page}`,
         { headers: { Authorization: `Bearer ${access}` } }
       );
       if (!sRes.ok) {
@@ -117,15 +131,18 @@ exports.handler = async (event) => {
     }
     log(`list fetched: ${allActivities.length} activities`);
 
-    // Fetch detail for activities missing summary calories. With a 7-day
-    // window (~20 activities for a heavy trainer), 8-concurrent throttling
-    // is plenty to stay under timeout and rate limit.
-    const needDetail = allActivities.filter(a => !(a.calories && a.calories > 0));
-    log(`${needDetail.length} need detail`);
-    const CONCURRENCY = 8;
-    for (let i = 0; i < needDetail.length; i += CONCURRENCY) {
-      const batch = needDetail.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(async a => {
+    // For date mode, filter to only activities whose local-day matches.
+    // For days mode, no filter — keep everything in the trailing window.
+    const filtered = dateParam
+      ? allActivities.filter(a => typeof a.start_date_local === 'string' && a.start_date_local.slice(0, 10) === dateParam)
+      : allActivities;
+    log(`${filtered.length} after date filter`);
+
+    // Date mode: fetch details for the few activities on this single day.
+    // Window mode: skip details (too slow — proxy times out).
+    if (dateParam && filtered.length) {
+      await Promise.all(filtered.map(async a => {
+        if (a.calories && a.calories > 0) return;
         try {
           const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
             headers: { Authorization: `Bearer ${access}` },
@@ -136,13 +153,12 @@ exports.handler = async (event) => {
           }
         } catch(_) { /* leave at 0 on failure */ }
       }));
-      log(`detail batch ${i/CONCURRENCY + 1} done`);
+      log('details done');
     }
-    log('all details done');
 
     // Upsert into exercise_logs. The partial unique index on
     // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
-    const upsertRows = allActivities.map(a => ({
+    const upsertRows = filtered.map(a => ({
       profile_id,
       date: (a.start_date_local || '').slice(0, 10),
       name: a.name || a.sport_type || 'Strava activity',
