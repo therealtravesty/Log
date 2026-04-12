@@ -1071,14 +1071,18 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:500;">Strava integration</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Auto-import workouts into your exercise log</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;">Strava integration</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Auto-import workouts into your exercise log</div>
+        </div>
       </div>
-      <button id="stravaConnectBtn" onclick="connectStrava()" style="background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:8px 14px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Connect Strava</button>
-      <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Sync last 8 days</button>
+      <div style="display:flex;gap:8px;">
+        <button id="stravaConnectBtn" onclick="connectStrava()" style="flex:1;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Connect Strava</button>
+        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 8 days</button>
+      </div>
     </div>
 
     <div class="card">
@@ -2975,7 +2979,7 @@ function connectStrava() {
   // Strava redirects back to the app root with ?code=... — index.html
   // detects this on load and exchanges the code via /api/strava-auth.
   const redirect = window.location.origin + '/';
-  const url = `https://www.strava.com/oauth/authorize?client_id=223909&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&approval_prompt=auto&scope=read,activity:read&state=strava`;
+  const url = `https://www.strava.com/oauth/authorize?client_id=223909&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all&state=strava`;
   window.location.href = url;
 }
 
