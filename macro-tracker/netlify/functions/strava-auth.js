@@ -108,7 +108,9 @@ exports.handler = async (event) => {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: tokenData.expires_at,
-        updated_at: new Date().toISOString(),
+        // Note: existing schema uses `created_at`, not `updated_at`. We write
+        // it on every upsert anyway so it functions as a last-touched marker.
+        created_at: new Date().toISOString(),
       };
 
       // Upsert via on_conflict on the primary key

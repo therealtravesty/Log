@@ -60,7 +60,7 @@ async function refreshToken(profile_id, refresh_token) {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expires_at: data.expires_at,
-      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     }),
   });
   return data.access_token;
