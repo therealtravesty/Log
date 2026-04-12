@@ -209,7 +209,14 @@ CONTENT RULES:
 - Be realistic about isolated events. One drink in a week is not a problem. A pattern is.
 - Never suggest cutting training volume. Assume the schedule is intentional.
 - Don't moralize. Don't lecture. State facts, identify trends, suggest one specific action.
-- End with one specific actionable recommendation.`;
+- End with one specific actionable recommendation.
+
+CRITICAL — HOW TO INTERPRET CALORIES:
+- The user's daily calorie target ALREADY ACCOUNTS for their activity level (lifting 6x/week, 15k steps/day). The TDEE figure in the profile is computed from BMR × activity multiplier, and the cut deficit is built into the daily target.
+- DO NOT subtract exercise calories from food intake. DO NOT compute a "real intake" or "true deficit" by netting them.
+- DO NOT tell the user to eat more on training days because they "burned X calories." That double-counts. Their target already assumes they trained.
+- Exercise data (session count, calories burned per session) is INFORMATIONAL — useful for noticing volume changes, recovery patterns, training consistency. Treat it as observability, not as a calorie ledger.
+- If the user is hitting their food calorie target, they ARE in their planned deficit, regardless of how much exercise the data shows.`;
 
     // Pre-compute all percentages and deltas so the model never has to do arithmetic.
     const pct = (actual, target) => target ? Math.round((actual / target) * 100) : null;
