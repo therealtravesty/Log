@@ -996,10 +996,13 @@
       <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-drinks"></div>
       <!-- Universal aggregation filter — applies to all chart groups -->
-      <div class="chart-range-tabs" id="rangeTabsUnified">
+      <div class="chart-range-tabs" id="rangeTabsUnified" style="display:flex;align-items:center;gap:8px;">
         <button class="chart-range-tab active" onclick="switchRangeMode('daily', this)">Daily</button>
         <button class="chart-range-tab" onclick="switchRangeMode('monthly', this)">Monthly</button>
         <button class="chart-range-tab" onclick="switchRangeMode('yearly', this)">Yearly</button>
+        <select id="dailyMonthPicker" class="settings-select" onchange="onDailyMonthPick(this.value)" style="margin-left:auto;height:28px;font-size:12px;padding:0 8px;width:auto;font-family:'DM Mono',monospace;">
+          <option value="">Last 30 days</option>
+        </select>
       </div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
@@ -1066,6 +1069,15 @@
         
         <div class="header-meta"id="headerMetaGoals"></div>
       </div>
+    </div>
+
+    <div class="card" style="display:flex;align-items:center;gap:12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;">Strava integration</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Auto-import workouts into your exercise log</div>
+      </div>
+      <button id="stravaConnectBtn" onclick="connectStrava()" style="background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:8px 14px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Connect Strava</button>
     </div>
 
     <div class="card">
@@ -1331,6 +1343,8 @@ async function selectProfile(id, profileData, isNew = false) {
   }
   await Promise.all([loadAllFromServer(), loadWeightsFromServer(), loadExerciseFromServer(), loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(), loadHabitsFromServer(), loadHabitLogsFromServer()]);
   await initSettings();
+  await checkStravaConnection();
+  await handleStravaOAuthCallback();
   setDate(todayStr());
   // Reveal app now that data is ready — prevents Log flashing before profile resolves
   document.getElementById('appContainer').style.display = '';
@@ -1932,6 +1946,7 @@ function setDate(d) {
   if (isToday) setMealTabByTime();
   loadActiveWeight();
   renderToday();
+  if (typeof loadStravaForDate === 'function') loadStravaForDate(d);
 }
 
 function clearSearchInput() {
@@ -2864,17 +2879,117 @@ async function removeExercise(id) {
 
 function renderExercise() {
   const items = _exercise[activeDate] || [];
+  const stravaItems = (_stravaByDate[activeDate] || []);
   const c = document.getElementById('exerciseItems');
-  if (!items.length) { c.innerHTML = '<div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div>'; return; }
-  c.innerHTML = items.map(e => `<div class="exercise-row">
-    <span class="exercise-name">${e.name}</span>
+  if (!items.length && !stravaItems.length) { c.innerHTML = '<div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div>'; return; }
+  const stravaSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;vertical-align:middle;margin-left:6px;" title="From Strava"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>`;
+  const stravaRows = stravaItems.map(e => `<div class="exercise-row">
+    <span class="exercise-name">${escapeHtml(e.name)}${stravaSvg}</span>
+    <span class="exercise-burned">${e.calories_burned ? '−'+e.calories_burned+' kcal' : '<span style="color:var(--text-3);font-size:11px;">no kcal</span>'}</span>
+    <button class="del-btn" title="From Strava — remove in Strava app" disabled style="opacity:0.25;cursor:not-allowed;">×</button>
+  </div>`).join('');
+  const manualRows = items.map(e => `<div class="exercise-row">
+    <span class="exercise-name">${escapeHtml(e.name)}</span>
     <span class="exercise-burned">−${e.calories_burned} kcal</span>
     <button class="del-btn" onclick="removeExercise(${e.id})" title="Remove">×</button>
   </div>`).join('');
+  c.innerHTML = stravaRows + manualRows;
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// ── Strava integration ────────────────────────────────────────────
+let _stravaConnected = false;
+let _stravaByDate = {}; // { 'YYYY-MM-DD': [activities] }
+let _stravaFetchInFlight = {};
+
+async function checkStravaConnection() {
+  if (!activeProfileId) return;
+  try {
+    const res = await api(`strava-auth?profile_id=${activeProfileId}`);
+    _stravaConnected = !!res?.connected;
+    updateStravaButton();
+  } catch(e) { _stravaConnected = false; }
+}
+
+async function loadStravaForDate(date) {
+  if (!_stravaConnected || !activeProfileId) return;
+  if (_stravaByDate[date]) { renderExercise(); renderNetBanner(); return; }
+  if (_stravaFetchInFlight[date]) return;
+  _stravaFetchInFlight[date] = true;
+  try {
+    const list = await api(`strava-activities?profile_id=${activeProfileId}&date=${date}`);
+    _stravaByDate[date] = Array.isArray(list) ? list : [];
+    if (date === activeDate) { renderExercise(); renderNetBanner(); }
+  } catch(e) {
+    _stravaByDate[date] = [];
+  } finally {
+    delete _stravaFetchInFlight[date];
+  }
+}
+
+function connectStrava() {
+  if (!activeProfileId) { showToast('Select a profile first'); return; }
+  // Strava redirects back to the app root with ?code=... — index.html
+  // detects this on load and exchanges the code via /api/strava-auth.
+  const redirect = window.location.origin + '/';
+  const url = `https://www.strava.com/oauth/authorize?client_id=223909&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&approval_prompt=auto&scope=read,activity:read&state=strava`;
+  window.location.href = url;
+}
+
+async function disconnectStrava() {
+  if (!confirm('Disconnect Strava? Your activities will stop appearing in the exercise log.')) return;
+  try {
+    await api('strava-auth', { method: 'POST', body: { profile_id: activeProfileId, action: 'disconnect' } });
+    _stravaConnected = false;
+    _stravaByDate = {};
+    updateStravaButton();
+    renderExercise(); renderNetBanner();
+    showToast('Strava disconnected');
+  } catch(e) { showToast('Could not disconnect'); }
+}
+
+function updateStravaButton() {
+  const btn = document.getElementById('stravaConnectBtn');
+  if (!btn) return;
+  if (_stravaConnected) {
+    btn.textContent = '✓ Strava connected — tap to disconnect';
+    btn.onclick = disconnectStrava;
+    btn.style.color = '#1D9E75';
+  } else {
+    btn.textContent = 'Connect Strava';
+    btn.onclick = connectStrava;
+    btn.style.color = '#FC4C02';
+  }
+}
+
+// On app load, check for ?code=...&state=strava (OAuth callback) and exchange
+async function handleStravaOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  if (!code || state !== 'strava') return;
+  // Strip the params from the URL immediately so a refresh doesn't re-send
+  const cleanUrl = window.location.pathname + window.location.hash;
+  window.history.replaceState({}, '', cleanUrl);
+  if (!activeProfileId) { showToast('Select a profile first, then reconnect Strava'); return; }
+  try {
+    showToast('Connecting Strava...');
+    const res = await api('strava-auth', { method: 'POST', body: { profile_id: activeProfileId, code } });
+    if (res?.connected) {
+      _stravaConnected = true;
+      updateStravaButton();
+      _stravaByDate = {};
+      loadStravaForDate(activeDate);
+      showToast('Strava connected!');
+    }
+  } catch(e) { showToast('Strava connection failed: ' + (e.message || 'unknown')); }
 }
 
 function getExerciseBurned() {
-  return (_exercise[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
+  const manual = (_exercise[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
+  const strava = (_stravaByDate[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
+  return manual + strava;
 }
 
 function renderNetBanner() {
@@ -3440,9 +3555,9 @@ function buildCharts(days, allFoods, weights) {
   }
 
   // Weight — aggregate if needed
-  const cutoff = getChartRangeCutoff();
+  const dayFilter = getChartDayFilter();
   const allWeightDays = Object.keys(weights).sort();
-  const filteredWeightDays = (cutoff ? allWeightDays.filter(d => d >= cutoff) : allWeightDays).filter(d => weights[d]);
+  const filteredWeightDays = allWeightDays.filter(dayFilter).filter(d => weights[d]);
 
   if (filteredWeightDays.length) {
     let wLabels, wData;
@@ -3529,8 +3644,17 @@ let _habitRangeMode = 'daily';
 function switchRangeMode(mode, btn) {
   _rangeMode = mode;
   _habitRangeMode = mode;
+  // Switching out of daily clears any specific-month selection so other
+  // modes always start from a clean all-time view.
+  if (mode !== 'daily') _dailyMonth = '';
   document.querySelectorAll('#rangeTabsUnified .chart-range-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  // Show/hide the daily-only month picker
+  const picker = document.getElementById('dailyMonthPicker');
+  if (picker) {
+    picker.style.display = mode === 'daily' ? '' : 'none';
+    if (mode === 'daily') picker.value = _dailyMonth || '';
+  }
   // Clear cached canvas dimensions so Chart.js re-measures cleanly
   document.querySelectorAll('.chart-wrap canvas').forEach(c => {
     c.style.width = ''; c.style.height = '';
@@ -3550,11 +3674,61 @@ function switchRangeMode(mode, btn) {
   });
 }
 
+// State: in daily mode, '' means trailing 30 days, 'YYYY-MM' means that
+// specific calendar month. Ignored in monthly/yearly modes.
+let _dailyMonth = '';
+
+// Returns a (date) => boolean filter encoding the current chart range.
+// Daily + no month picked → trailing 30 days from today.
+// Daily + month picked    → only days in that calendar month.
+// Monthly                 → all-time (no filter).
+// Yearly                  → all-time (no filter).
+function getChartDayFilter() {
+  if (_rangeMode === 'daily') {
+    if (_dailyMonth) {
+      return d => d.startsWith(_dailyMonth);
+    }
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cs = cutoff.toISOString().slice(0, 10);
+    return d => d >= cs;
+  }
+  return () => true; // monthly + yearly = all-time
+}
+
+// Legacy cutoff helper kept for code paths that still want a string boundary
+// (e.g. drink chart's monthly branch). Returns null when there's no boundary.
 function getChartRangeCutoff() {
-  const d = new Date();
-  if (_rangeMode === 'daily')   { d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); }
-  if (_rangeMode === 'monthly') { d.setMonth(d.getMonth() - 12); return d.toISOString().slice(0, 10); }
-  return null; // yearly = all-time
+  if (_rangeMode === 'daily' && !_dailyMonth) {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  }
+  return null; // monthly, yearly, and daily-with-month all use full data
+}
+
+function onDailyMonthPick(value) {
+  _dailyMonth = value || '';
+  // Re-render whatever's currently visible
+  renderHistory();
+  if (_activeChartGroup === 'drinks') renderDrinksChart();
+  if (_activeChartGroup === 'habits') renderHabitChart();
+}
+
+// Populate the daily month picker with every month that has food-log data,
+// most recent first. Called from renderHistory so it stays in sync.
+function populateDailyMonthPicker() {
+  const sel = document.getElementById('dailyMonthPicker');
+  if (!sel) return;
+  const months = [...new Set(Object.keys(_allFoods).map(d => d.slice(0, 7)))].sort().reverse();
+  const current = _dailyMonth;
+  sel.innerHTML = '<option value="">Last 30 days</option>' + months.map(m => {
+    const [y, mo] = m.split('-');
+    const label = new Date(parseInt(y), parseInt(mo)-1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return `<option value="${m}"${m === current ? ' selected' : ''}>${label}</option>`;
+  }).join('');
+  // Only show the picker in daily mode
+  sel.style.display = _rangeMode === 'daily' ? '' : 'none';
 }
 
 // Legacy shim — old code paths that called switchHabitRange still work
@@ -3662,18 +3836,28 @@ function renderHabitChart() {
   canvas.style.width = ''; canvas.style.height = '';
   canvas.removeAttribute('width'); canvas.removeAttribute('height');
 
-  // ── DAILY — last 30 days, one bar per day ──────────────────────
+  // ── DAILY — last 30 days OR a specific calendar month ─────────
   if (_habitRangeMode === 'daily') {
-    if (title) title.textContent = 'Habit completions — last 30 days';
     if (yearSel) yearSel.style.display = 'none';
     canvas.style.display = ''; wrap.style.display = '';
     if (heatmap) heatmap.style.display = 'none';
 
     const days = [];
-    const d = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const dd = new Date(d); dd.setDate(d.getDate() - i);
-      days.push(dd.toISOString().slice(0,10));
+    if (_dailyMonth) {
+      const [y, mo] = _dailyMonth.split('-').map(Number);
+      const lastDay = new Date(y, mo, 0).getDate();
+      for (let i = 1; i <= lastDay; i++) {
+        days.push(`${_dailyMonth}-${String(i).padStart(2,'0')}`);
+      }
+      const monthLabel = new Date(y, mo-1, 1).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+      if (title) title.textContent = `Habit completions — ${monthLabel}`;
+    } else {
+      const d = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const dd = new Date(d); dd.setDate(d.getDate() - i);
+        days.push(dd.toISOString().slice(0,10));
+      }
+      if (title) title.textContent = 'Habit completions — last 30 days';
     }
     const labels = days.map(d => {
       const dt = new Date(d + 'T12:00:00');
@@ -3894,19 +4078,27 @@ function renderDrinksChart() {
 
   let labels, data;
   if (_rangeMode === 'daily') {
-    if (title) title.textContent = 'Drinks per day — last 30 days';
     const days = [];
-    const d = new Date();
-    for (let i = 29; i >= 0; i--) { const dd = new Date(d); dd.setDate(d.getDate() - i); days.push(dd.toISOString().slice(0,10)); }
+    if (_dailyMonth) {
+      // Specific calendar month — show every day in that month
+      const [y, mo] = _dailyMonth.split('-').map(Number);
+      const lastDay = new Date(y, mo, 0).getDate();
+      for (let i = 1; i <= lastDay; i++) {
+        days.push(`${_dailyMonth}-${String(i).padStart(2,'0')}`);
+      }
+      const monthLabel = new Date(y, mo-1, 1).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+      if (title) title.textContent = `Drinks per day — ${monthLabel}`;
+    } else {
+      const d = new Date();
+      for (let i = 29; i >= 0; i--) { const dd = new Date(d); dd.setDate(d.getDate() - i); days.push(dd.toISOString().slice(0,10)); }
+      if (title) title.textContent = 'Drinks per day — last 30 days';
+    }
     labels = days.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
     data   = days.map(d => dailyCounts[d] || 0);
   } else if (_rangeMode === 'monthly') {
-    if (title) title.textContent = 'Drinks per month — last 12 months';
+    if (title) title.textContent = 'Drinks per month — all time';
     const months = {};
-    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 12);
-    const cutoffStr = cutoff.toISOString().slice(0,10);
     Object.entries(dailyCounts).forEach(([date, n]) => {
-      if (date < cutoffStr) return;
       const key = date.slice(0,7);
       months[key] = (months[key] || 0) + n;
     });
@@ -3936,11 +4128,12 @@ function renderDrinksChart() {
 }
 
 function renderHistory() {
+  populateDailyMonthPicker();
   const all = _allFoods;
   const weights = _weights;
-  const cutoff = getChartRangeCutoff();
+  const dayFilter = getChartDayFilter();
   const allDays = Object.keys(all).sort();
-  const days = cutoff ? allDays.filter(d => d >= cutoff) : allDays;
+  const days = allDays.filter(dayFilter);
   const daysRev = [...days].reverse();
 
   document.getElementById('historySubtitle').textContent = days.length ? `${days.length} day${days.length===1?'':'s'} tracked` : '';
