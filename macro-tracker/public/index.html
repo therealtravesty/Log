@@ -650,6 +650,7 @@
       <button class="tab active" id="tab-today" onclick="showView('today', getTabDirection('today'))">Log</button>
       <button class="tab" id="tab-habits" onclick="showView('habits', getTabDirection('habits'))">Habits</button>
       <button class="tab" id="tab-history" onclick="showView('history', getTabDirection('history'))">History</button>
+      <button class="tab" id="tab-coach" onclick="showView('coach', getTabDirection('coach'))">Coach</button>
     </div>
   </div>
 
@@ -1164,6 +1165,30 @@
     </div>
   </div>
 
+  <div class="view" id="view-coach">
+    <div class="header">
+      <div class="header-top">
+        <div class="header-meta" id="headerMetaCoach"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:600;">AI Coach</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;" id="coachUpdatedAt">Tap refresh to generate your first analysis</div>
+        </div>
+        <button id="coachRefreshBtn" onclick="refreshCoachAnalysis()" style="background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Refresh</button>
+      </div>
+      <div id="coachContent" style="font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;">
+        <div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">
+          Your AI coach reviews your last 7, 30, and 90 days of nutrition,<br>
+          weight, exercise, and habit data and provides analytical feedback.<br><br>
+          Tap <strong>Refresh</strong> to get started.
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 <div class="toast"id="toast"></div>
 
@@ -1566,6 +1591,7 @@ async function loadCustomFoodsFromServer() {
       return { id: r.id, name: r.name.replace(/^\[cf\] /, ''),
         cal: f.cal||0, pro: f.pro||0, carb: f.carb||0, fat: f.fat||0,
         satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
+        isDrink: f.isDrink === true,
         servingLabel: f.servingLabel||'1 serving' };
     });
     cacheSet('customFoods', _customFoods);
@@ -1713,9 +1739,7 @@ async function autoLearnCustomFood(food) {
   if (!food || !food.name) return;
   const name = food.name.trim();
   if (!name) return;
-  // Skip if a custom food with this name already exists (case-insensitive)
   const lc = name.toLowerCase();
-  if (_customFoods.some(f => f.name.toLowerCase() === lc)) return;
   // Build per-serving macros from base fields, falling back to scaled values
   const entry = {
     name,
@@ -1727,31 +1751,34 @@ async function autoLearnCustomFood(food) {
     sug:    Math.round(food.baseSug    ?? food.sug    ?? 0),
     sod:    Math.round(food.baseSod    ?? food.sod    ?? 0),
     fib:    Math.round(food.baseFib    ?? food.fib    ?? 0),
+    isDrink: food.isDrink === true,
     servingLabel: food.servingLabel || '1 serving',
   };
-  // Skip nutritionally empty entries (no cal AND no macros)
   if (!entry.cal && !entry.pro && !entry.carb && !entry.fat) return;
-  // Optimistically add to local list so the dropdown picks it up immediately.
-  // Use a temporary negative id; reconcile with the real id from the server.
-  const tempId = -Date.now();
-  _customFoods.push({ id: tempId, ...entry });
-  cacheSet('customFoods', _customFoods);
+  // Update local copy: replace existing entry with same name, or append.
+  const existingIdx = _customFoods.findIndex(f => f.name.toLowerCase() === lc);
+  if (existingIdx !== -1) {
+    _customFoods[existingIdx] = { ..._customFoods[existingIdx], ...entry };
+    cacheSet('customFoods', _customFoods);
+  } else {
+    const tempId = -Date.now();
+    _customFoods.push({ id: tempId, ...entry });
+    cacheSet('customFoods', _customFoods);
+  }
   try {
+    // Server-side upsert: insert if new, PATCH the existing row if name conflict.
     const res = await api('custom-foods', { method: 'POST', body: {
       profile_id: activeProfileId, ...entry
     }});
     const row = Array.isArray(res) ? res[0] : res;
     if (row && row.id) {
-      const idx = _customFoods.findIndex(f => f.id === tempId);
-      if (idx !== -1) {
-        _customFoods[idx] = { ...entry, id: row.id };
-        cacheSet('customFoods', _customFoods);
-      }
+      // Reconcile id from server (only matters for new inserts)
+      const idx = _customFoods.findIndex(f => f.name.toLowerCase() === lc);
+      if (idx !== -1) _customFoods[idx] = { ..._customFoods[idx], ...entry, id: row.id };
+      cacheSet('customFoods', _customFoods);
     }
   } catch(e) {
-    // Roll back optimistic entry on failure
-    _customFoods = _customFoods.filter(f => f.id !== tempId);
-    cacheSet('customFoods', _customFoods);
+    // Leave the local optimistic update in place; cache will reconcile next load.
   }
 }
 
@@ -1988,6 +2015,12 @@ function showView(name, direction) {
   const tabEl = document.getElementById('tab-'+name);
   if (tabEl) tabEl.classList.add('active');
 
+  // First visit to Coach tab → auto-load if we have no analysis yet
+  if (name === 'coach' && !_coachLoadedOnce) {
+    _coachLoadedOnce = true;
+    setTimeout(() => loadCoachFromCache(), 50);
+  }
+
   if (nextEl === currentEl) return; // view already shown, tab is now synced
 
   if (!direction || !currentEl) {
@@ -2014,7 +2047,7 @@ function showView(name, direction) {
 }
 
 // ── Swipe between tabs ────────────────────────────────────────────
-const TAB_ORDER = ['goals', 'today', 'habits', 'history'];
+const TAB_ORDER = ['goals', 'today', 'habits', 'history', 'coach'];
 
 function getTabDirection(targetName) {
   const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
@@ -2444,7 +2477,7 @@ function renderFoodResult(food, servingLabel, sourceText, isInternal) {
         <span style="font-size:12px;color:var(--text-2);flex:1;">Count as alcoholic drink</span>
         <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;">
           <input type="checkbox" id="re_is_drink" style="opacity:0;width:0;height:0;position:absolute;" onchange="updateDrinkToggle(this)">
-          <span id="re_drink_track" style="position:absolute;inset:0;border-radius:11px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="document.getElementById('re_is_drink').click()"></span>
+          <span id="re_drink_track" style="position:absolute;inset:0;border-radius:11px;background:var(--border-med);transition:background 0.2s;cursor:pointer;"></span>
           <span id="re_drink_thumb" style="position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,0.2);"></span>
         </label>
       </div>
@@ -2683,16 +2716,32 @@ function toggleFoodEdit(foodId) {
 async function saveEditedFood(foodId) {
   const food = getActiveFoods().find(f => f.id === foodId);
   if (!food) return;
+  const newCal    = Math.round(parseFloat(document.getElementById(`fe_cal_${foodId}`).value)||0);
+  const newPro    = Math.round(parseFloat(document.getElementById(`fe_pro_${foodId}`).value)||0);
+  const newCarb   = Math.round(parseFloat(document.getElementById(`fe_carb_${foodId}`).value)||0);
+  const newFat    = Math.round(parseFloat(document.getElementById(`fe_fat_${foodId}`).value)||0);
+  const newSatFat = Math.round(parseFloat(document.getElementById(`fe_satFat_${foodId}`).value)||0);
+  const newSug    = Math.round(parseFloat(document.getElementById(`fe_sug_${foodId}`).value)||0);
+  const newSod    = Math.round(parseFloat(document.getElementById(`fe_sod_${foodId}`).value)||0);
+  const newFib    = Math.round(parseFloat(document.getElementById(`fe_fib_${foodId}`).value)||0);
+  const newIsDrink = document.getElementById(`fe_isDrink_${foodId}`)?.checked === true;
+  // The edited values are at the current serving multiplier. To recompute the
+  // per-serving "base" values that auto-learn stores in the library, divide by
+  // servingMult. If servingMult is 1 (the common case), they're identical.
+  const mult = food.servingMult || 1;
   const updated = {
     ...food,
-    cal:    Math.round(parseFloat(document.getElementById(`fe_cal_${foodId}`).value)||0),
-    pro:    Math.round(parseFloat(document.getElementById(`fe_pro_${foodId}`).value)||0),
-    carb:   Math.round(parseFloat(document.getElementById(`fe_carb_${foodId}`).value)||0),
-    fat:    Math.round(parseFloat(document.getElementById(`fe_fat_${foodId}`).value)||0),
-    satFat: Math.round(parseFloat(document.getElementById(`fe_satFat_${foodId}`).value)||0),
-    sug:    Math.round(parseFloat(document.getElementById(`fe_sug_${foodId}`).value)||0),
-    sod:    Math.round(parseFloat(document.getElementById(`fe_sod_${foodId}`).value)||0),
-    fib:    Math.round(parseFloat(document.getElementById(`fe_fib_${foodId}`).value)||0),
+    cal: newCal, pro: newPro, carb: newCarb, fat: newFat,
+    satFat: newSatFat, sug: newSug, sod: newSod, fib: newFib,
+    isDrink: newIsDrink,
+    baseCal:    Math.round(newCal    / mult),
+    basePro:    Math.round(newPro    / mult),
+    baseCarb:   Math.round(newCarb   / mult),
+    baseFat:    Math.round(newFat    / mult),
+    baseSatFat: Math.round(newSatFat / mult),
+    baseSug:    Math.round(newSug    / mult),
+    baseSod:    Math.round(newSod    / mult),
+    baseFib:    Math.round(newFib    / mult),
   };
   try {
     await removeFood(food);
@@ -3048,6 +3097,66 @@ function getExerciseBurned() {
   const manual = (_exercise[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
   const strava = (_stravaByDate[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
   return manual + strava;
+}
+
+// ── AI Coach ──────────────────────────────────────────────────────
+let _coachLoadedOnce = false;
+
+function coachCacheKey() { return `coach_${activeProfileId}`; }
+
+function loadCoachFromCache() {
+  try {
+    const raw = localStorage.getItem(coachCacheKey());
+    if (!raw) return;
+    const cached = JSON.parse(raw);
+    if (cached?.message) renderCoachMessage(cached.message, cached.generated_at);
+  } catch(_) {}
+}
+
+function renderCoachMessage(message, generated_at) {
+  const content = document.getElementById('coachContent');
+  const timestamp = document.getElementById('coachUpdatedAt');
+  if (!content) return;
+  content.textContent = message;
+  if (timestamp && generated_at) {
+    const d = new Date(generated_at);
+    const now = new Date();
+    const mins = Math.round((now - d) / 60000);
+    let label;
+    if (mins < 1) label = 'just now';
+    else if (mins < 60) label = `${mins} min ago`;
+    else if (mins < 1440) label = `${Math.round(mins/60)} hr ago`;
+    else label = `${Math.round(mins/1440)} day${Math.round(mins/1440) === 1 ? '' : 's'} ago`;
+    timestamp.textContent = `Last analysis: ${label}`;
+  }
+}
+
+async function refreshCoachAnalysis() {
+  if (!activeProfileId) { showToast('Select a profile first'); return; }
+  const btn = document.getElementById('coachRefreshBtn');
+  const content = document.getElementById('coachContent');
+  if (btn) { btn.textContent = 'Analyzing...'; btn.disabled = true; }
+  if (content) {
+    content.innerHTML = '<div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">Reviewing your last 90 days of data...<br>This usually takes 3-5 seconds.</div>';
+  }
+  try {
+    const res = await api(`coach-checkin?profile_id=${activeProfileId}`);
+    if (res?.message) {
+      renderCoachMessage(res.message, res.generated_at);
+      try {
+        localStorage.setItem(coachCacheKey(), JSON.stringify({ message: res.message, generated_at: res.generated_at }));
+      } catch(_) {}
+    } else {
+      content.textContent = 'No response from coach. Try again.';
+    }
+  } catch(e) {
+    if (content) {
+      content.innerHTML = `<div style="color:var(--red-text);font-size:13px;padding:1rem;">Coach error: ${e.message || 'unknown'}</div>`;
+    }
+    showToast('Coach error: ' + (e.message || 'unknown'));
+  } finally {
+    if (btn) { btn.textContent = 'Refresh'; btn.disabled = false; }
+  }
 }
 
 function renderNetBanner() {
@@ -3442,6 +3551,14 @@ function renderToday() {
               <div class="food-edit-field"><label class="food-edit-label">Sugar (g)</label><input class="food-edit-input"id="fe_sug_${f.id}"type="number"value="${f.sug||0}"/></div>
               <div class="food-edit-field"><label class="food-edit-label">Sodium (mg)</label><input class="food-edit-input"id="fe_sod_${f.id}"type="number"value="${f.sod||0}"/></div>
               <div class="food-edit-field"><label class="food-edit-label">Fiber (g)</label><input class="food-edit-input"id="fe_fib_${f.id}"type="number"value="${f.fib||0}"/></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:8px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);">
+              <span style="font-size:12px;color:var(--text-2);flex:1;">Count as alcoholic drink</span>
+              <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;">
+                <input type="checkbox" id="fe_isDrink_${f.id}" ${f.isDrink ? 'checked' : ''} style="opacity:0;width:0;height:0;position:absolute;" onchange="(function(cb){const t=document.getElementById('fe_drink_track_${f.id}');const th=document.getElementById('fe_drink_thumb_${f.id}');if(t)t.style.background=cb.checked?'var(--pink)':'var(--border-med)';if(th)th.style.transform=cb.checked?'translateX(18px)':'translateX(0)';})(this)">
+                <span id="fe_drink_track_${f.id}" style="position:absolute;inset:0;border-radius:11px;background:${f.isDrink ? 'var(--pink)' : 'var(--border-med)'};transition:background 0.2s;cursor:pointer;"></span>
+                <span id="fe_drink_thumb_${f.id}" style="position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,0.2);transform:${f.isDrink ? 'translateX(18px)' : 'translateX(0)'};"></span>
+              </label>
             </div>
             <div class="food-edit-actions">
               <button class="food-edit-save"onclick="saveEditedFood(${f.id})">Save changes</button>
@@ -4493,6 +4610,7 @@ async function logFoodFromDb(id) {
   const food = { id: Date.now(), name: f.name,
     cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat,
     satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
+    isDrink: f.isDrink === true,
     servingLabel: f.servingLabel||'1 serving', servingMult: 1,
     baseCal: f.cal, basePro: f.pro, baseCarb: f.carb, baseFat: f.fat,
     baseSatFat: f.satFat||0, baseSug: f.sug||0, baseSod: f.sod||0, baseFib: f.fib||0 };
