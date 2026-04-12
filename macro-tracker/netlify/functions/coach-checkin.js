@@ -101,13 +101,17 @@ exports.handler = async (event) => {
 
   try {
     // ── Fetch all the data we need in parallel ────────────────────
+    // Each fetch is wrapped to return [] on failure so a single missing table
+    // doesn't kill the whole analysis. The frontend gets a working response
+    // with whatever data is available.
+    const safeSb = (path) => sb(path).catch(e => { console.warn('[coach] fetch failed:', path, e.message); return []; });
     const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogsRows] = await Promise.all([
-      sb(`food_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      sb(`weights?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      sb(`exercise?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      sb(`settings?profile_id=eq.${encodeURIComponent(profile_id)}`),
-      sb(`habits?profile_id=eq.${encodeURIComponent(profile_id)}`),
-      sb(`habit_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
+      safeSb(`food_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
+      safeSb(`weights?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
+      safeSb(`exercise_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
+      safeSb(`settings?profile_id=eq.${encodeURIComponent(profile_id)}`),
+      safeSb(`habits?profile_id=eq.${encodeURIComponent(profile_id)}`),
+      safeSb(`habit_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
     ]);
 
     // ── Aggregate ──────────────────────────────────────────────────
@@ -175,9 +179,19 @@ exports.handler = async (event) => {
       return { name: h.name, completed, total: 7 };
     });
 
-    // Profile settings
-    const settings = (settingsRows && settingsRows[0]) || {};
-    const goals = settings.goals || {};
+    // Profile settings — stored as a JSONB `data` blob keyed off profile_id.
+    // Goals (cal/pro/carb/fat targets) are NOT stored in the settings table —
+    // the frontend computes them on the fly via Mifflin-St Jeor and passes
+    // them in as query params so we don't have to duplicate the math.
+    const settingsRow = (settingsRows && settingsRows[0]) || {};
+    const settings = settingsRow.data || {};
+    const qsGoals = event.queryStringParameters || {};
+    const goals = {
+      cal:  parseInt(qsGoals.cal)  || null,
+      pro:  parseInt(qsGoals.pro)  || null,
+      carb: parseInt(qsGoals.carb) || null,
+      fat:  parseInt(qsGoals.fat)  || null,
+    };
 
     // ── Build the prompt ───────────────────────────────────────────
     const systemPrompt = `You are an analytical nutrition and fitness coach. Your role is to review the user's tracked data and give specific, evidence-based feedback. Follow these rules strictly:
