@@ -194,56 +194,71 @@ exports.handler = async (event) => {
     };
 
     // ── Build the prompt ───────────────────────────────────────────
-    const systemPrompt = `You are an analytical nutrition and fitness coach. Your role is to review the user's tracked data and give specific, evidence-based feedback. Follow these rules strictly:
+    const systemPrompt = `You are an analytical nutrition and fitness coach. You review the user's tracked data and give specific, evidence-based feedback. Follow these rules strictly and without exception:
 
-1. ALWAYS show the math. If you say someone is "over" or "under" a target, state by exactly how much (e.g., "16g under your 200g protein target = 8% short").
-2. Be analytical, not preachy. Cite specific numbers from the data in every claim.
-3. Give credit where credit is due, but proportionally. Don't praise things that aren't actually working well, and don't withhold credit for things that are.
-4. Be realistic about isolated events. One drink in a week is not a problem worth flagging. A pattern is.
-5. Identify what's working AND what needs attention. Don't be all-positive or all-negative.
-6. Keep responses around 250-350 words. Use short paragraphs or sections, not bullet lists.
-7. Focus on patterns across timeframes (week vs month vs 90 days). Trends matter more than single days.
-8. Never suggest cutting training volume — assume the user's training schedule is intentional and effective.
-9. End with one specific actionable recommendation, not a list of vague tips.`;
+FORMATTING RULES (CRITICAL):
+- Never use markdown syntax. No #, ##, ###, **, *, _, -, or numbered lists. The output is rendered as plain text.
+- Write in clean paragraphs separated by blank lines. 3-4 paragraphs maximum.
+- No bullet points. No section headers. No bold text. Just prose.
+- Aim for 180-220 words total. Be selective; do not pad.
+
+CONTENT RULES:
+- The data block below contains pre-computed numbers and percentages. Use them directly. NEVER derive your own percentages or do arithmetic — the math is already done for you.
+- Always cite specific numbers from the data.
+- Identify what is working AND what needs attention. Be proportional — don't over-praise or over-criticize.
+- Be realistic about isolated events. One drink in a week is not a problem. A pattern is.
+- Never suggest cutting training volume. Assume the schedule is intentional.
+- Don't moralize. Don't lecture. State facts, identify trends, suggest one specific action.
+- End with one specific actionable recommendation.`;
+
+    // Pre-compute all percentages and deltas so the model never has to do arithmetic.
+    const pct = (actual, target) => target ? Math.round((actual / target) * 100) : null;
+    const delta = (actual, target) => target ? actual - target : null;
+    const fmtDelta = (d) => d === null ? '?' : (d > 0 ? '+' : '') + d;
+    const fmtPct = (p) => p === null ? '?' : p + '%';
+
+    const w = weekAvg;
+    const m = monthAvg;
+    const n = ninetyAvg;
 
     const dataBlock = `
 USER PROFILE:
 - ${settings.sex || 'M'}, ${settings.age || '?'}, ${settings.heightFt || '?'}'${settings.heightIn || 0}", currently ${currentWeight || '?'} lbs
 - Goal: ${settings.goal || 'cut'} at ${settings.rate || '1'} lb/week
 - Daily targets: ${goals.cal || '?'} cal / ${goals.pro || '?'}g protein / ${goals.carb || '?'}g carbs / ${goals.fat || '?'}g fat
-- Activity level: ${settings.activity || '?'}
-- Macro split: ${settings.split || '?'}
+- Activity level: ${settings.activity || '?'}, training split: ${settings.split || '?'}
 
-LAST 7 DAYS:
-${weekAvg ? `- Days logged: ${weekAvg.daysLogged}/7
-- Calories: avg ${weekAvg.cal}/day (target ${goals.cal || '?'}, delta ${goals.cal ? (weekAvg.cal - goals.cal > 0 ? '+' : '') + (weekAvg.cal - goals.cal) : '?'})
-- Protein: avg ${weekAvg.pro}g/day (target ${goals.pro || '?'}, delta ${goals.pro ? (weekAvg.pro - goals.pro > 0 ? '+' : '') + (weekAvg.pro - goals.pro) + 'g' : '?'})
-- Carbs: avg ${weekAvg.carb}g/day (target ${goals.carb || '?'})
-- Fat: avg ${weekAvg.fat}g/day (target ${goals.fat || '?'})
-- Sugar: avg ${weekAvg.sug}g/day
+LAST 7 DAYS (pre-computed — use these numbers directly, do NOT recalculate):
+${w ? `- Days logged: ${w.daysLogged} of 7
+- Calories: ${w.cal}/day average. Target ${goals.cal || '?'}. ${fmtPct(pct(w.cal, goals.cal))} of target. Delta ${fmtDelta(delta(w.cal, goals.cal))} kcal/day.
+- Protein: ${w.pro}g/day average. Target ${goals.pro || '?'}g. ${fmtPct(pct(w.pro, goals.pro))} of target. Delta ${fmtDelta(delta(w.pro, goals.pro))}g/day.
+- Carbs: ${w.carb}g/day average. ${fmtPct(pct(w.carb, goals.carb))} of ${goals.carb || '?'}g target. Delta ${fmtDelta(delta(w.carb, goals.carb))}g.
+- Fat: ${w.fat}g/day average. ${fmtPct(pct(w.fat, goals.fat))} of ${goals.fat || '?'}g target. Delta ${fmtDelta(delta(w.fat, goals.fat))}g.
+- Sugar: ${w.sug}g/day average.
 - Drinks logged: ${drinksWeek}
-- Exercise sessions: ${exer7.length}, total ${exer7Cal} kcal burned
-- Weight delta: ${delta7 !== null ? (delta7 > 0 ? '+' : '') + delta7 + ' lbs' : 'no data'}` : '- No data logged this week'}
+- Exercise: ${exer7.length} sessions, ${exer7Cal} kcal burned total
+- Weight delta: ${delta7 !== null ? (delta7 > 0 ? '+' : '') + delta7 + ' lbs' : 'no data'}` : '- No data this week'}
 
-LAST 30 DAYS:
-${monthAvg ? `- Days logged: ${monthAvg.daysLogged}/30
-- Calories: avg ${monthAvg.cal}/day (target ${goals.cal || '?'}, delta ${goals.cal ? (monthAvg.cal - goals.cal > 0 ? '+' : '') + (monthAvg.cal - goals.cal) : '?'})
-- Protein: avg ${monthAvg.pro}g/day (target ${goals.pro || '?'}, delta ${goals.pro ? (monthAvg.pro - goals.pro > 0 ? '+' : '') + (monthAvg.pro - goals.pro) + 'g' : '?'})
-- Carbs: avg ${monthAvg.carb}g/day, Fat: avg ${monthAvg.fat}g/day
-- Drinks logged: ${drinksMonth} (${(drinksMonth/4.3).toFixed(1)}/week)
-- Exercise sessions: ${exer30.length}, total ${exer30Cal} kcal burned
+LAST 30 DAYS (pre-computed):
+${m ? `- Days logged: ${m.daysLogged} of 30 (${Math.round(m.daysLogged/30*100)}% adherence)
+- Calories: ${m.cal}/day average. ${fmtPct(pct(m.cal, goals.cal))} of ${goals.cal || '?'} target. Delta ${fmtDelta(delta(m.cal, goals.cal))} kcal/day.
+- Protein: ${m.pro}g/day. ${fmtPct(pct(m.pro, goals.pro))} of ${goals.pro || '?'}g target. Delta ${fmtDelta(delta(m.pro, goals.pro))}g/day.
+- Carbs: ${m.carb}g/day, Fat: ${m.fat}g/day
+- Drinks: ${drinksMonth} total (${(drinksMonth/4.3).toFixed(1)}/week)
+- Exercise: ${exer30.length} sessions, ${exer30Cal} kcal burned total
 - Weight delta: ${delta30 !== null ? (delta30 > 0 ? '+' : '') + delta30 + ' lbs' : 'no data'}
-- Implied weekly rate: ${delta30 !== null ? (delta30 / 4.3).toFixed(2) + ' lbs/week' : 'no data'}` : '- No data logged in last 30 days'}
+- Implied rate: ${delta30 !== null ? (delta30 / 4.3).toFixed(2) + ' lbs/week' : '?'}` : '- No data this month'}
 
-LAST 90 DAYS:
-${ninetyAvg ? `- Days logged: ${ninetyAvg.daysLogged}/90 (${Math.round(ninetyAvg.daysLogged/90*100)}% adherence)
-- Calories: avg ${ninetyAvg.cal}/day, Protein: avg ${ninetyAvg.pro}g/day
+LAST 90 DAYS (pre-computed):
+${n ? `- Days logged: ${n.daysLogged} of 90 (${Math.round(n.daysLogged/90*100)}% adherence)
+- Calories: ${n.cal}/day average. ${fmtPct(pct(n.cal, goals.cal))} of target.
+- Protein: ${n.pro}g/day. ${fmtPct(pct(n.pro, goals.pro))} of target.
 - Weight delta: ${delta90 !== null ? (delta90 > 0 ? '+' : '') + delta90 + ' lbs' : 'no data'}` : '- Limited 90-day data'}
 
-HABITS (last 7 days completion):
-${habitStats.length ? habitStats.map(h => `- ${h.name}: ${h.completed}/7`).join('\n') : '- No habits tracked'}
+HABITS (last 7 days):
+${habitStats.length ? habitStats.map(h => `- ${h.name}: ${h.completed} of 7 days`).join('\n') : '- No habits tracked'}
 
-Provide your analysis now. Show the math. Don't moralize. Identify patterns, not isolated events.`;
+Write your analysis now. Use the pre-computed numbers above directly. Do NOT do any arithmetic. Plain text only — no markdown, no headers, no bullets. 3-4 paragraphs, 180-220 words.`;
 
     // ── Call Claude ────────────────────────────────────────────────
     const aRes = await fetch('https://api.anthropic.com/v1/messages', {

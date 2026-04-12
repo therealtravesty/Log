@@ -1,12 +1,14 @@
 // netlify/functions/strava-activities.js
 //
-// GET /api/strava-activities?profile_id=X&date=YYYY-MM-DD
-//   → Returns activities that started on that date in the athlete's local TZ
-//   → Refreshes the access token automatically if expired
-//   → Returns [] if the profile isn't connected
+// POST /api/strava-activities  { profile_id, days }
+//   → Pulls the last N days of activities from Strava (default 90)
+//   → Upserts each activity into exercise_logs (dedup by profile_id+strava_id)
+//   → Returns { synced, total_fetched }
 //
-// Response shape:
-//   [{ id, name, type, calories_burned, distance_m, moving_time_s, start_local }]
+// Strava activities live in exercise_logs alongside manual entries. The
+// `source` column distinguishes them ('strava' vs 'manual') and `strava_id`
+// holds the Strava activity id for dedup. The frontend doesn't maintain a
+// separate Strava cache anymore — everything reads from exercise_logs.
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,10 +18,10 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
-const json = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) });
+const json = (sc, body) => ({ statusCode: sc, headers, body: JSON.stringify(body) });
 
 async function sb(path, init = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -34,9 +36,8 @@ async function sb(path, init = {}) {
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    const e = new Error(data?.message || `Supabase ${res.status}`);
-    e.status = res.status; e.data = data;
-    throw e;
+    const e = new Error(data?.message || `Supabase ${res.status}: ${text}`);
+    e.status = res.status; throw e;
   }
   return data;
 }
@@ -68,59 +69,48 @@ async function refreshToken(profile_id, refresh_token) {
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
-  if (event.httpMethod !== 'GET') return json(405, { error: 'Method not allowed' });
-
+  if (event.httpMethod !== 'POST') return json(405, { error: 'Use POST' });
   if (!SUPABASE_URL || !SUPABASE_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
     return json(500, { error: 'env vars not configured' });
   }
 
-  const qs = event.queryStringParameters || {};
-  if (!qs.profile_id || !qs.date) return json(400, { error: 'profile_id and date required' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(qs.date)) return json(400, { error: 'date must be YYYY-MM-DD' });
-
   try {
-    const rows = await sb(
-      `strava_tokens?profile_id=eq.${encodeURIComponent(qs.profile_id)}&select=*`
-    );
-    if (!rows || !rows.length) return json(200, []); // Not connected — empty list, not an error.
+    const body = JSON.parse(event.body || '{}');
+    const profile_id = body.profile_id;
+    const days = Math.min(parseInt(body.days) || 90, 365);
+    if (!profile_id) return json(400, { error: 'profile_id required' });
+
+    const rows = await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}&select=*`);
+    if (!rows || !rows.length) return json(200, { synced: 0, error: 'not connected' });
 
     let token = rows[0];
     const now = Math.floor(Date.now() / 1000);
     let access = token.access_token;
     if (now >= (token.expires_at || 0) - 60) {
-      access = await refreshToken(qs.profile_id, token.refresh_token);
+      access = await refreshToken(profile_id, token.refresh_token);
     }
 
-    // Strava's `after`/`before` are unix timestamps. We use UTC midnight for
-    // the requested date with a generous +/- 12-hour buffer so that any
-    // activity starting on that local day is captured regardless of TZ.
-    const dayMid = Math.floor(new Date(qs.date + 'T00:00:00Z').getTime() / 1000);
-    const after  = dayMid - 12 * 3600;
-    const before = dayMid + 36 * 3600; // 24h day + 12h forward buffer
-
-    const sRes = await fetch(
-      `https://www.strava.com/api/v3/athlete/activities?after=${after}&before=${before}&per_page=50`,
-      { headers: { Authorization: `Bearer ${access}` } }
-    );
-    if (!sRes.ok) {
-      const errText = await sRes.text();
-      return json(sRes.status, { error: 'Strava API error', detail: errText });
+    // Pull activities for the requested window, paginating until empty.
+    const after = Math.floor(Date.now() / 1000) - days * 86400;
+    const allActivities = [];
+    for (let page = 1; page <= 10; page++) {
+      const sRes = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=200&page=${page}`,
+        { headers: { Authorization: `Bearer ${access}` } }
+      );
+      if (!sRes.ok) {
+        const errText = await sRes.text();
+        return json(sRes.status, { error: 'Strava API error', detail: errText.slice(0, 300) });
+      }
+      const pageData = await sRes.json();
+      if (!Array.isArray(pageData) || !pageData.length) break;
+      allActivities.push(...pageData);
+      if (pageData.length < 200) break;
     }
-    const activities = await sRes.json();
 
-    // Filter to activities whose LOCAL start date matches the requested date.
-    // start_date_local is ISO without TZ ("2026-04-12T07:30:00Z" but it's local).
-    const filtered = (activities || []).filter(a =>
-      typeof a.start_date_local === 'string' && a.start_date_local.slice(0, 10) === qs.date
-    );
-
-    // The summary endpoint doesn't include `calories` for many activity types
-    // (weight training, stair-stepper, walks without HR). Strava only exposes
-    // calories on the detail endpoint /activities/{id}. Fetch details for any
-    // activity that doesn't already have calories so the user sees the same
-    // numbers they see in the Strava app. This costs N extra API calls but
-    // Strava allows 200/15min so it's fine for normal use.
-    await Promise.all(filtered.map(async a => {
+    // For activities missing summary calories, fetch detail in parallel.
+    // Some activity types (weight training, walks) only expose calories via detail.
+    await Promise.all(allActivities.map(async a => {
       if (a.calories && a.calories > 0) return;
       try {
         const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
@@ -130,20 +120,31 @@ exports.handler = async (event) => {
           const detail = await dRes.json();
           if (detail.calories) a.calories = detail.calories;
         }
-      } catch(_) { /* leave as-is on failure */ }
+      } catch(_) { /* leave at 0 on failure */ }
     }));
 
-    const out = filtered.map(a => ({
-      id: a.id,
-      name: a.name,
-      type: a.sport_type || a.type,
+    // Upsert into exercise_logs. The partial unique index on
+    // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
+    const upsertRows = allActivities.map(a => ({
+      profile_id,
+      date: (a.start_date_local || '').slice(0, 10),
+      name: a.name || a.sport_type || 'Strava activity',
       calories_burned: Math.round(a.calories || a.kilojoules || 0),
-      distance_m: a.distance,
-      moving_time_s: a.moving_time,
-      start_local: a.start_date_local,
-    }));
+      strava_id: a.id,
+      source: 'strava',
+    })).filter(r => r.date);
 
-    return json(200, out);
+    let synced = 0;
+    if (upsertRows.length) {
+      await sb('exercise_logs?on_conflict=profile_id,strava_id', {
+        method: 'POST',
+        body: JSON.stringify(upsertRows),
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      });
+      synced = upsertRows.length;
+    }
+
+    return json(200, { synced, days, total_fetched: allActivities.length });
   } catch (e) {
     return json(500, { error: e.message || 'Internal error' });
   }
