@@ -3140,7 +3140,14 @@ async function refreshCoachAnalysis() {
     content.innerHTML = '<div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">Reviewing your last 90 days of data...<br>This usually takes 3-5 seconds.</div>';
   }
   try {
-    const res = await api(`coach-checkin?profile_id=${activeProfileId}`);
+    const params = new URLSearchParams({
+      profile_id: activeProfileId,
+      cal:  GOALS.cal  || '',
+      pro:  GOALS.pro  || '',
+      carb: GOALS.carb || '',
+      fat:  GOALS.fat  || '',
+    });
+    const res = await api(`coach-checkin?${params.toString()}`);
     if (res?.message) {
       renderCoachMessage(res.message, res.generated_at);
       try {
