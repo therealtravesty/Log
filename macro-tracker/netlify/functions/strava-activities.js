@@ -114,6 +114,25 @@ exports.handler = async (event) => {
       typeof a.start_date_local === 'string' && a.start_date_local.slice(0, 10) === qs.date
     );
 
+    // The summary endpoint doesn't include `calories` for many activity types
+    // (weight training, stair-stepper, walks without HR). Strava only exposes
+    // calories on the detail endpoint /activities/{id}. Fetch details for any
+    // activity that doesn't already have calories so the user sees the same
+    // numbers they see in the Strava app. This costs N extra API calls but
+    // Strava allows 200/15min so it's fine for normal use.
+    await Promise.all(filtered.map(async a => {
+      if (a.calories && a.calories > 0) return;
+      try {
+        const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
+          headers: { Authorization: `Bearer ${access}` },
+        });
+        if (dRes.ok) {
+          const detail = await dRes.json();
+          if (detail.calories) a.calories = detail.calories;
+        }
+      } catch(_) { /* leave as-is on failure */ }
+    }));
+
     const out = filtered.map(a => ({
       id: a.id,
       name: a.name,
