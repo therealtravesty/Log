@@ -1071,13 +1071,14 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex;align-items:center;gap:12px;">
+    <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:500;">Strava integration</div>
         <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Auto-import workouts into your exercise log</div>
       </div>
       <button id="stravaConnectBtn" onclick="connectStrava()" style="background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:8px 14px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Connect Strava</button>
+      <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Sync last 8 days</button>
     </div>
 
     <div class="card">
@@ -2912,19 +2913,60 @@ async function checkStravaConnection() {
   } catch(e) { _stravaConnected = false; }
 }
 
-async function loadStravaForDate(date) {
-  if (!_stravaConnected || !activeProfileId) return;
-  if (_stravaByDate[date]) { renderExercise(); renderNetBanner(); return; }
-  if (_stravaFetchInFlight[date]) return;
+async function loadStravaForDate(date, opts = {}) {
+  if (!_stravaConnected || !activeProfileId) {
+    if (opts.verbose) showToast('Not connected to Strava');
+    return { ok: false, count: 0 };
+  }
+  if (_stravaByDate[date] && !opts.force) {
+    if (date === activeDate) { renderExercise(); renderNetBanner(); }
+    return { ok: true, count: _stravaByDate[date].length, cached: true };
+  }
+  if (_stravaFetchInFlight[date]) return { ok: true, count: 0, inflight: true };
   _stravaFetchInFlight[date] = true;
   try {
     const list = await api(`strava-activities?profile_id=${activeProfileId}&date=${date}`);
     _stravaByDate[date] = Array.isArray(list) ? list : [];
     if (date === activeDate) { renderExercise(); renderNetBanner(); }
+    return { ok: true, count: _stravaByDate[date].length };
   } catch(e) {
     _stravaByDate[date] = [];
+    if (opts.verbose) showToast('Strava: ' + (e.message || 'fetch failed'));
+    console.error('[strava] fetch failed for', date, e);
+    return { ok: false, count: 0, error: e.message };
   } finally {
     delete _stravaFetchInFlight[date];
+  }
+}
+
+// Manual sync — fetches today + the previous 7 days with visible progress.
+// Bypasses the per-date cache so it always hits Strava fresh.
+async function syncStravaRecent() {
+  if (!_stravaConnected) { showToast('Connect Strava first'); return; }
+  if (!activeProfileId) { showToast('Select a profile first'); return; }
+  const btn = document.getElementById('stravaSyncBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
+  // Build the last 8 days (today + 7 prior)
+  const dates = [];
+  const base = new Date();
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(base); d.setDate(base.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  let totalActivities = 0;
+  let firstError = null;
+  for (const date of dates) {
+    const res = await loadStravaForDate(date, { force: true });
+    if (!res.ok && !firstError) firstError = res.error || 'unknown error';
+    totalActivities += res.count || 0;
+  }
+  if (btn) { btn.textContent = origText; btn.disabled = false; }
+  renderExercise(); renderNetBanner();
+  if (firstError) {
+    showToast('Sync error: ' + firstError);
+  } else {
+    showToast(`Synced ${totalActivities} activit${totalActivities === 1 ? 'y' : 'ies'} from last 8 days`);
   }
 }
 
@@ -2951,15 +2993,18 @@ async function disconnectStrava() {
 
 function updateStravaButton() {
   const btn = document.getElementById('stravaConnectBtn');
+  const syncBtn = document.getElementById('stravaSyncBtn');
   if (!btn) return;
   if (_stravaConnected) {
-    btn.textContent = '✓ Strava connected — tap to disconnect';
+    btn.textContent = '✓ Connected — disconnect';
     btn.onclick = disconnectStrava;
     btn.style.color = '#1D9E75';
+    if (syncBtn) syncBtn.style.display = '';
   } else {
     btn.textContent = 'Connect Strava';
     btn.onclick = connectStrava;
     btn.style.color = '#FC4C02';
+    if (syncBtn) syncBtn.style.display = 'none';
   }
 }
 
@@ -2969,21 +3014,30 @@ async function handleStravaOAuthCallback() {
   const code = params.get('code');
   const state = params.get('state');
   if (!code || state !== 'strava') return;
-  // Strip the params from the URL immediately so a refresh doesn't re-send
-  const cleanUrl = window.location.pathname + window.location.hash;
-  window.history.replaceState({}, '', cleanUrl);
-  if (!activeProfileId) { showToast('Select a profile first, then reconnect Strava'); return; }
+  if (!activeProfileId) {
+    showToast('Select a profile first, then reconnect Strava');
+    return; // Leave URL params intact so user can retry after picking profile
+  }
   try {
     showToast('Connecting Strava...');
     const res = await api('strava-auth', { method: 'POST', body: { profile_id: activeProfileId, code } });
     if (res?.connected) {
+      // Strip params only AFTER successful exchange so a failure leaves
+      // them available for retry/inspection.
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
       _stravaConnected = true;
       updateStravaButton();
       _stravaByDate = {};
       loadStravaForDate(activeDate);
       showToast('Strava connected!');
+    } else {
+      showToast('Strava: unexpected response');
     }
-  } catch(e) { showToast('Strava connection failed: ' + (e.message || 'unknown')); }
+  } catch(e) {
+    showToast('Strava connection failed: ' + (e.message || 'unknown'));
+    console.error('[strava] OAuth exchange failed:', e);
+  }
 }
 
 function getExerciseBurned() {
@@ -3561,13 +3615,29 @@ function buildCharts(days, allFoods, weights) {
 
   if (filteredWeightDays.length) {
     let wLabels, wData;
-    if (isAggregated && agg.weightData) {
-      // Use aggregated weight data, filter out nulls
-      const pairs = agg.weightLabels
-        .map((l,i) => [l, agg.weightData[i]])
-        .filter(([,v]) => v !== null);
-      wLabels = pairs.map(([l]) => l);
-      wData   = pairs.map(([,v]) => v);
+    if (isAggregated) {
+      // Bucket weights by their OWN dates, not by food-log dates. Previously
+      // we reused agg.weightLabels (built from _allFoods months) which dropped
+      // every weight entry on a date that didn't have a food log — silently
+      // hiding years of historical weight data.
+      const buckets = {}; // key → { sum, count, sortKey, label }
+      filteredWeightDays.forEach(d => {
+        const dt = new Date(d + 'T12:00:00');
+        let key, label;
+        if (_rangeMode === 'monthly') {
+          key = d.slice(0, 7); // YYYY-MM
+          label = dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        } else {
+          key = d.slice(0, 4); // YYYY
+          label = key;
+        }
+        if (!buckets[key]) buckets[key] = { sum: 0, count: 0, label };
+        buckets[key].sum += weights[d];
+        buckets[key].count += 1;
+      });
+      const keys = Object.keys(buckets).sort();
+      wLabels = keys.map(k => buckets[k].label);
+      wData   = keys.map(k => Math.round((buckets[k].sum / buckets[k].count) * 10) / 10);
     } else {
       wLabels = filteredWeightDays.map(shortDate);
       wData   = filteredWeightDays.map(d => weights[d]);
