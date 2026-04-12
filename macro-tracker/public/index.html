@@ -1554,6 +1554,13 @@ async function loadCustomFoodsFromServer() {
     const cached = cacheGet('customFoods');
     if (cached) _customFoods = cached;
   }
+  // If user already typed in search before load finished, re-render now
+  try {
+    const si = document.getElementById('searchInput');
+    if (si && si.value && si.value.trim().length >= 2 && typeof renderFoodDbDropdown === 'function') {
+      renderFoodDbDropdown(si.value.trim().toLowerCase());
+    }
+  } catch(_) {}
 }
 
 async function saveCustomFood(food, silent = false) {
@@ -2407,7 +2414,7 @@ function showDrinksModal() {
         <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</div>
         <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:1px;">${d.cal} kcal · ${d.meal || 'uncategorized'}</div>
       </div>
-      <button onclick="unflagDrink(${d.id})" style="background:var(--red-bg);color:var(--red-text);border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0;">Not a drink</button>
+      <button onclick="unflagDrink(${d.id})" title="Remove from drinks" style="background:var(--red-bg);color:var(--red-text);border:none;border-radius:6px;width:28px;height:28px;font-size:16px;font-weight:500;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">×</button>
     </div>`).join('');
 
   requestAnimationFrame(() => {
@@ -4104,7 +4111,12 @@ function hideFoodDbDropdown() {
 
 function renderFoodDbDropdown(query) {
   const el = document.getElementById('foodDbDropdown');
-  if (!el || !_customFoods.length) { hideFoodDbDropdown(); return; }
+  if (!el) return;
+  if (!_customFoods || !_customFoods.length) {
+    el.style.display = 'block';
+    el.innerHTML = `<div style="font-size:11px;color:var(--text-3);padding:12px;text-align:center;font-family:'DM Mono',monospace;">No saved foods yet — press Enter to search the web</div>`;
+    return;
+  }
   // Score: exact name start = 3, contains = 2, word match = 1
   const scored = _customFoods.map(f => {
     const n = f.name.toLowerCase();
@@ -4117,7 +4129,11 @@ function renderFoodDbDropdown(query) {
     .sort((a, b) => b.score - a.score || _customFoods.indexOf(b.f) - _customFoods.indexOf(a.f))
     .slice(0, 8);
 
-  if (!scored.length) { hideFoodDbDropdown(); return; }
+  if (!scored.length) {
+    el.style.display = 'block';
+    el.innerHTML = `<div style="font-size:11px;color:var(--text-3);padding:12px;text-align:center;font-family:'DM Mono',monospace;">No matches in your saved foods — press Enter to search the web</div>`;
+    return;
+  }
 
   el.style.display = 'block';
   el.innerHTML = `
