@@ -1683,6 +1683,57 @@ async function addFood(food, meal) {
   if (!_allFoods[activeDate]) _allFoods[activeDate] = [];
   _allFoods[activeDate].push(savedFood);
   cacheSet('allFoods', _allFoods);
+  // Auto-learn: silently save this food to the custom library so future
+  // searches surface it in the dropdown. Dedup by case-insensitive name.
+  autoLearnCustomFood(food).catch(()=>{});
+}
+
+// Save a logged food to the custom library if not already present.
+// Uses BASE per-serving macros so scaling works correctly on future logs.
+async function autoLearnCustomFood(food) {
+  if (!food || !food.name) return;
+  const name = food.name.trim();
+  if (!name) return;
+  // Skip if a custom food with this name already exists (case-insensitive)
+  const lc = name.toLowerCase();
+  if (_customFoods.some(f => f.name.toLowerCase() === lc)) return;
+  // Build per-serving macros from base fields, falling back to scaled values
+  const entry = {
+    name,
+    cal:    Math.round(food.baseCal    ?? food.cal    ?? 0),
+    pro:    Math.round(food.basePro    ?? food.pro    ?? 0),
+    carb:   Math.round(food.baseCarb   ?? food.carb   ?? 0),
+    fat:    Math.round(food.baseFat    ?? food.fat    ?? 0),
+    satFat: Math.round(food.baseSatFat ?? food.satFat ?? 0),
+    sug:    Math.round(food.baseSug    ?? food.sug    ?? 0),
+    sod:    Math.round(food.baseSod    ?? food.sod    ?? 0),
+    fib:    Math.round(food.baseFib    ?? food.fib    ?? 0),
+    servingLabel: food.servingLabel || '1 serving',
+  };
+  // Skip nutritionally empty entries (no cal AND no macros)
+  if (!entry.cal && !entry.pro && !entry.carb && !entry.fat) return;
+  // Optimistically add to local list so the dropdown picks it up immediately.
+  // Use a temporary negative id; reconcile with the real id from the server.
+  const tempId = -Date.now();
+  _customFoods.push({ id: tempId, ...entry });
+  cacheSet('customFoods', _customFoods);
+  try {
+    const res = await api('custom-foods', { method: 'POST', body: {
+      profile_id: activeProfileId, ...entry
+    }});
+    const row = Array.isArray(res) ? res[0] : res;
+    if (row && row.id) {
+      const idx = _customFoods.findIndex(f => f.id === tempId);
+      if (idx !== -1) {
+        _customFoods[idx] = { ...entry, id: row.id };
+        cacheSet('customFoods', _customFoods);
+      }
+    }
+  } catch(e) {
+    // Roll back optimistic entry on failure
+    _customFoods = _customFoods.filter(f => f.id !== tempId);
+    cacheSet('customFoods', _customFoods);
+  }
 }
 
 async function removeFood(food) {
@@ -3485,9 +3536,18 @@ function switchRangeMode(mode, btn) {
     c.style.width = ''; c.style.height = '';
     c.removeAttribute('width'); c.removeAttribute('height');
   });
-  renderHistory();
-  if (_activeChartGroup === 'drinks') renderDrinksChart();
-  if (_activeChartGroup === 'habits') renderHabitChart();
+  // Defer rebuild to next frame so the browser performs a layout pass on the
+  // now-cleared canvases before Chart.js measures them. Without this, charts
+  // get created against stale dimensions and labels collapse off-screen.
+  requestAnimationFrame(() => {
+    renderHistory();
+    if (_activeChartGroup === 'drinks') renderDrinksChart();
+    if (_activeChartGroup === 'habits') renderHabitChart();
+    // Second frame: force resize on every active chart now that they're laid out
+    requestAnimationFrame(() => {
+      Object.values(chartInstances).forEach(c => { try { c.resize(); } catch(_) {} });
+    });
+  });
 }
 
 function getChartRangeCutoff() {
@@ -3598,6 +3658,9 @@ function renderHabitChart() {
   const habitsToShow = selectedId === 'all' ? _habits : _habits.filter(h => String(h.id) === selectedId);
 
   if (chartInstances['habit']) { chartInstances['habit'].destroy(); delete chartInstances['habit']; }
+  // Defensively reset canvas dims so Chart.js re-measures from current layout.
+  canvas.style.width = ''; canvas.style.height = '';
+  canvas.removeAttribute('width'); canvas.removeAttribute('height');
 
   // ── DAILY — last 30 days, one bar per day ──────────────────────
   if (_habitRangeMode === 'daily') {
@@ -3712,6 +3775,9 @@ function renderHabitChart() {
           </div>`).join('')
       : '';
   }
+  // Force a resize on the next frame so the chart matches the post-layout
+  // canvas dimensions, not whatever was cached at create time.
+  requestAnimationFrame(() => { try { chartInstances['habit']?.resize(); } catch(_) {} });
 }
 
 function renderHabitHeatmap(habits, year) {
