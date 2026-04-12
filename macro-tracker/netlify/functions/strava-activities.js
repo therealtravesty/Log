@@ -75,12 +75,16 @@ exports.handler = async (event) => {
   }
 
   try {
+    const t0 = Date.now();
+    const log = (label) => console.log(`[strava-sync] ${label} +${Date.now() - t0}ms`);
+
     const body = JSON.parse(event.body || '{}');
     const profile_id = body.profile_id;
-    const days = Math.min(parseInt(body.days) || 14, 365);
+    const days = Math.min(parseInt(body.days) || 7, 365);
     if (!profile_id) return json(400, { error: 'profile_id required' });
 
     const rows = await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}&select=*`);
+    log('token fetched');
     if (!rows || !rows.length) return json(200, { synced: 0, error: 'not connected' });
 
     let token = rows[0];
@@ -88,6 +92,7 @@ exports.handler = async (event) => {
     let access = token.access_token;
     if (now >= (token.expires_at || 0) - 60) {
       access = await refreshToken(profile_id, token.refresh_token);
+      log('token refreshed');
     }
 
     // Pull activities for the requested window, paginating until empty.
@@ -110,12 +115,13 @@ exports.handler = async (event) => {
       allActivities.push(...pageData);
       if (pageData.length < 200) break;
     }
+    log(`list fetched: ${allActivities.length} activities`);
 
-    // Fetch detail for activities missing summary calories. With a 14-day
-    // window (~40-50 activities for a heavy trainer), we throttle to 8 concurrent
-    // to stay safely under both the rate limit (200/15min) and the Netlify
-    // function timeout (10s). Light throttling, no cutoff date.
+    // Fetch detail for activities missing summary calories. With a 7-day
+    // window (~20 activities for a heavy trainer), 8-concurrent throttling
+    // is plenty to stay under timeout and rate limit.
     const needDetail = allActivities.filter(a => !(a.calories && a.calories > 0));
+    log(`${needDetail.length} need detail`);
     const CONCURRENCY = 8;
     for (let i = 0; i < needDetail.length; i += CONCURRENCY) {
       const batch = needDetail.slice(i, i + CONCURRENCY);
@@ -130,7 +136,9 @@ exports.handler = async (event) => {
           }
         } catch(_) { /* leave at 0 on failure */ }
       }));
+      log(`detail batch ${i/CONCURRENCY + 1} done`);
     }
+    log('all details done');
 
     // Upsert into exercise_logs. The partial unique index on
     // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
@@ -151,6 +159,7 @@ exports.handler = async (event) => {
         headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
       });
       synced = upsertRows.length;
+      log(`upsert done: ${synced} rows`);
     }
 
     return json(200, { synced, days, total_fetched: allActivities.length });
