@@ -689,15 +689,14 @@
 
     <!-- Live coaching blurb -->
     <div id="coachingBlurb" style="display:none;margin:-4px 0 10px;padding:8px 12px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-2);line-height:1.45;"></div>
-    <!-- Net calories banner — sits right below macros -->
+    <!-- Calorie banner — food intake vs target, with exercise shown as informational context -->
     <div class="net-banner"id="netBanner">
       <div class="net-item"><div class="net-item-label">Food</div><div class="net-item-val"id="netFood">0</div></div>
-      <div class="net-divider">−</div>
-      <div class="net-item"><div class="net-item-label">Exercise</div><div class="net-item-val"id="netExercise">0</div></div>
-      <div class="net-divider">=</div>
-      <div class="net-item"><div class="net-result-label">Net calories</div><div class="net-result-val"id="netResult">0</div></div>
+      <div class="net-divider">/</div>
+      <div class="net-item"><div class="net-result-label">Target</div><div class="net-result-val"id="netResult">0</div></div>
       <div style="flex:1"></div>
-      <div class="net-item"style="text-align:right;"><div class="net-item-label">Target</div><div class="net-item-val"id="netTarget">2,850</div></div>
+      <div class="net-item"style="text-align:right;"><div class="net-item-label">Burned <span style="font-size:9px;color:var(--text-3);font-weight:normal;">(info)</span></div><div class="net-item-val"id="netExercise" style="color:var(--text-2);">0</div></div>
+      <span id="netTarget" style="display:none;">2,850</span>
     </div>
 
     <!-- Weight — standalone card -->
@@ -1164,6 +1163,9 @@
         </div>
       </div>
 
+      <div style="margin-top:1rem;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border-med);font-size:11px;color:var(--text-3);line-height:1.5;font-family:'DM Mono',monospace;">
+        <strong style="color:var(--text-2);">Heads up:</strong> Your calorie target already accounts for your activity level. Don't subtract workout calories from your daily target — eat to the number shown above. The exercise log is for tracking volume and showing your coach what you're doing, not for "earning" extra food.
+      </div>
       <div class="settings-result"id="settingsResult"style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;"></div>
       <div id="goalsSavedMsg"style="display:none;font-size:12px;color:var(--green-text);margin-top:10px;font-family:'DM Mono',monospace;"> Goals saved</div>
     </div>
@@ -3184,14 +3186,16 @@ async function refreshCoachAnalysis() {
 function renderNetBanner() {
   const foodCal = totals(getActiveFoods()).cal;
   const burned = getExerciseBurned();
-  const net = foodCal - burned;
   const target = GOALS.cal;
   document.getElementById('netFood').textContent = foodCal.toLocaleString();
   document.getElementById('netExercise').textContent = burned.toLocaleString();
   document.getElementById('netTarget').textContent = target.toLocaleString();
+  // Show target as the comparison number — we no longer subtract exercise from food.
+  // The user's daily target already accounts for their activity level, so subtracting
+  // workout calories would double-count. Exercise calories are shown as informational.
   const el = document.getElementById('netResult');
-  el.textContent = net.toLocaleString();
-  el.className = 'net-result-val '+ (net > target ? 'over': 'under');
+  el.textContent = target.toLocaleString();
+  el.className = 'net-result-val '+ (foodCal > target ? 'over': 'under');
 }
 
 // ── Saved meals ───────────────────────────────────────────────────
