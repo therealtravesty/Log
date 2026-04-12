@@ -798,7 +798,7 @@
 
     <div class="footer-actions">
       <button class="ghost-btn danger"onclick="resetDay()">Reset this day</button>
-      <div id="drinkCountPill" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text-2);background:var(--surface);border:0.5px solid var(--border-med);border-radius:20px;padding:4px 10px;">
+      <div id="drinkCountPill" onclick="showDrinksModal()" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text-2);background:var(--surface);border:0.5px solid var(--border-med);border-radius:20px;padding:4px 10px;cursor:pointer;">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--pink);display:inline-block;flex-shrink:0;"></span>
         <span id="drinkCountLabel">0 drinks</span>
       </div>
@@ -2350,15 +2350,16 @@ function renderFoodResult(food, servingLabel, sourceText, isInternal) {
         </label>
       </div>
     </div>`;
-  // Auto-detect alcoholic drink from food name
-  const drinkKeywords = /\b(beer|lager|ale|ipa|stout|porter|pilsner|wine|champagne|prosecco|cider|mead|sake|soju|spirits?|whiskey|whisky|bourbon|scotch|rum|vodka|gin|tequila|mezcal|brandy|cognac|liqueur|shot|cocktail|margarita|mojito|martini|spritz|hard\s+seltzer|white\s+claw|truly|smirnoff|hard\s+lemonade|sangria|mule|negroni|daiquiri|mimosa|bellini)\b/i;
-  const isDrink = drinkKeywords.test(food.name);
-  const cb = document.getElementById('re_is_drink');
-  if (cb && isDrink) {
-    cb.checked = true;
-    updateDrinkToggle(cb);
-  }
-}
+  // Auto-detect alcoholic drink from food name (deferred so DOM is ready)
+  requestAnimationFrame(() => {
+    const drinkKeywords = /\b(beer|lager|ale|ipa|stout|porter|pilsner|wine|champagne|prosecco|cider|mead|sake|soju|spirits?|whiskey|whisky|bourbon|scotch|rum|vodka|gin|tequila|mezcal|brandy|cognac|liqueur|shot|cocktail|margarita|mojito|martini|spritz|hard\s+seltzer|white\s+claw|truly|smirnoff|hard\s+lemonade|sangria|mule|negroni|daiquiri|mimosa|bellini)\b/i;
+    const isDrink = drinkKeywords.test(food.name);
+    const cb = document.getElementById('re_is_drink');
+    if (cb && isDrink) {
+      cb.checked = true;
+      updateDrinkToggle(cb);
+    }
+  });
 
 function renderDrinkCount() {
   const drinks = (getActiveFoods()).filter(f => f.isDrink);
@@ -2372,7 +2373,42 @@ function renderDrinkCount() {
     pill.style.display = 'none';
   }
 }
+  
+function showDrinksModal() {
+  const drinks = getActiveFoods().filter(f => f.isDrink);
+  if (!drinks.length) { showToast('No drinks logged today'); return; }
 
+  document.getElementById('macroBreakdownTitle').textContent = `Drinks logged today (${drinks.length})`;
+  document.getElementById('macroBreakdownBody').innerHTML = drinks.map(d => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</div>
+        <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:1px;">${d.cal} kcal · ${d.meal || 'uncategorized'}</div>
+      </div>
+      <button onclick="unflagDrink(${d.id})" style="background:var(--red-bg);color:var(--red-text);border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;flex-shrink:0;">Not a drink</button>
+    </div>`).join('');
+
+  requestAnimationFrame(() => {
+    const modal = document.getElementById('macroBreakdownModal');
+    document.getElementById('macroBreakdownOverlay').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    addSwipeToDismiss(modal, closeMacroBreakdown);
+  });
+}
+
+async function unflagDrink(foodId) {
+  const food = getActiveFoods().find(f => f.id === foodId);
+  if (!food) return;
+  food.isDrink = false;
+  // Update via remove + re-add since the foods PATCH endpoint isn't set up for is_drink
+  try {
+    await removeFood(food);
+    await addFood(food, food.meal);
+    closeMacroBreakdown();
+    renderToday();
+    showToast('Drink flag removed');
+  } catch(e) { showToast('Could not update — try again'); }
+}
 function updateDrinkToggle(cb) {
   const track = document.getElementById('re_drink_track');
   const thumb  = document.getElementById('re_drink_thumb');
@@ -3412,11 +3448,15 @@ let _habitRangeMode = 'daily';
 
 function switchRangeMode(mode, btn) {
   _rangeMode = mode;
-  _habitRangeMode = mode; // keep habit chart in sync
+  _habitRangeMode = mode;
   document.querySelectorAll('#rangeTabsUnified .chart-range-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  // Clear cached canvas dimensions so Chart.js re-measures cleanly
+  document.querySelectorAll('.chart-wrap canvas').forEach(c => {
+    c.style.width = ''; c.style.height = '';
+    c.removeAttribute('width'); c.removeAttribute('height');
+  });
   renderHistory();
-  // Also re-render drinks/habits if they're the active view
   if (_activeChartGroup === 'drinks') renderDrinksChart();
   if (_activeChartGroup === 'habits') renderHabitChart();
 }
@@ -3435,16 +3475,15 @@ function switchChartRange() { /* no-op — old function removed */ }
 function switchChartGroup(group) {
   _activeChartGroup = group;
   document.querySelectorAll('.chart-group-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  if (event && event.target) event.target.classList.add('active');
   ['weight','nutrition','habits','drinks'].forEach(g => {
     const el = document.getElementById(`chartSubTabs-${g}`);
     if (el) el.classList.toggle('hidden', g !== group);
   });
-// Unified range tabs are always visible — no toggling needed
   if (group === 'weight') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-weight')?.classList.add('active');
-    requestAnimationFrame(() => chartInstances.weight?.resize());
+    renderHistory();
   } else if (group === 'habits') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-habits')?.classList.add('active');
@@ -4016,16 +4055,20 @@ function showToast(msg) {
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); hideFoodDbDropdown(); lookupFood(); }
 });
-// Live filter against saved food database as user types
-document.getElementById('searchInput').addEventListener('input', e => {
-  const q = e.target.value.trim().toLowerCase();
-  if (q.length < 2) { hideFoodDbDropdown(); return; }
-  renderFoodDbDropdown(q);
-});
-// Hide dropdown when user clicks outside
-document.addEventListener('click', e => {
-  if (!e.target.closest('#foodDbDropdown') && !e.target.closest('#searchInput')) hideFoodDbDropdown();
-});
+// Live filter against saved food database — defer to ensure DOM is ready
+function bindFoodDbDropdown() {
+  const input = document.getElementById('searchInput');
+  if (!input) { setTimeout(bindFoodDbDropdown, 100); return; }
+  input.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (q.length < 2) { hideFoodDbDropdown(); return; }
+    renderFoodDbDropdown(q);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#foodDbDropdown') && !e.target.closest('#searchInput')) hideFoodDbDropdown();
+  });
+}
+bindFoodDbDropdown();
 
 function hideFoodDbDropdown() {
   const el = document.getElementById('foodDbDropdown');
