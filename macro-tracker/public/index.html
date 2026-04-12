@@ -748,7 +748,9 @@
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
-        <div id="foodDbDropdown" style="display:none;margin-top:8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;"></div>
+        <div style="position:relative;height:0;">
+          <div id="foodDbDropdown" style="display:none;position:absolute;top:4px;left:0;right:0;z-index:50;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
+        </div>
         <div id="resultArea"></div>
       </div>
 
@@ -1943,24 +1945,43 @@ function getTabDirection(targetName) {
   if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return null;
   return toIdx > fromIdx ? 'left': 'right';
 }
-let _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false;
+let _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false, _swipeLock = null;
 
 document.addEventListener('touchstart', e => {
   // Don't intercept if modal is open or touch is inside modal
+  _swipeLock = null;
   if (document.body.classList.contains('modal-open')) return;
   if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen')) return;
   _swipeStartX = e.touches[0].clientX;
   _swipeStartY = e.touches[0].clientY;
   _swipeActive = true;
-}, { passive: true });
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (!_swipeActive) return;
+  if (_swipeLock === 'v') return; // vertical scroll wins, leave alone
+  const dx = e.touches[0].clientX - _swipeStartX;
+  const dy = e.touches[0].clientY - _swipeStartY;
+  if (_swipeLock === null) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; // not enough movement yet
+    _swipeLock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+  }
+  if (_swipeLock === 'h') {
+    // Horizontal intent — block native vertical scroll for this gesture
+    if (e.cancelable) e.preventDefault();
+  }
+}, { passive: false });
 
 document.addEventListener('touchend', e => {
   if (!_swipeActive || document.body.classList.contains('modal-open')) return;
   if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen')) return;
   const dx = e.changedTouches[0].clientX - _swipeStartX;
   const dy = e.changedTouches[0].clientY - _swipeStartY;
+  const wasHorizontal = _swipeLock === 'h';
   _swipeActive = false;
-  if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+  _swipeLock = null;
+  if (!wasHorizontal && (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5)) return;
+  if (Math.abs(dx) < 60) return;
   const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
   // On Log tab, horizontal swipes change days instead of switching tabs
   if (currentTab === 'today') {
@@ -2360,6 +2381,7 @@ function renderFoodResult(food, servingLabel, sourceText, isInternal) {
       updateDrinkToggle(cb);
     }
   });
+}
 
 function renderDrinkCount() {
   const drinks = (getActiveFoods()).filter(f => f.isDrink);
@@ -3788,6 +3810,7 @@ function renderDrinksChart() {
   const title  = document.getElementById('drinksChartTitle');
   if (!canvas) return;
   if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
+  canvas.style.width = ''; canvas.style.height = '';
   canvas.removeAttribute('width'); canvas.removeAttribute('height');
 
   const dailyCounts = {};
@@ -3914,12 +3937,16 @@ function renderHistory() {
       const inst = chartInstances[chartName || 'macros'];
       inst?.resize();
     });
+  } else if (group === 'drinks') {
+    document.getElementById('chart-drinks')?.classList.add('active');
+  } else if (group === 'habits') {
+    document.getElementById('chart-habits')?.classList.add('active');
   } else {
     document.getElementById('chart-weight')?.classList.add('active');
   }
 
   populateHabitChartControls();
-  renderHabitChart();
+  if (group === 'habits') renderHabitChart();
 
   // Habit streak stat
   const habitStreakEl = document.getElementById('statHabitStreak');
