@@ -1082,7 +1082,7 @@
       </div>
       <div style="display:flex;gap:8px;">
         <button id="stravaConnectBtn" onclick="connectStrava()" style="flex:1;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Connect Strava</button>
-        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 14 days</button>
+        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 7 days</button>
       </div>
     </div>
 
@@ -2987,7 +2987,7 @@ async function syncStravaRecent() {
   try {
     const res = await api('strava-activities', {
       method: 'POST',
-      body: { profile_id: activeProfileId, days: 14 },
+      body: { profile_id: activeProfileId, days: 7 },
     });
     if (res?.error) {
       showToast('Sync error: ' + res.error);
