@@ -748,6 +748,7 @@
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
+        <div id="foodDbDropdown" style="display:none;margin-top:8px;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;"></div>
         <div id="resultArea"></div>
       </div>
 
@@ -991,23 +992,12 @@
         <button class="chart-tab" onclick="switchChart('fiber', event)">Fiber</button>
       </div>
       <div class="chart-sub-tabs hidden" id="chartSubTabs-habits"></div>
-      <div class="chart-sub-tabs hidden" id="chartSubTabs-drinks">
-        <button class="chart-tab active" onclick="switchDrinksView('daily', this)">Daily</button>
-        <button class="chart-tab" onclick="switchDrinksView('weekly', this)">Weekly avg</button>
-      </div>
-      <!-- Time range filter for weight/nutrition -->
-      <div class="chart-range-tabs" id="rangeTabsMain">
-        <button class="chart-range-tab" onclick="switchChartRange('7d', this)">7D</button>
-        <button class="chart-range-tab" onclick="switchChartRange('30d', this)">30D</button>
-        <button class="chart-range-tab" onclick="switchChartRange('3m', this)">3M</button>
-        <button class="chart-range-tab" onclick="switchChartRange('1y', this)">1Y</button>
-        <button class="chart-range-tab active" onclick="switchChartRange('all', this)">All</button>
-      </div>
-      <!-- Time range filter for habits -->
-      <div class="chart-range-tabs hidden" id="rangeTabsHabits">
-        <button class="chart-range-tab active" onclick="switchHabitRange('daily', this)">Daily</button>
-        <button class="chart-range-tab" onclick="switchHabitRange('monthly', this)">Monthly</button>
-        <button class="chart-range-tab" onclick="switchHabitRange('yearly', this)">Yearly</button>
+      <div class="chart-sub-tabs hidden" id="chartSubTabs-drinks"></div>
+      <!-- Universal aggregation filter — applies to all chart groups -->
+      <div class="chart-range-tabs" id="rangeTabsUnified">
+        <button class="chart-range-tab active" onclick="switchRangeMode('daily', this)">Daily</button>
+        <button class="chart-range-tab" onclick="switchRangeMode('monthly', this)">Monthly</button>
+        <button class="chart-range-tab" onclick="switchRangeMode('yearly', this)">Yearly</button>
       </div>
       <div class="chart-card active"id="chart-weight">
         <div class="chart-title">Body weight over time (lbs)</div>
@@ -1970,9 +1960,14 @@ document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - _swipeStartX;
   const dy = e.changedTouches[0].clientY - _swipeStartY;
   _swipeActive = false;
-  // Only trigger if horizontal swipe > 60px and more horizontal than vertical
   if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
   const currentTab = document.querySelector('.tab.active')?.id?.replace('tab-','');
+  // On Log tab, horizontal swipes change days instead of switching tabs
+  if (currentTab === 'today') {
+    if (dx < 0) shiftDay(1);   // swipe left = next day
+    else        shiftDay(-1);  // swipe right = previous day
+    return;
+  }
   const idx = TAB_ORDER.indexOf(currentTab);
   if (idx === -1) return;
   if (dx < 0 && idx < TAB_ORDER.length - 1) showView(TAB_ORDER[idx + 1], 'left');
@@ -3198,22 +3193,29 @@ function shortDate(d) {
 // ── Chart aggregation helpers ─────────────────────────────────
 // Returns { days, labels, aggregatedFoods, aggregatedWeights } based on range
 function aggregateChartData(days, allFoods, weights) {
-  const range = _chartRange;
-  // 7D and 30D → daily (no aggregation)
-  if (range === '7d' || range === '30d' || days.length <= 35) {
-    return {
-      labels: days.map(shortDate),
-      days,
-      foodData: days.map(d => allFoods[d] || []),
-      weightData: null // handled separately
-    };
-  }
-  // 3M → weekly averages
-  if (range === '3m' || days.length <= 120) {
-    return aggregateByWeek(days, allFoods, weights);
-  }
-  // 1Y / All → monthly averages
-  return aggregateByMonth(days, allFoods, weights);
+  if (_rangeMode === 'daily')   return { labels: days.map(shortDate), days, foodData: days.map(d => allFoods[d] || []), weightData: null };
+  if (_rangeMode === 'monthly') return aggregateByMonth(days, allFoods, weights);
+  return aggregateByYear(days, allFoods, weights); // yearly
+}
+
+function aggregateByYear(days, allFoods, weights) {
+  const years = {};
+  days.forEach(d => {
+    const key = d.slice(0, 4);
+    if (!years[key]) years[key] = { days: [], firstDay: d };
+    years[key].days.push(d);
+  });
+  const keys = Object.keys(years).sort();
+  return {
+    labels: keys,
+    days: keys.map(k => years[k].firstDay),
+    foodData: keys.map(k => ({ _avgDays: years[k].days.length, _merged: years[k].days.flatMap(d => allFoods[d] || []) })),
+    weightData: keys.map(k => {
+      const wts = years[k].days.map(d => weights[d]).filter(Boolean);
+      return wts.length ? Math.round(wts.reduce((a,b)=>a+b,0)/wts.length * 10) / 10 : null;
+    }),
+    weightLabels: keys
+  };
 }
 
 function aggregateByWeek(days, allFoods, weights) {
@@ -3403,26 +3405,32 @@ function buildCharts(days, allFoods, weights) {
 
 // Track active group so renderHistory knows which sub-tab to default to
 let _activeChartGroup = 'weight';
-let _chartRange = 'all'; // '7d' | '30d' | '3m' | '1y' | 'all'
-let _habitRangeMode = 'daily'; // 'daily' | 'monthly' | 'yearly'
+// Unified aggregation mode — drives weight, nutrition, drinks, and habits
+let _rangeMode = 'daily'; // 'daily' | 'monthly' | 'yearly'
+// Legacy alias for habit chart code
+let _habitRangeMode = 'daily';
 
-function switchChartRange(range, btn) {
-  _chartRange = range;
-  // Only clear active state within the main range tabs, not the habits ones
-  document.querySelectorAll('#rangeTabsMain .chart-range-tab').forEach(t => t.classList.remove('active'));
+function switchRangeMode(mode, btn) {
+  _rangeMode = mode;
+  _habitRangeMode = mode; // keep habit chart in sync
+  document.querySelectorAll('#rangeTabsUnified .chart-range-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderHistory();
+  // Also re-render drinks/habits if they're the active view
+  if (_activeChartGroup === 'drinks') renderDrinksChart();
+  if (_activeChartGroup === 'habits') renderHabitChart();
 }
 
 function getChartRangeCutoff() {
-  if (_chartRange === 'all') return null;
   const d = new Date();
-  if (_chartRange === '7d')  d.setDate(d.getDate() - 7);
-  if (_chartRange === '30d') d.setDate(d.getDate() - 30);
-  if (_chartRange === '3m')  d.setMonth(d.getMonth() - 3);
-  if (_chartRange === '1y')  d.setFullYear(d.getFullYear() - 1);
-  return d.toISOString().slice(0, 10);
+  if (_rangeMode === 'daily')   { d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); }
+  if (_rangeMode === 'monthly') { d.setMonth(d.getMonth() - 12); return d.toISOString().slice(0, 10); }
+  return null; // yearly = all-time
 }
+
+// Legacy shim — old code paths that called switchHabitRange still work
+function switchHabitRange(mode, btn) { switchRangeMode(mode, btn); }
+function switchChartRange() { /* no-op — old function removed */ }
 
 function switchChartGroup(group) {
   _activeChartGroup = group;
@@ -3432,8 +3440,7 @@ function switchChartGroup(group) {
     const el = document.getElementById(`chartSubTabs-${g}`);
     if (el) el.classList.toggle('hidden', g !== group);
   });
-  document.getElementById('rangeTabsMain').classList.toggle('hidden', group === 'habits' || group === 'drinks');
-  document.getElementById('rangeTabsHabits').classList.toggle('hidden', group !== 'habits');
+// Unified range tabs are always visible — no toggling needed
   if (group === 'weight') {
     document.querySelectorAll('.chart-card').forEach(c => c.classList.remove('active'));
     document.getElementById('chart-weight')?.classList.add('active');
@@ -3744,57 +3751,52 @@ function renderDrinksChart() {
   if (chartInstances.drinks) { chartInstances.drinks.destroy(); delete chartInstances.drinks; }
   canvas.removeAttribute('width'); canvas.removeAttribute('height');
 
-  // Build daily drink counts from food logs
   const dailyCounts = {};
   Object.entries(_allFoods).forEach(([date, foods]) => {
     const n = (foods || []).filter(f => f.isDrink).length;
     if (n > 0) dailyCounts[date] = n;
   });
 
-  if (_drinksView === 'daily') {
-    if (title) title.textContent = 'Drinks per day — last 60 days';
+  let labels, data;
+  if (_rangeMode === 'daily') {
+    if (title) title.textContent = 'Drinks per day — last 30 days';
     const days = [];
     const d = new Date();
-    for (let i = 59; i >= 0; i--) {
-      const dd = new Date(d); dd.setDate(d.getDate() - i);
-      days.push(dd.toISOString().slice(0,10));
-    }
-    const labels = days.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-    const data   = days.map(d => dailyCounts[d] || 0);
-    chartInstances.drinks = new Chart(canvas.getContext('2d'), {
-      type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: data.map(v => v > 0 ? 'rgba(212,83,126,0.75)' : 'rgba(212,83,126,0.1)'), borderRadius: 4 }] },
-      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
-        tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} drink${ctx.parsed.y !== 1 ? 's' : ''}` }}},
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
-                  x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
-    });
-  } else {
-    if (title) title.textContent = 'Drinks per week — last 26 weeks';
-    const weeks = {};
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 182);
+    for (let i = 29; i >= 0; i--) { const dd = new Date(d); dd.setDate(d.getDate() - i); days.push(dd.toISOString().slice(0,10)); }
+    labels = days.map(d => new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    data   = days.map(d => dailyCounts[d] || 0);
+  } else if (_rangeMode === 'monthly') {
+    if (title) title.textContent = 'Drinks per month — last 12 months';
+    const months = {};
+    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 12);
     const cutoffStr = cutoff.toISOString().slice(0,10);
     Object.entries(dailyCounts).forEach(([date, n]) => {
       if (date < cutoffStr) return;
-      const dt = new Date(date+'T12:00:00');
-      const jan1 = new Date(dt.getFullYear(), 0, 1);
-      const wn = Math.ceil(((dt - jan1) / 86400000 + jan1.getDay() + 1) / 7);
-      const key = `${dt.getFullYear()}-W${String(wn).padStart(2,'0')}`;
-      if (!weeks[key]) weeks[key] = { count: 0, firstDay: date };
-      weeks[key].count += n;
+      const key = date.slice(0,7);
+      months[key] = (months[key] || 0) + n;
     });
-    const keys = Object.keys(weeks).sort();
-    const labels = keys.map(k => { const dt = new Date(weeks[k].firstDay+'T12:00:00'); return 'Wk '+dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}); });
-    const data   = keys.map(k => weeks[k].count);
-    chartInstances.drinks = new Chart(canvas.getContext('2d'), {
-      type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: 'rgba(212,83,126,0.75)', borderRadius: 4 }] },
-      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
-        tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} drink${ctx.parsed.y !== 1 ? 's' : ''} this week` }}},
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
-                  x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
+    const keys = Object.keys(months).sort();
+    labels = keys.map(k => { const [y,m] = k.split('-'); return new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('en-US',{month:'short',year:'2-digit'}); });
+    data   = keys.map(k => months[k]);
+  } else {
+    if (title) title.textContent = 'Drinks per year — all time';
+    const years = {};
+    Object.entries(dailyCounts).forEach(([date, n]) => {
+      const key = date.slice(0,4);
+      years[key] = (years[key] || 0) + n;
     });
+    const keys = Object.keys(years).sort();
+    labels = keys; data = keys.map(k => years[k]);
   }
+
+  chartInstances.drinks = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: data.map(v => v > 0 ? 'rgba(212,83,126,0.75)' : 'rgba(212,83,126,0.1)'), borderRadius: 4 }] },
+    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
+      tooltip: { ...chartDefaults.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} drink${ctx.parsed.y !== 1 ? 's' : ''}` }}},
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: tickColor }, grid: { color: gridColor } },
+                x: { ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 10, color: tickColor }, grid: { display: false } } } }
+  });
   requestAnimationFrame(() => chartInstances.drinks?.resize());
 }
 
@@ -3829,16 +3831,21 @@ function renderHistory() {
   if (calSub) calSub.textContent = `goal: ${GOALS.cal.toLocaleString()}`;
   if (proSub) proSub.textContent = `goal: ${GOALS.pro}g`;
 
-  // Streak calculation — start from yesterday (today may not be complete yet)
+  // Streak calculation — counts consecutive logged days ending yesterday.
+  // Today is excluded from the streak count regardless of whether it's logged,
+  // so the number doesn't fluctuate during the day as you log meals.
   let streak = 0;
   const check = new Date();
-  check.setDate(check.getDate() - 1);
-  while (true) {
+  check.setDate(check.getDate() - 1); // start from yesterday
+  while (streak < 365) {
     const y = check.getFullYear();
     const m = String(check.getMonth()+1).padStart(2,'0');
     const day = String(check.getDate()).padStart(2,'0');
     const ds = `${y}-${m}-${day}`;
-    if (all[ds]) { streak++; check.setDate(check.getDate()-1); } else break;
+    if (all[ds] && all[ds].length > 0) {
+      streak++;
+      check.setDate(check.getDate()-1);
+    } else break;
   }
   const streakEl = document.getElementById('statStreak');
   if (streakEl) {
@@ -4007,8 +4014,77 @@ function showToast(msg) {
 
 // Enter to lookup (Shift+Enter for newline)
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); lookupFood(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); hideFoodDbDropdown(); lookupFood(); }
 });
+// Live filter against saved food database as user types
+document.getElementById('searchInput').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  if (q.length < 2) { hideFoodDbDropdown(); return; }
+  renderFoodDbDropdown(q);
+});
+// Hide dropdown when user clicks outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#foodDbDropdown') && !e.target.closest('#searchInput')) hideFoodDbDropdown();
+});
+
+function hideFoodDbDropdown() {
+  const el = document.getElementById('foodDbDropdown');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function renderFoodDbDropdown(query) {
+  const el = document.getElementById('foodDbDropdown');
+  if (!el || !_customFoods.length) { hideFoodDbDropdown(); return; }
+  // Score: exact name start = 3, contains = 2, word match = 1
+  const scored = _customFoods.map(f => {
+    const n = f.name.toLowerCase();
+    let score = 0;
+    if (n.startsWith(query)) score = 3;
+    else if (n.includes(query)) score = 2;
+    else if (query.split(/\s+/).some(w => w.length > 2 && n.includes(w))) score = 1;
+    return { f, score };
+  }).filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score || _customFoods.indexOf(b.f) - _customFoods.indexOf(a.f))
+    .slice(0, 8);
+
+  if (!scored.length) { hideFoodDbDropdown(); return; }
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="font-size:10px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-family:'DM Mono',monospace;padding:8px 12px 6px;border-bottom:0.5px solid var(--border);">
+      ${scored.length} match${scored.length === 1 ? '' : 'es'} from your foods
+    </div>
+    ${scored.map(({f}) => `
+      <div onclick="logFoodFromDb(${f.id})" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:0.5px solid var(--border);transition:background 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+          <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:1px;">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F</div>
+        </div>
+        <span style="font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;">+</span>
+      </div>`).join('')}
+    <div style="font-size:11px;color:var(--text-3);padding:8px 12px;text-align:center;background:var(--bg);">
+      Press Enter to search the web instead
+    </div>`;
+}
+
+async function logFoodFromDb(id) {
+  const f = _customFoods.find(f => f.id === id);
+  if (!f) return;
+  const meal = getActiveMealTab() || 'uncategorized';
+  const food = { id: Date.now(), name: f.name,
+    cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat,
+    satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
+    servingLabel: f.servingLabel||'1 serving', servingMult: 1,
+    baseCal: f.cal, basePro: f.pro, baseCarb: f.carb, baseFat: f.fat,
+    baseSatFat: f.satFat||0, baseSug: f.sug||0, baseSod: f.sod||0, baseFib: f.fib||0 };
+  try {
+    await addFood(food, meal);
+    document.getElementById('searchInput').value = '';
+    hideFoodDbDropdown();
+    renderToday();
+    showToast(`Added: ${f.name}`);
+  } catch(e) { showToast('Could not add — try again'); }
+}
 
 // ── Welcome modal & home screen tip ─────────────────────────────
 function initWelcome() {
