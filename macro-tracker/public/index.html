@@ -3411,7 +3411,7 @@ function buildCharts(days, allFoods, weights) {
   const { labels, foodData } = agg;
   const isAggregated = foodData[0] && !Array.isArray(foodData[0]);
   const tooltipSuffix = isAggregated
-    ? (_chartRange === '3m' ? ' (weekly avg)' : ' (monthly avg)')
+    ? (_rangeMode === 'monthly' ? ' (monthly avg)' : ' (yearly avg)')
     : '';
 
   Object.values(chartInstances).forEach(c => c.destroy());
