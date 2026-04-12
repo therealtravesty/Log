@@ -772,6 +772,10 @@
     <div class="card"style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
       <div id="exerciseItems"><div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div></div>
+      <button id="stravaDaySyncBtn" onclick="syncStravaForActiveDate()" style="display:none;width:100%;margin-top:10px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:8px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;display:none;align-items:center;justify-content:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        Sync this day with Strava
+      </button>
       <div style="margin-top:1rem;border-top:0.5px solid var(--border);padding-top:1rem;">
         <div class="section-title">Log exercise</div>
         <div class="exercise-add-row">
@@ -1082,7 +1086,7 @@
       </div>
       <div style="display:flex;gap:8px;">
         <button id="stravaConnectBtn" onclick="connectStrava()" style="flex:1;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Connect Strava</button>
-        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 7 days</button>
+        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 14 days</button>
       </div>
     </div>
 
@@ -2975,7 +2979,38 @@ async function checkStravaConnection() {
   } catch(e) { _stravaConnected = false; }
 }
 
-// Sync triggers a server-side pull of the last 90 days of Strava activities,
+// Per-day sync — fetches just the activities for the currently active date
+// and persists them. Used by the button on the Log tab. Faster than the full
+// 14-day sync since it only touches one day's worth of activities, and it
+// DOES fetch per-activity calorie details since the volume is small enough
+// to fit under the proxy timeout.
+async function syncStravaForActiveDate() {
+  if (!_stravaConnected) { showToast('Connect Strava first'); return; }
+  if (!activeProfileId || !activeDate) return;
+  const btn = document.getElementById('stravaDaySyncBtn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Syncing...'; }
+  try {
+    const res = await api('strava-activities', {
+      method: 'POST',
+      body: { profile_id: activeProfileId, date: activeDate },
+    });
+    if (res?.error) {
+      showToast('Sync error: ' + res.error);
+    } else {
+      await loadExerciseFromServer();
+      renderExercise(); renderNetBanner();
+      const n = res?.synced || 0;
+      showToast(n > 0 ? `Synced ${n} activit${n === 1 ? 'y' : 'ies'} for this day` : 'No Strava activities for this day');
+    }
+  } catch(e) {
+    showToast('Sync error: ' + (e.message || 'unknown'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+  }
+}
+
+// Manual sync — fetches the last 14 days of Strava activities,
 // upserting each into exercise_logs. After sync, we reload _exercise from the
 // server so the new rows are visible everywhere.
 async function syncStravaRecent() {
@@ -2987,7 +3022,7 @@ async function syncStravaRecent() {
   try {
     const res = await api('strava-activities', {
       method: 'POST',
-      body: { profile_id: activeProfileId, days: 7 },
+      body: { profile_id: activeProfileId, days: 14 },
     });
     if (res?.error) {
       showToast('Sync error: ' + res.error);
@@ -3025,17 +3060,20 @@ async function disconnectStrava() {
 function updateStravaButton() {
   const btn = document.getElementById('stravaConnectBtn');
   const syncBtn = document.getElementById('stravaSyncBtn');
+  const daySyncBtn = document.getElementById('stravaDaySyncBtn');
   if (!btn) return;
   if (_stravaConnected) {
     btn.textContent = '✓ Connected — disconnect';
     btn.onclick = disconnectStrava;
     btn.style.color = '#1D9E75';
     if (syncBtn) syncBtn.style.display = '';
+    if (daySyncBtn) daySyncBtn.style.display = 'flex';
   } else {
     btn.textContent = 'Connect Strava';
     btn.onclick = connectStrava;
     btn.style.color = '#FC4C02';
     if (syncBtn) syncBtn.style.display = 'none';
+    if (daySyncBtn) daySyncBtn.style.display = 'none';
   }
 }
 
