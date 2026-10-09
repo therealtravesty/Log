@@ -9,6 +9,13 @@
 // `source` column distinguishes them ('strava' vs 'manual') and `strava_id`
 // holds the Strava activity id for dedup. The frontend doesn't maintain a
 // separate Strava cache anymore — everything reads from exercise_logs.
+//
+// After saving, any habit marked "Auto-complete from Strava" is ticked for
+// each day with a qualifying workout (rule in strava-lib.js). New activities
+// also arrive on their own via strava-webhook.js; this endpoint is the manual
+// / backfill path.
+
+const { toExerciseRow, applyStravaHabits } = require('./strava-lib');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -158,14 +165,7 @@ exports.handler = async (event) => {
 
     // Upsert into exercise_logs. The partial unique index on
     // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
-    const upsertRows = filtered.map(a => ({
-      profile_id,
-      date: (a.start_date_local || '').slice(0, 10),
-      name: a.name || a.sport_type || 'Strava activity',
-      calories_burned: Math.round(a.calories || a.kilojoules || 0),
-      strava_id: a.id,
-      source: 'strava',
-    })).filter(r => r.date);
+    const upsertRows = filtered.map(a => toExerciseRow(profile_id, a)).filter(r => r.date);
 
     let synced = 0;
     if (upsertRows.length) {
@@ -178,7 +178,11 @@ exports.handler = async (event) => {
       log(`upsert done: ${synced} rows`);
     }
 
-    return json(200, { synced, days, total_fetched: allActivities.length });
+    let habits_ticked = 0;
+    try { habits_ticked = await applyStravaHabits(profile_id, upsertRows.map(r => r.date)); }
+    catch (e) { console.warn('[strava-sync] habit auto-complete failed:', e.message); }
+
+    return json(200, { synced, days, total_fetched: allActivities.length, habits_ticked });
   } catch (e) {
     return json(500, { error: e.message || 'Internal error' });
   }

@@ -1,305 +1,244 @@
 // netlify/functions/coach-checkin.js
 //
-// GET /api/coach-checkin?profile_id=X
+// POST /api/coach-checkin  { profile_id, today, goals: {cal,pro,carb,fat}, notes }
+// (GET with the same fields as query params still works.)
 //
-// Aggregates the user's recent nutrition, weight, exercise, drink, and habit
-// data from Supabase, builds a structured prompt, and calls Claude Haiku for
-// an analytical coaching response.
+// Builds a "where you are vs. where you planned to be" picture from weight,
+// activity (Strava + manual), habits, and food logs, plus the user's own notes,
+// then asks Claude for a short coaching read.
+//
+// All dates are anchored to the user's LOCAL `today` sent by the app — the
+// server runs in UTC, which would otherwise shift days after 8pm Eastern.
 //
 // Returns: { message, generated_at, data_summary }
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const MODELS = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001']; // first that works
+
+const { isWorkoutType } = require('./strava-lib');
 
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 const json = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) });
 
 async function sb(path) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Supabase ${res.status}: ${text}`);
   return text ? JSON.parse(text) : null;
 }
 
-// Sum macros across an array of food log rows
+// ── Date helpers (pure YYYY-MM-DD strings, no time zones) ──
+const toDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const fromDate = d => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return fromDate(d); };
+const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 864e5);
+const weekStart = s => { const d = toDate(s); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return fromDate(d); }; // Monday
+const inRange = (d, from, to) => d >= from && d <= to;
+const round1 = n => Math.round(n * 10) / 10;
+const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
+
 function sumMacros(rows) {
-  return rows.reduce((acc, r) => ({
-    cal:    acc.cal    + (r.cal    || 0),
-    pro:    acc.pro    + (r.pro    || 0),
-    carb:   acc.carb   + (r.carb   || 0),
-    fat:    acc.fat    + (r.fat    || 0),
-    satFat: acc.satFat + (r.sat_fat || 0),
-    sug:    acc.sug    + (r.sug    || 0),
-    sod:    acc.sod    + (r.sod    || 0),
-    fib:    acc.fib    + (r.fib    || 0),
-  }), { cal:0, pro:0, carb:0, fat:0, satFat:0, sug:0, sod:0, fib:0 });
+  return rows.reduce((a, r) => ({
+    cal: a.cal + (r.cal || 0), pro: a.pro + (r.pro || 0), carb: a.carb + (r.carb || 0),
+    fat: a.fat + (r.fat || 0), sug: a.sug + (r.sug || 0),
+  }), { cal: 0, pro: 0, carb: 0, fat: 0, sug: 0 });
 }
 
-// Group food rows by date and return per-date totals
-function groupByDate(rows) {
-  const byDate = {};
-  rows.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = [];
-    byDate[r.date].push(r);
-  });
-  return byDate;
-}
-
-// Average per-day across a window of dates
-function avgPerDay(rowsByDate, windowDays) {
-  const dates = Object.keys(rowsByDate);
-  if (!dates.length) return null;
-  const totals = sumMacros(dates.flatMap(d => rowsByDate[d]));
-  const days = Math.max(1, windowDays || dates.length);
-  return {
-    cal:    Math.round(totals.cal    / days),
-    pro:    Math.round(totals.pro    / days),
-    carb:   Math.round(totals.carb   / days),
-    fat:    Math.round(totals.fat    / days),
-    satFat: Math.round(totals.satFat / days),
-    sug:    Math.round(totals.sug    / days),
-    sod:    Math.round(totals.sod    / days),
-    fib:    Math.round(totals.fib    / days),
-    daysLogged: dates.length,
-  };
-}
-
-// Filter dates within the last N days from today (UTC date strings)
-function filterRecentDays(rowsByDate, n) {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - n);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
-  const out = {};
-  Object.entries(rowsByDate).forEach(([d, rows]) => {
-    if (d >= cutoffStr) out[d] = rows;
-  });
-  return out;
+// Least-squares slope of weight over time → lbs per week
+function weeklyRate(points) {
+  if (points.length < 3) return null;
+  const x0 = toDate(points[0].date);
+  const xs = points.map(p => (toDate(p.date) - x0) / 864e5), ys = points.map(p => p.lbs);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  const num = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0);
+  const den = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  return den ? round1(num / den * 7) : null;
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
-  if (event.httpMethod !== 'GET') return json(405, { error: 'Method not allowed' });
+  if (!['GET', 'POST'].includes(event.httpMethod)) return json(405, { error: 'Method not allowed' });
+  if (!SUPABASE_URL || !SUPABASE_KEY || !ANTHROPIC_KEY) return json(500, { error: 'env vars not configured' });
 
-  if (!SUPABASE_URL || !SUPABASE_KEY || !ANTHROPIC_KEY) {
-    return json(500, { error: 'env vars not configured' });
+  let input = {};
+  if (event.httpMethod === 'POST') { try { input = JSON.parse(event.body || '{}'); } catch (_) {} }
+  else {
+    const q = event.queryStringParameters || {};
+    input = { profile_id: q.profile_id, today: q.today, notes: q.notes, goals: { cal: q.cal, pro: q.pro, carb: q.carb, fat: q.fat } };
   }
-
-  const profile_id = event.queryStringParameters?.profile_id;
+  const profile_id = input.profile_id;
   if (!profile_id) return json(400, { error: 'profile_id required' });
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(input.today || '') ? input.today : fromDate(new Date());
+  const notes = String(input.notes || '').trim().slice(0, 1500);
+  const g = input.goals || {};
+  const goals = { cal: parseInt(g.cal) || null, pro: parseInt(g.pro) || null, carb: parseInt(g.carb) || null, fat: parseInt(g.fat) || null };
 
   try {
-    // ── Fetch all the data we need in parallel ────────────────────
-    // Each fetch is wrapped to return [] on failure so a single missing table
-    // doesn't kill the whole analysis. The frontend gets a working response
-    // with whatever data is available.
-    const safeSb = (path) => sb(path).catch(e => { console.warn('[coach] fetch failed:', path, e.message); return []; });
-    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogsRows] = await Promise.all([
-      safeSb(`food_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      safeSb(`weights?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      safeSb(`exercise_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
-      safeSb(`settings?profile_id=eq.${encodeURIComponent(profile_id)}`),
-      safeSb(`habits?profile_id=eq.${encodeURIComponent(profile_id)}`),
-      safeSb(`habit_logs?profile_id=eq.${encodeURIComponent(profile_id)}&order=date.asc&limit=1000000`),
+    const pid = encodeURIComponent(profile_id);
+    const since = addDays(today, -120);
+    const safe = p => sb(p).catch(e => { console.warn('[coach] fetch failed:', p, e.message); return []; });
+    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogRows] = await Promise.all([
+      safe(`food_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
+      safe(`weights?profile_id=eq.${pid}&order=date.asc&limit=100000`),
+      safe(`exercise_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
+      safe(`settings?profile_id=eq.${pid}`),
+      safe(`habits?profile_id=eq.${pid}&order=sort_order.asc`),
+      safe(`habit_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
     ]);
+    const settings = (settingsRows && settingsRows[0] && settingsRows[0].data) || {};
 
-    // ── Aggregate ──────────────────────────────────────────────────
-    const foodByDate = groupByDate(foodRows || []);
-    const week = filterRecentDays(foodByDate, 7);
-    const month = filterRecentDays(foodByDate, 30);
-    const ninety = filterRecentDays(foodByDate, 90);
+    // ── Plan ──
+    const goal = settings.goal || 'cut';
+    const rate = parseFloat(settings.rate || '1') || 0;
+    const plannedRate = goal === 'cut' ? -rate : goal === 'bulk' ? rate : 0; // lbs/week
+    const plannedSessions = 6; // trains 6x/week (also baked into the TDEE multiplier)
 
-    const weekAvg  = avgPerDay(week,  7);
-    const monthAvg = avgPerDay(month, 30);
-    const ninetyAvg= avgPerDay(ninety, 90);
-
-    // Drinks per period — drinks are food rows with is_drink=true
-    const drinksWeek  = (foodRows || []).filter(r => r.is_drink && week[r.date]).length;
-    const drinksMonth = (foodRows || []).filter(r => r.is_drink && month[r.date]).length;
-
-    // Weight trajectory
-    const sortedWeights = (weightRows || []).filter(w => w.weight).map(w => ({ date: w.date, lbs: parseFloat(w.weight) }));
-    const currentWeight = sortedWeights.length ? sortedWeights[sortedWeights.length - 1].lbs : null;
-    const weight7d  = sortedWeights.find(w => {
-      const d = new Date(); d.setDate(d.getDate() - 7);
-      return w.date >= d.toISOString().slice(0,10);
-    });
-    const weight30d = sortedWeights.find(w => {
-      const d = new Date(); d.setDate(d.getDate() - 30);
-      return w.date >= d.toISOString().slice(0,10);
-    });
-    const weight90d = sortedWeights.find(w => {
-      const d = new Date(); d.setDate(d.getDate() - 90);
-      return w.date >= d.toISOString().slice(0,10);
-    });
-    const delta7  = (currentWeight && weight7d)  ? +(currentWeight - weight7d.lbs).toFixed(1)  : null;
-    const delta30 = (currentWeight && weight30d) ? +(currentWeight - weight30d.lbs).toFixed(1) : null;
-    const delta90 = (currentWeight && weight90d) ? +(currentWeight - weight90d.lbs).toFixed(1) : null;
-
-    // Exercise — last 7 / 30 days
-    const exer7 = (exerciseRows || []).filter(e => {
-      const d = new Date(); d.setDate(d.getDate() - 7);
-      return e.date >= d.toISOString().slice(0,10);
-    });
-    const exer30 = (exerciseRows || []).filter(e => {
-      const d = new Date(); d.setDate(d.getDate() - 30);
-      return e.date >= d.toISOString().slice(0,10);
-    });
-    const exer7Cal  = exer7.reduce((a,e)  => a + (e.calories_burned || 0), 0);
-    const exer30Cal = exer30.reduce((a,e) => a + (e.calories_burned || 0), 0);
-
-    // Habits — completion rate over last 7 days
-    const habitMap = {};
-    (habitsRows || []).forEach(h => { habitMap[h.id] = h; });
-    const habitWindow = (() => {
-      const days = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        days.push(d.toISOString().slice(0,10));
-      }
-      return days;
-    })();
-    const habitStats = (habitsRows || []).map(h => {
-      const logs = (habitLogsRows || []).filter(l => l.habit_id === h.id && habitWindow.includes(l.date));
-      const completed = logs.filter(l => {
-        if (h.target_type === 'quantity') return (l.value || 0) >= (h.target_value || 1);
-        return (l.value || 0) >= 1;
-      }).length;
-      return { name: h.name, completed, total: 7 };
-    });
-
-    // Profile settings — stored as a JSONB `data` blob keyed off profile_id.
-    // Goals (cal/pro/carb/fat targets) are NOT stored in the settings table —
-    // the frontend computes them on the fly via Mifflin-St Jeor and passes
-    // them in as query params so we don't have to duplicate the math.
-    const settingsRow = (settingsRows && settingsRows[0]) || {};
-    const settings = settingsRow.data || {};
-    const qsGoals = event.queryStringParameters || {};
-    const goals = {
-      cal:  parseInt(qsGoals.cal)  || null,
-      pro:  parseInt(qsGoals.pro)  || null,
-      carb: parseInt(qsGoals.carb) || null,
-      fat:  parseInt(qsGoals.fat)  || null,
-    };
-
-    // ── Build the prompt ───────────────────────────────────────────
-    const systemPrompt = `You are an analytical nutrition and fitness coach. You review the user's tracked data and give specific, evidence-based feedback. Follow these rules strictly and without exception:
-
-FORMATTING RULES (CRITICAL):
-- Never use markdown syntax. No #, ##, ###, **, *, _, -, or numbered lists. The output is rendered as plain text.
-- Write in clean paragraphs separated by blank lines. 3-4 paragraphs maximum.
-- No bullet points. No section headers. No bold text. Just prose.
-- Aim for 180-220 words total. Be selective; do not pad.
-
-CONTENT RULES:
-- The data block below contains pre-computed numbers and percentages. Use them directly. NEVER derive your own percentages or do arithmetic — the math is already done for you.
-- Always cite specific numbers from the data.
-- Identify what is working AND what needs attention. Be proportional — don't over-praise or over-criticize.
-- Be realistic about isolated events. One drink in a week is not a problem. A pattern is.
-- Never suggest cutting training volume. Assume the schedule is intentional.
-- Don't moralize. Don't lecture. State facts, identify trends, suggest one specific action.
-- End with one specific actionable recommendation.
-
-CRITICAL — HOW TO INTERPRET CALORIES:
-- The user's daily calorie target ALREADY ACCOUNTS for their activity level (lifting 6x/week, 15k steps/day). The TDEE figure in the profile is computed from BMR × activity multiplier, and the cut deficit is built into the daily target.
-- DO NOT subtract exercise calories from food intake. DO NOT compute a "real intake" or "true deficit" by netting them.
-- DO NOT tell the user to eat more on training days because they "burned X calories." That double-counts. Their target already assumes they trained.
-- Exercise data (session count, calories burned per session) is INFORMATIONAL — useful for noticing volume changes, recovery patterns, training consistency. Treat it as observability, not as a calorie ledger.
-- If the user is hitting their food calorie target, they ARE in their planned deficit, regardless of how much exercise the data shows.`;
-
-    // Pre-compute all percentages and deltas so the model never has to do arithmetic.
-    const pct = (actual, target) => target ? Math.round((actual / target) * 100) : null;
-    const delta = (actual, target) => target ? actual - target : null;
-    const fmtDelta = (d) => d === null ? '?' : (d > 0 ? '+' : '') + d;
-    const fmtPct = (p) => p === null ? '?' : p + '%';
-
-    const w = weekAvg;
-    const m = monthAvg;
-    const n = ninetyAvg;
-
-    const dataBlock = `
-USER PROFILE:
-- ${settings.sex || 'M'}, ${settings.age || '?'}, ${settings.heightFt || '?'}'${settings.heightIn || 0}", currently ${currentWeight || '?'} lbs
-- Goal: ${settings.goal || 'cut'} at ${settings.rate || '1'} lb/week
-- Daily targets: ${goals.cal || '?'} cal / ${goals.pro || '?'}g protein / ${goals.carb || '?'}g carbs / ${goals.fat || '?'}g fat
-- Activity level: ${settings.activity || '?'}, training split: ${settings.split || '?'}
-
-LAST 7 DAYS (pre-computed — use these numbers directly, do NOT recalculate):
-${w ? `- Days logged: ${w.daysLogged} of 7
-- Calories: ${w.cal}/day average. Target ${goals.cal || '?'}. ${fmtPct(pct(w.cal, goals.cal))} of target. Delta ${fmtDelta(delta(w.cal, goals.cal))} kcal/day.
-- Protein: ${w.pro}g/day average. Target ${goals.pro || '?'}g. ${fmtPct(pct(w.pro, goals.pro))} of target. Delta ${fmtDelta(delta(w.pro, goals.pro))}g/day.
-- Carbs: ${w.carb}g/day average. ${fmtPct(pct(w.carb, goals.carb))} of ${goals.carb || '?'}g target. Delta ${fmtDelta(delta(w.carb, goals.carb))}g.
-- Fat: ${w.fat}g/day average. ${fmtPct(pct(w.fat, goals.fat))} of ${goals.fat || '?'}g target. Delta ${fmtDelta(delta(w.fat, goals.fat))}g.
-- Sugar: ${w.sug}g/day average.
-- Drinks logged: ${drinksWeek}
-- Exercise: ${exer7.length} sessions, ${exer7Cal} kcal burned total
-- Weight delta: ${delta7 !== null ? (delta7 > 0 ? '+' : '') + delta7 + ' lbs' : 'no data'}` : '- No data this week'}
-
-LAST 30 DAYS (pre-computed):
-${m ? `- Days logged: ${m.daysLogged} of 30 (${Math.round(m.daysLogged/30*100)}% adherence)
-- Calories: ${m.cal}/day average. ${fmtPct(pct(m.cal, goals.cal))} of ${goals.cal || '?'} target. Delta ${fmtDelta(delta(m.cal, goals.cal))} kcal/day.
-- Protein: ${m.pro}g/day. ${fmtPct(pct(m.pro, goals.pro))} of ${goals.pro || '?'}g target. Delta ${fmtDelta(delta(m.pro, goals.pro))}g/day.
-- Carbs: ${m.carb}g/day, Fat: ${m.fat}g/day
-- Drinks: ${drinksMonth} total (${(drinksMonth/4.3).toFixed(1)}/week)
-- Exercise: ${exer30.length} sessions, ${exer30Cal} kcal burned total
-- Weight delta: ${delta30 !== null ? (delta30 > 0 ? '+' : '') + delta30 + ' lbs' : 'no data'}
-- Implied rate: ${delta30 !== null ? (delta30 / 4.3).toFixed(2) + ' lbs/week' : '?'}` : '- No data this month'}
-
-LAST 90 DAYS (pre-computed):
-${n ? `- Days logged: ${n.daysLogged} of 90 (${Math.round(n.daysLogged/90*100)}% adherence)
-- Calories: ${n.cal}/day average. ${fmtPct(pct(n.cal, goals.cal))} of target.
-- Protein: ${n.pro}g/day. ${fmtPct(pct(n.pro, goals.pro))} of target.
-- Weight delta: ${delta90 !== null ? (delta90 > 0 ? '+' : '') + delta90 + ' lbs' : 'no data'}` : '- Limited 90-day data'}
-
-HABITS (last 7 days):
-${habitStats.length ? habitStats.map(h => `- ${h.name}: ${h.completed} of 7 days`).join('\n') : '- No habits tracked'}
-
-Write your analysis now. Use the pre-computed numbers above directly. Do NOT do any arithmetic. Plain text only — no markdown, no headers, no bullets. 3-4 paragraphs, 180-220 words.`;
-
-    // ── Call Claude ────────────────────────────────────────────────
-    const aRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 800,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: dataBlock }],
-      }),
-    });
-
-    if (!aRes.ok) {
-      const errText = await aRes.text();
-      return json(500, { error: `Claude API error ${aRes.status}`, detail: errText.slice(0, 300) });
+    // ── Weight ──
+    const weights = (weightRows || []).filter(w => w.weight && w.date <= today).map(w => ({ date: w.date, lbs: parseFloat(w.weight) }));
+    const latest = weights[weights.length - 1] || null;
+    const avgIn = (from, to) => { const p = weights.filter(w => inRange(w.date, from, to)); return p.length ? round1(p.reduce((a, w) => a + w.lbs, 0) / p.length) : null; };
+    const avg7 = avgIn(addDays(today, -6), today), avgPrev7 = avgIn(addDays(today, -13), addDays(today, -7));
+    const rate28 = weeklyRate(weights.filter(w => w.date >= addDays(today, -27)));
+    const n28 = weights.filter(w => w.date >= addDays(today, -27)).length;
+    const w90 = weights.find(w => w.date >= addDays(today, -89));
+    let paceLabel = 'not enough weigh-ins to judge pace';
+    if (rate28 != null) {
+      const gap = round1(rate28 - plannedRate);
+      paceLabel = goal === 'cut'
+        ? (rate28 > 0 ? `gaining (${signed(rate28)} lb/wk) while the plan is to lose ${rate} lb/wk — off plan`
+          : Math.abs(gap) <= 0.3 ? `on pace (${signed(rate28)} lb/wk vs planned −${rate})`
+          : gap > 0 ? `losing slower than planned (${signed(rate28)} lb/wk vs −${rate})`
+          : `losing faster than planned (${signed(rate28)} lb/wk vs −${rate})`)
+        : `${signed(rate28)} lb/wk vs planned ${signed(plannedRate)}`;
     }
 
-    const aData = await aRes.json();
+    // ── Activity (Strava + manual) by Monday-start week ──
+    const ex = (exerciseRows || []).filter(e => e.date <= today);
+    const isWorkout = e => e.source !== 'strava' || !e.sport_type ? true : isWorkoutType(e);
+    const thisWeek = weekStart(today);
+    const weeks = [0, 1, 2, 3].map(i => {
+      const from = addDays(thisWeek, -7 * i), to = addDays(from, 6);
+      const rows = ex.filter(e => inRange(e.date, from, to));
+      const workoutDays = new Set(rows.filter(isWorkout).map(e => e.date)).size;
+      const walks = rows.filter(e => !isWorkout(e)).length;
+      const elapsed = i === 0 ? daysBetween(from, today) + 1 : 7;
+      return { label: i === 0 ? `This week (${elapsed} of 7 days so far)` : `${i} week${i > 1 ? 's' : ''} ago`, workoutDays, walks, elapsed };
+    });
+
+    // ── Habits ──
+    const logs = {};
+    (habitLogRows || []).forEach(l => { (logs[l.habit_id] = logs[l.habit_id] || {})[l.date] = l.value || 0; });
+    const done = (h, d) => { const v = (logs[h.id] || {})[d] || 0; return h.target_type === 'quantity' ? v >= (h.target_value || 1) : v >= 1; };
+    const startOf = h => { const f = Object.keys(logs[h.id] || {}).sort()[0]; const c = h.created_at ? String(h.created_at).slice(0, 10) : null; return [f, c].filter(Boolean).sort()[0] || today; };
+    const rateIn = (h, from, to) => {
+      const s = startOf(h); let n = 0, k = 0;
+      for (let d = from; d <= to; d = addDays(d, 1)) if (d >= s) { n++; if (done(h, d)) k++; }
+      return n ? { k, n, pct: Math.round(k / n * 100) } : null;
+    };
+    const streak = h => { let d = today, s = 0; if (!done(h, d)) d = addDays(d, -1); while (s < 999 && done(h, d)) { s++; d = addDays(d, -1); } return s; };
+    const habitLines = (habitsRows || []).map(h => {
+      const r7 = rateIn(h, addDays(today, -6), today), r30 = rateIn(h, addDays(today, -29), today), prior = rateIn(h, addDays(today, -59), addDays(today, -30));
+      if (!r30) return `- ${h.name}: not started yet`;
+      const trend = prior ? (r30.pct - prior.pct >= 10 ? 'improving' : prior.pct - r30.pct >= 10 ? 'slipping' : 'steady') + ` vs the 30 days before (${prior.pct}%)` : 'no earlier data';
+      const auto = h.auto_source === 'strava' ? ' [auto-completed from Strava workouts]' : '';
+      return `- ${h.name}${auto}: last 7 days ${r7 ? `${r7.k}/${r7.n}` : '—'}, last 30 days ${r30.pct}% — ${trend}. Current streak ${streak(h)} days.`;
+    });
+
+    // ── Food (averages over LOGGED days only) ──
+    const byDate = {};
+    (foodRows || []).filter(r => r.date <= today).forEach(r => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    const foodWindow = n => {
+      const ds = Object.keys(byDate).filter(d => d >= addDays(today, -(n - 1)));
+      if (!ds.length) return { days: 0 };
+      const t = sumMacros(ds.flatMap(d => byDate[d]));
+      return { days: ds.length, cal: Math.round(t.cal / ds.length), pro: Math.round(t.pro / ds.length), carb: Math.round(t.carb / ds.length), fat: Math.round(t.fat / ds.length), sug: Math.round(t.sug / ds.length), drinks: ds.flatMap(d => byDate[d]).filter(r => r.is_drink).length };
+    };
+    const f7 = foodWindow(7), f30 = foodWindow(30);
+    const sparse = f30.days < 10;
+    const vsGoal = (v, goal, unit) => goal ? `${v}${unit}/day (target ${goal}${unit}, ${signed(v - goal)})` : `${v}${unit}/day`;
+
+    // ── Prompt ──
+    const systemPrompt = `You are a direct, practical fitness coach reviewing one person's tracked data. Your job is to tell them where they are relative to their plan, what is driving it, and the single most useful thing to do this week.
+
+FORMAT (plain text, rendered as-is):
+- No markdown at all: no #, **, *, _, -, or numbered lists. No headers.
+- 3 or 4 short paragraphs separated by blank lines, 200-260 words total.
+
+HOW TO READ THE DATA:
+- Every number below is pre-computed. Quote them; never do your own arithmetic or invent numbers.
+- Weight is the ground truth for whether the plan is working. Lead with the weight pace vs plan.
+- Weigh-ins fluctuate day to day; trust the weekly rate and 7-day averages over single readings.
+- If food logging is marked SPARSE, do not judge intake from the food numbers. Rely on the weight trend and the user's own notes for what they are eating.
+- The user's notes describe how things have actually been going. Take them seriously and respond to them specifically, without repeating them back verbatim.
+- An outdoor walk is not a workout here; walks support the daily step goal.
+
+CALORIES (critical):
+- The daily calorie target ALREADY includes their activity (lifting 6x/week, 15k steps/day). Never subtract exercise calories from food, never compute a "true deficit", never suggest eating back exercise calories.
+
+TONE:
+- Honest and proportional. Name what is working and what is not. No lecturing or moralizing, no hype.
+- Never suggest cutting training volume.
+- End with ONE specific, realistic action for the next 7 days, tied to the biggest gap in the data.`;
+
+    const dataBlock = `TODAY: ${today}
+
+PROFILE & PLAN
+- ${settings.sex || 'male'}, ${settings.age || '?'}, ${settings.heightFt || '?'}'${settings.heightIn || 0}"
+- Goal: ${goal}${goal !== 'maintain' ? ` at ${rate} lb/week` : ''}
+- Daily targets: ${goals.cal || '?'} kcal, ${goals.pro || '?'}g protein, ${goals.carb || '?'}g carbs, ${goals.fat || '?'}g fat
+- Training plan: ${plannedSessions} workouts per week plus 15k steps/day
+
+WEIGHT
+- Latest: ${latest ? `${latest.lbs} lbs on ${latest.date}${daysBetween(latest.date, today) > 3 ? ` (${daysBetween(latest.date, today)} days ago — weigh-ins have lapsed)` : ''}` : 'no weigh-ins'}
+- 7-day average: ${avg7 ?? 'n/a'}${avgPrev7 != null && avg7 != null ? ` vs ${avgPrev7} the week before (${signed(round1(avg7 - avgPrev7))} lbs)` : ''}
+- Pace over the last 28 days (${n28} weigh-ins): ${paceLabel}
+- 90-day change: ${latest && w90 ? `${signed(round1(latest.lbs - w90.lbs))} lbs since ${w90.date}` : 'n/a'}
+
+ACTIVITY (workout days per week vs plan of ${plannedSessions}; outdoor walks counted separately)
+${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 1 ? '' : 's'}, ${w.walks} outdoor walk${w.walks === 1 ? '' : 's'}`).join('\n')}
+
+HABITS
+${habitLines.length ? habitLines.join('\n') : '- No habits set up'}
+
+FOOD LOGGING${sparse ? ' — SPARSE' : ''}
+- Days logged: ${f7.days} of the last 7, ${f30.days} of the last 30${sparse ? ' (too few to judge intake)' : ''}
+${!sparse && f7.days ? `- Last 7 logged days: calories ${vsGoal(f7.cal, goals.cal, '')}, protein ${vsGoal(f7.pro, goals.pro, 'g')}, carbs ${f7.carb}g, fat ${f7.fat}g, sugar ${f7.sug}g` : ''}
+${!sparse && f30.days ? `- Last 30 (${f30.days} logged days): calories ${vsGoal(f30.cal, goals.cal, '')}, protein ${vsGoal(f30.pro, goals.pro, 'g')}; drinks logged: ${f30.drinks}` : ''}
+
+USER'S NOTES ON HOW THINGS ARE GOING
+${notes ? notes : '(none provided)'}
+
+Write the check-in now.`.replace(/\n{3,}/g, '\n\n');
+
+    // ── Call Claude (newest model first, older one as a fallback) ──
+    let aData = null, lastErr = '';
+    for (const model of MODELS) {
+      const aRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model, max_tokens: 900, system: systemPrompt, messages: [{ role: 'user', content: dataBlock }] }),
+      });
+      if (aRes.ok) { aData = await aRes.json(); aData._model = model; break; }
+      lastErr = `${aRes.status}: ${(await aRes.text()).slice(0, 200)}`;
+      if (![400, 404].includes(aRes.status)) break; // only fall back when the model itself is unavailable
+    }
+    if (!aData) return json(500, { error: `Claude API error ${lastErr}` });
     const message = (aData.content || []).map(b => b.text || '').join('').trim();
 
     return json(200, {
       message,
       generated_at: new Date().toISOString(),
-      data_summary: {
-        days_logged_week: weekAvg?.daysLogged || 0,
-        days_logged_month: monthAvg?.daysLogged || 0,
-        current_weight: currentWeight,
-        delta_30d: delta30,
-      },
+      model: aData._model,
+      data_summary: { current_weight: latest?.lbs ?? null, rate_28d: rate28, workout_days_this_week: weeks[0].workoutDays, food_days_30d: f30.days },
       tokens: { in: aData.usage?.input_tokens, out: aData.usage?.output_tokens },
     });
   } catch (e) {
