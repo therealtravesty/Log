@@ -220,7 +220,7 @@
   .hist-seg-wrap { display: flex; gap: 2px; padding: 3px; margin-bottom: 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; }
   .hist-seg { flex: 1; padding: 7px 0; border: none; border-radius: 9px; background: none; color: var(--text-2); font: 500 13px 'DM Sans', system-ui, sans-serif; cursor: pointer; transition: background 0.15s, color 0.15s; }
   .hist-seg.active { background: var(--text); color: var(--bg); }
-  .hist-chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 -1rem 10px; padding: 0 1rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .hist-chips::-webkit-scrollbar { display: none; }
   .hist-chips .chart-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 6px 12px; border-radius: 16px; font-size: 12px; }
   .hist-chip-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
@@ -242,6 +242,18 @@
   .hist-empty { height: 200px; display: flex; align-items: center; justify-content: center; padding: 0 24px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--text-3); }
   .hist-heatmap { overflow-x: auto; margin-top: 14px; padding-bottom: 2px; scrollbar-width: none; }
   .hist-heatmap::-webkit-scrollbar { display: none; }
+  .hist-habit-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .hist-habit-list:empty { display: none; }
+  .hh-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s; }
+  .hh-row:active { transform: scale(0.985); }
+  .hh-row.active { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+  .hh-tile { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3); }
+  .hh-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .hh-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hh-bar { height: 4px; border-radius: 2px; background: var(--border-med); overflow: hidden; }
+  .hh-bar span { display: block; height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+  .hh-sub { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hh-pct { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 44px; text-align: right; }
   .hist-list-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 8px; font-size: 13px; font-weight: 500; color: var(--text-2); }
   .hist-list-head:has(+ #historyList:empty) { display: none; }
   /* ── Log: week strip day navigation ── */
@@ -264,6 +276,15 @@
   .day-cell.active .dow, .day-cell.active .dnum { color: var(--bg); }
   .day-cell.active.has-log .ddot { background: var(--bg); }
   .day-cell:disabled { opacity: 0.3; cursor: default; }
+  .ios-switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; margin-left: 12px; border: none; border-radius: 13px; background: var(--border-med); cursor: pointer; transition: background 0.2s; padding: 0; }
+  .ios-switch span { position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; }
+  .ios-switch[aria-checked="true"] { background: var(--green); }
+  .ios-switch[aria-checked="true"] span { transform: translateX(18px); }
+  .coach-notes { margin-bottom: 14px; }
+  .coach-notes-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+  .coach-notes-input { width: 100%; resize: vertical; min-height: 72px; padding: 10px 12px; font: 16px/1.4 'DM Sans', system-ui, sans-serif; color: var(--text); background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius); outline: none; }
+  .coach-notes-input:focus { border-color: var(--text-3); }
+  .coach-notes-hint { font-size: 11px; color: var(--text-3); margin-top: 5px; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1017,6 +1038,15 @@
               </label>
             </div>
           </div>
+          <div class="habit-modal-field" id="editHabitStravaField" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--text);">Auto-complete from Strava</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px;">Checks this off once the day's Strava workouts add up to 15+ min. Outdoor walks and hikes don't count.</div>
+              </div>
+              <button class="ios-switch" id="editHabitStrava" role="switch" aria-checked="false" onclick="toggleHabitStrava()"><span></span></button>
+            </div>
+          </div>
           <button class="habit-modal-delete"onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
       </div>
@@ -1058,6 +1088,7 @@
       <div class="hist-empty" id="histEmpty" style="display:none;"></div>
       <div class="hist-heatmap" id="histHeatmap" style="display:none;"></div>
     </div>
+    <div class="hist-habit-list" id="histHabitList"></div>
 
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Habit streak</div><div class="stat-val" id="statHabitStreak">—</div><div class="stat-sub">all habits done</div></div>
@@ -1189,10 +1220,15 @@
         </div>
         <button id="coachRefreshBtn" onclick="refreshCoachAnalysis()" style="background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;flex-shrink:0;">Refresh</button>
       </div>
+      <div class="coach-notes">
+        <label class="coach-notes-label" for="coachNotes">How have things been going?</label>
+        <textarea id="coachNotes" class="coach-notes-input" rows="3" maxlength="1500" placeholder="e.g. Less active than usual lately, eating more and worse. Want to get back to 6 lifts a week." oninput="saveCoachNotes()"></textarea>
+        <div class="coach-notes-hint">The coach reads this alongside your weight, workouts, and habits. It's kept on this phone.</div>
+      </div>
       <div id="coachContent" style="font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;">
         <div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">
-          Your AI coach reviews your last 7, 30, and 90 days of nutrition,<br>
-          weight, exercise, and habit data and provides analytical feedback.<br><br>
+          Your coach compares your weight trend, workouts, and habits<br>
+          against your plan, and reads your notes above.<br><br>
           Tap <strong>Refresh</strong> to get started.
         </div>
       </div>
@@ -1329,7 +1365,7 @@ async function api(path, options = {}) {
     return text ? JSON.parse(text) : null;
   });
 
-  if (!_isOnline && isWrite) {
+  if (!_isOnline && isWrite && !options.noQueue) {
     await enqueueRequest('/api/'+ path, method, options.body ?? null);
     return options.body ? { ...options.body, offline: true } : { offline: true };
   }
@@ -1337,7 +1373,7 @@ async function api(path, options = {}) {
     return await doFetch();
   } catch(e) {
     // Only enqueue for offline/network errors — not server-side rejections
-    if (isWrite && !e.isServerError) {
+    if (isWrite && !e.isServerError && !options.noQueue) {
       await enqueueRequest('/api/'+ path, method, options.body ?? null);
       return options.body ? { ...options.body, offline: true } : { offline: true };
     }
@@ -3207,7 +3243,7 @@ async function syncStravaForActiveDate() {
     if (res?.error) {
       showToast('Sync error: ' + res.error);
     } else {
-      await loadExerciseFromServer();
+      await Promise.all([loadExerciseFromServer(), loadHabitLogsFromServer()]);
       renderExercise(); renderNetBanner();
       const n = res?.synced || 0;
       showToast(n > 0 ? `Synced ${n} activit${n === 1 ? 'y' : 'ies'} for this day` : 'No Strava activities for this day');
@@ -3237,9 +3273,10 @@ async function syncStravaRecent() {
       showToast('Sync error: ' + res.error);
     } else {
       // Reload exercise from server to pull in newly persisted Strava rows
-      await loadExerciseFromServer();
+      await Promise.all([loadExerciseFromServer(), loadHabitLogsFromServer()]);
       renderExercise(); renderNetBanner();
-      showToast(`Synced ${res?.synced || 0} activit${res?.synced === 1 ? 'y' : 'ies'} from Strava`);
+      const ticked = res?.habits_ticked ? ' · habits updated' : '';
+      showToast(`Synced ${res?.synced || 0} activit${res?.synced === 1 ? 'y' : 'ies'} from Strava${ticked}`);
     }
   } catch(e) {
     showToast('Sync error: ' + (e.message || 'unknown'));
@@ -3328,7 +3365,18 @@ let _coachLoadedOnce = false;
 
 function coachCacheKey() { return `coach_${activeProfileId}`; }
 
+function coachNotesKey() { return `coachNotes_${activeProfileId}`; }
+let _coachNotesTimer = null;
+function saveCoachNotes() {
+  clearTimeout(_coachNotesTimer);
+  _coachNotesTimer = setTimeout(() => {
+    try { localStorage.setItem(coachNotesKey(), document.getElementById('coachNotes').value); } catch (_) {}
+  }, 300);
+}
+
 function loadCoachFromCache() {
+  const notesEl = document.getElementById('coachNotes');
+  if (notesEl && !notesEl.value) { try { notesEl.value = localStorage.getItem(coachNotesKey()) || ''; } catch (_) {} }
   try {
     const raw = localStorage.getItem(coachCacheKey());
     if (!raw) return;
@@ -3361,17 +3409,15 @@ async function refreshCoachAnalysis() {
   const content = document.getElementById('coachContent');
   if (btn) { btn.textContent = 'Analyzing...'; btn.disabled = true; }
   if (content) {
-    content.innerHTML = '<div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">Reviewing your last 90 days of data...<br>This usually takes 3-5 seconds.</div>';
+    content.innerHTML = '<div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">Comparing your weight, workouts, and habits to your plan...<br>This usually takes 5-10 seconds.</div>';
   }
   try {
-    const params = new URLSearchParams({
+    const res = await api('coach-checkin', { method: 'POST', noQueue: true, body: {
       profile_id: activeProfileId,
-      cal:  GOALS.cal  || '',
-      pro:  GOALS.pro  || '',
-      carb: GOALS.carb || '',
-      fat:  GOALS.fat  || '',
-    });
-    const res = await api(`coach-checkin?${params.toString()}`);
+      today: todayStr(), // local date — the server runs in UTC
+      goals: { cal: GOALS.cal, pro: GOALS.pro, carb: GOALS.carb, fat: GOALS.fat },
+      notes: document.getElementById('coachNotes')?.value || '',
+    }});
     if (res?.message) {
       renderCoachMessage(res.message, res.generated_at);
       try {
@@ -3980,6 +4026,7 @@ function renderHistory() {
   renderHistMetricChips();
 
   renderHistStats(w);
+  renderHistHabitList(w);
   withChartJs(() => renderHistChart(w));
   renderHistoryList([...foodDaysIn(w.days)].reverse());
 }
@@ -3988,10 +4035,51 @@ function renderHistMetricChips() {
   const el = document.getElementById('histMetricChips');
   let items = [];
   if (_histGroup === 'nutrition') items = Object.entries(NUTRI_METRICS).map(([k, m]) => ({ key: k, label: m.label }));
-  if (_histGroup === 'habits') items = [{ key: 'all', label: 'All habits' }, ..._habits.map(h => ({ key: String(h.id), label: h.name, color: h.color }))];
-  if (_histGroup === 'habits' && !items.some(i => i.key === _histMetric.habits)) _histMetric.habits = 'all';
+  if (_histGroup === 'habits' && _histMetric.habits !== 'all' && !_habits.some(h => String(h.id) === _histMetric.habits)) _histMetric.habits = 'all';
   el.style.display = items.length ? '' : 'none';
   el.innerHTML = items.map(i => `<button class="chart-tab${_histMetric[_histGroup] === i.key ? ' active' : ''}" onclick="setHistMetric('${i.key}')">${i.color ? `<span class="hist-chip-dot" style="background:${i.color}"></span>` : ''}${i.label}</button>`).join('');
+}
+
+// One row per habit (plus "All habits"): completion + streak for the current
+// range. Tapping a row focuses the chart on it; tapping it again returns to All.
+function renderHistHabitList(w) {
+  const el = document.getElementById('histHabitList');
+  if (_histGroup !== 'habits' || !_habits.length) { el.innerHTML = ''; return; }
+  const stat = hs => {
+    let s = 0, n = 0, full = 0;
+    hs.forEach(h => { const st = habitStartDate(h); w.days.forEach(d => { if (d >= st) { n++; const sc = habitScore(h, d); s += sc; if (sc >= 1) full++; } }); });
+    return { pct: n ? Math.round(s / n * 100) : null, full, n };
+  };
+  const row = (key, name, tileBg, icon, color, st, sub) => {
+    const active = _histMetric.habits === key;
+    return `<button class="hh-row${active ? ' active' : ''}" onclick="selectHistHabit('${key}')" aria-pressed="${active}">
+      <span class="hh-tile" style="background:${tileBg}">${icon}</span>
+      <span class="hh-main">
+        <span class="hh-name">${name}</span>
+        <span class="hh-bar"><span style="width:${st.pct || 0}%;background:${color}"></span></span>
+        <span class="hh-sub">${sub}</span>
+      </span>
+      <span class="hh-pct">${st.pct == null ? '—' : st.pct + '%'}</span>
+    </button>`;
+  };
+  const allSt = stat(_habits);
+  let html = row('all', 'All habits', '#3a7d44', habitIconSvg('check', '#fff', 18), '#3a7d44', allSt,
+    `${allSt.full} of ${allSt.n} check-ins · ${calcHabitStreak()}d all-done streak`);
+  _habits.forEach(h => {
+    const st = stat([h]);
+    const tile = `${h.color};background:linear-gradient(160deg, color-mix(in srgb, ${h.color} 70%, white), ${h.color})`;
+    html += row(String(h.id), h.name, tile, habitIconSvg(h.icon || 'check', '#fff', 18), h.color, st,
+      st.n ? `${st.full} of ${st.n} days · ${habitStreak(h)}d streak` : 'Not started in this range');
+  });
+  el.innerHTML = html;
+}
+
+function selectHistHabit(key) {
+  _histMetric.habits = (_histMetric.habits === key && key !== 'all') ? 'all' : key;
+  renderHistory();
+  // Bring the chart into view if it has scrolled off the top
+  const card = document.querySelector('#view-history .hist-card');
+  if (card && card.getBoundingClientRect().top < 0) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderHistStats(w) {
@@ -4020,6 +4108,7 @@ function histEmpty(msg) {
   const e = document.getElementById('histEmpty');
   e.textContent = msg || '';
   e.style.display = msg ? '' : 'none';
+  if (msg) document.getElementById('histHeadlineSub').textContent = ''; // message already says it
   document.getElementById('histChartWrap').style.display = msg ? 'none' : '';
 }
 
@@ -5044,6 +5133,9 @@ function openHabitModal(habitId) {
   const importantCb = document.getElementById('editHabitImportant');
   const track = document.getElementById('editHabitImportantTrack');
   const thumb = document.getElementById('editHabitImportantThumb');
+  const stravaField = document.getElementById('editHabitStravaField');
+  if (stravaField) stravaField.style.display = (_stravaConnected || h.auto_source === 'strava') ? '' : 'none';
+  document.getElementById('editHabitStrava')?.setAttribute('aria-checked', String(h.auto_source === 'strava'));
   const isImportant = h.important !== false; // default true
   if (importantCb) importantCb.checked = isImportant;
   if (track) track.style.background = isImportant ? 'var(--green)' : 'var(--border-med)';
@@ -5117,6 +5209,26 @@ function selectEditHabitColor(el) {
   autoSaveHabit();
 }
 
+// Saved with its own PATCH so regular habit edits keep working even before the
+// auto_source column exists in Supabase.
+async function toggleHabitStrava() {
+  const id = parseInt(document.getElementById('editHabitId').value);
+  const h = _habits.find(x => x.id === id);
+  const sw = document.getElementById('editHabitStrava');
+  if (!h || !sw) return;
+  const on = sw.getAttribute('aria-checked') !== 'true';
+  sw.setAttribute('aria-checked', String(on));
+  try {
+    await api(`habits?id=${id}`, { method: 'PATCH', body: { auto_source: on ? 'strava' : null } });
+    h.auto_source = on ? 'strava' : null;
+    cacheSet('habits', _habits);
+    showToast(on ? `${h.name} will check off from Strava workouts` : 'Strava auto-complete off');
+  } catch (e) {
+    sw.setAttribute('aria-checked', String(!on));
+    showToast('Could not save — has the Supabase update been run?');
+  }
+}
+
 function toggleHabitImportant() {
   const cb = document.getElementById('editHabitImportant');
   if (!cb) return;
@@ -5169,8 +5281,10 @@ async function saveEditedHabit() {
   const id = parseInt(document.getElementById('editHabitId').value);
   const name = document.getElementById('editHabitName').value.trim();
   if (!name) { showToast('Enter a habit name'); return; }
-  const color  = document.querySelector('#editHabitColorPicker .habit-color-swatch.selected')?.dataset.color || HABIT_COLORS[0];
-  const icon   = document.querySelector('#editHabitIconPicker .habit-icon-btn.selected')?.dataset.icon || 'check';
+  // Fall back to the habit's saved values, never a default, so an unrendered picker can't wipe them
+  const prev   = _habits.find(h => h.id === id) || {};
+  const color  = document.querySelector('#editHabitColorPicker .habit-color-swatch.selected')?.dataset.color || prev.color || HABIT_COLORS[0];
+  const icon   = document.querySelector('#editHabitIconPicker .habit-icon-btn.selected')?.dataset.icon || prev.icon || 'check';
   const type   = document.getElementById('editHabitType').value;
   const target = parseFloat(document.getElementById('editHabitTarget').value) || 1;
   const unit   = document.getElementById('editHabitUnit').value.trim();
