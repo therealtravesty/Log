@@ -1,0 +1,189 @@
+// netlify/functions/strava-activities.js
+//
+// POST /api/strava-activities  { profile_id, days }
+//   → Pulls the last N days of activities from Strava (default 90)
+//   → Upserts each activity into exercise_logs (dedup by profile_id+strava_id)
+//   → Returns { synced, total_fetched }
+//
+// Strava activities live in exercise_logs alongside manual entries. The
+// `source` column distinguishes them ('strava' vs 'manual') and `strava_id`
+// holds the Strava activity id for dedup. The frontend doesn't maintain a
+// separate Strava cache anymore — everything reads from exercise_logs.
+//
+// After saving, any habit marked "Auto-complete from Strava" is ticked for
+// each day with a qualifying workout (rule in strava-lib.js). New activities
+// also arrive on their own via strava-webhook.js; this endpoint is the manual
+// / backfill path.
+
+const { toExerciseRow, applyStravaHabits } = require('./strava-lib');
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
+const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
+
+const headers = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+const json = (sc, body) => ({ statusCode: sc, headers, body: JSON.stringify(body) });
+
+async function sb(path, init = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const e = new Error(data?.message || `Supabase ${res.status}: ${text}`);
+    e.status = res.status; throw e;
+  }
+  return data;
+}
+
+async function refreshToken(profile_id, refresh_token) {
+  const res = await fetch('https://www.strava.com/api/v3/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Token refresh failed');
+  await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at,
+      created_at: new Date().toISOString(),
+    }),
+  });
+  return data.access_token;
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers, body: '' };
+  if (event.httpMethod !== 'POST') return json(405, { error: 'Use POST' });
+  if (!SUPABASE_URL || !SUPABASE_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+    return json(500, { error: 'env vars not configured' });
+  }
+
+  try {
+    const t0 = Date.now();
+    const log = (label) => console.log(`[strava-sync] ${label} +${Date.now() - t0}ms`);
+
+    const body = JSON.parse(event.body || '{}');
+    const profile_id = body.profile_id;
+    const dateParam = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : null;
+    const days = Math.min(parseInt(body.days) || 14, 365);
+    if (!profile_id) return json(400, { error: 'profile_id required' });
+
+    const rows = await sb(`strava_tokens?profile_id=eq.${encodeURIComponent(profile_id)}&select=*`);
+    log('token fetched');
+    if (!rows || !rows.length) return json(200, { synced: 0, error: 'not connected' });
+
+    let token = rows[0];
+    const now = Math.floor(Date.now() / 1000);
+    let access = token.access_token;
+    if (now >= (token.expires_at || 0) - 60) {
+      access = await refreshToken(profile_id, token.refresh_token);
+      log('token refreshed');
+    }
+
+    // Compute the time window. Two modes:
+    //   date: a single calendar day with 12hr buffers on each side for TZ
+    //   days: trailing N days from now (no detail fetches — too slow for windows)
+    let after, before;
+    if (dateParam) {
+      const dayMid = Math.floor(new Date(dateParam + 'T00:00:00Z').getTime() / 1000);
+      after = dayMid - 12 * 3600;
+      before = dayMid + 36 * 3600;
+    } else {
+      after = Math.floor(Date.now() / 1000) - days * 86400;
+      before = null;
+    }
+
+    // Pull activities for the requested window, paginating until empty.
+    const allActivities = [];
+    for (let page = 1; page <= 10; page++) {
+      const beforeParam = before ? `&before=${before}` : '';
+      const sRes = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?after=${after}${beforeParam}&per_page=200&page=${page}`,
+        { headers: { Authorization: `Bearer ${access}` } }
+      );
+      if (!sRes.ok) {
+        const errText = await sRes.text();
+        const userMsg = sRes.status === 429
+          ? 'Strava rate limit reached. Wait 15 minutes and try again.'
+          : `Strava API error ${sRes.status}`;
+        return json(sRes.status, { error: userMsg, detail: errText.slice(0, 300) });
+      }
+      const pageData = await sRes.json();
+      if (!Array.isArray(pageData) || !pageData.length) break;
+      allActivities.push(...pageData);
+      if (pageData.length < 200) break;
+    }
+    log(`list fetched: ${allActivities.length} activities`);
+
+    // For date mode, filter to only activities whose local-day matches.
+    // For days mode, no filter — keep everything in the trailing window.
+    const filtered = dateParam
+      ? allActivities.filter(a => typeof a.start_date_local === 'string' && a.start_date_local.slice(0, 10) === dateParam)
+      : allActivities;
+    log(`${filtered.length} after date filter`);
+
+    // Date mode: fetch details for the few activities on this single day.
+    // Window mode: skip details (too slow — proxy times out).
+    if (dateParam && filtered.length) {
+      await Promise.all(filtered.map(async a => {
+        if (a.calories && a.calories > 0) return;
+        try {
+          const dRes = await fetch(`https://www.strava.com/api/v3/activities/${a.id}`, {
+            headers: { Authorization: `Bearer ${access}` },
+          });
+          if (dRes.ok) {
+            const detail = await dRes.json();
+            if (detail.calories) a.calories = detail.calories;
+          }
+        } catch(_) { /* leave at 0 on failure */ }
+      }));
+      log('details done');
+    }
+
+    // Upsert into exercise_logs. The partial unique index on
+    // (profile_id, strava_id) WHERE strava_id IS NOT NULL handles dedup.
+    const upsertRows = filtered.map(a => toExerciseRow(profile_id, a)).filter(r => r.date);
+
+    let synced = 0;
+    if (upsertRows.length) {
+      await sb('exercise_logs?on_conflict=profile_id,strava_id', {
+        method: 'POST',
+        body: JSON.stringify(upsertRows),
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      });
+      synced = upsertRows.length;
+      log(`upsert done: ${synced} rows`);
+    }
+
+    let habits_ticked = 0;
+    try { habits_ticked = await applyStravaHabits(profile_id, upsertRows.map(r => r.date)); }
+    catch (e) { console.warn('[strava-sync] habit auto-complete failed:', e.message); }
+
+    return json(200, { synced, days, total_fetched: allActivities.length, habits_ticked });
+  } catch (e) {
+    return json(500, { error: e.message || 'Internal error' });
+  }
+};
