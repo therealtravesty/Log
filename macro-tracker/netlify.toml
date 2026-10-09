@@ -18,3 +18,7 @@
 
 [functions."exercise-lookup"]
   timeout = 26
+
+# Coach uses a larger model; give it room beyond the 10s default
+[functions."coach-checkin"]
+  timeout = 26
