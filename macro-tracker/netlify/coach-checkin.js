@@ -1,6 +1,6 @@
 // netlify/functions/coach-checkin.js
 //
-// POST /api/coach-checkin  { profile_id, today, goals: {cal,pro,carb,fat}, notes }
+// POST /api/coach-checkin  { profile_id, today, goals: {cal,pro,carb,fat}, target: {...}, notes }
 // (GET with the same fields as query params still works.)
 //
 // Builds a "where you are vs. where you planned to be" picture from weight,
@@ -17,7 +17,14 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SE
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const MODELS = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001']; // first that works
 
-const { isWorkoutType } = require('./strava-lib');
+// Outdoor walks/hikes support the step goal; everything else is a workout.
+// Works for Strava sport_types ("Walk", "Hike") and Apple Health names
+// ("Walking", "Hiking", "Outdoor Walk"); treadmill/indoor walks count.
+function isWorkoutRow(e) {
+  if (e.source === 'strava' && e.trainer) return true;
+  const t = String(e.sport_type || e.name || '');
+  return !(/walk|hik/i.test(t) && !/treadmill|indoor/i.test(t));
+}
 
 const headers = {
   'Content-Type': 'application/json',
@@ -81,18 +88,20 @@ exports.handler = async (event) => {
   const notes = String(input.notes || '').trim().slice(0, 1500);
   const g = input.goals || {};
   const goals = { cal: parseInt(g.cal) || null, pro: parseInt(g.pro) || null, carb: parseInt(g.carb) || null, fat: parseInt(g.fat) || null };
+  const target = input.target || {}; // { source: 'garmin'|'estimate', tdee, days }
 
   try {
     const pid = encodeURIComponent(profile_id);
     const since = addDays(today, -120);
     const safe = p => sb(p).catch(e => { console.warn('[coach] fetch failed:', p, e.message); return []; });
-    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogRows] = await Promise.all([
+    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogRows, healthRows] = await Promise.all([
       safe(`food_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
       safe(`weights?profile_id=eq.${pid}&order=date.asc&limit=100000`),
       safe(`exercise_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
       safe(`settings?profile_id=eq.${pid}`),
       safe(`habits?profile_id=eq.${pid}&order=sort_order.asc`),
       safe(`habit_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
+      safe(`health_daily?profile_id=eq.${pid}&date=gte.${since}&order=date.asc`),
     ]);
     const settings = (settingsRows && settingsRows[0] && settingsRows[0].data) || {};
 
@@ -111,6 +120,8 @@ exports.handler = async (event) => {
     const n28 = weights.filter(w => w.date >= addDays(today, -27)).length;
     const w90 = weights.find(w => w.date >= addDays(today, -89));
     let paceLabel = 'not enough weigh-ins to judge pace';
+    // Pace gap in lb/week: positive = losing slower (or gaining) vs plan
+    const paceGap = rate28 != null && n28 >= 6 ? round1(rate28 - plannedRate) : null;
     if (rate28 != null) {
       const gap = round1(rate28 - plannedRate);
       paceLabel = goal === 'cut'
@@ -123,16 +134,34 @@ exports.handler = async (event) => {
 
     // ── Activity (Strava + manual) by Monday-start week ──
     const ex = (exerciseRows || []).filter(e => e.date <= today);
-    const isWorkout = e => e.source !== 'strava' || !e.sport_type ? true : isWorkoutType(e);
+    const isWorkout = e => (e.source === 'manual' || !e.source) ? true : isWorkoutRow(e);
     const thisWeek = weekStart(today);
     const weeks = [0, 1, 2, 3].map(i => {
       const from = addDays(thisWeek, -7 * i), to = addDays(from, 6);
       const rows = ex.filter(e => inRange(e.date, from, to));
       const workoutDays = new Set(rows.filter(isWorkout).map(e => e.date)).size;
+      const workoutMins = Math.round(rows.filter(isWorkout).reduce((a, e) => a + (e.moving_time || 0), 0) / 60);
       const walks = rows.filter(e => !isWorkout(e)).length;
       const elapsed = i === 0 ? daysBetween(from, today) + 1 : 7;
-      return { label: i === 0 ? `This week (${elapsed} of 7 days so far)` : `${i} week${i > 1 ? 's' : ''} ago`, workoutDays, walks, elapsed };
+      return { label: i === 0 ? `This week (${elapsed} of 7 days so far)` : `${i} week${i > 1 ? 's' : ''} ago`, workoutDays, workoutMins, walks, elapsed };
     });
+
+    // ── Garmin daily totals (via Apple Health), completed days only ──
+    const health = (healthRows || []).filter(h => h.date < today);
+    const hAvg = (from, to, f) => { const r = health.filter(h => inRange(h.date, from, to) && h[f]); return r.length ? { v: Math.round(r.reduce((a, h) => a + h[f], 0) / r.length), n: r.length } : null; };
+    const yest = addDays(today, -1);
+    const garmin = {
+      last7:  { active: hAvg(addDays(today, -7), yest, 'active_kcal'), resting: hAvg(addDays(today, -7), yest, 'resting_kcal'), steps: hAvg(addDays(today, -7), yest, 'steps') },
+      prior28:{ active: hAvg(addDays(today, -35), addDays(today, -8), 'active_kcal'), steps: hAvg(addDays(today, -35), addDays(today, -8), 'steps') },
+      d90:    { active: hAvg(addDays(today, -90), yest, 'active_kcal'), resting: hAvg(addDays(today, -90), yest, 'resting_kcal'), steps: hAvg(addDays(today, -90), yest, 'steps') },
+    };
+    const total7 = garmin.last7.active && garmin.last7.resting ? garmin.last7.active.v + garmin.last7.resting.v : null;
+    const pct = (a, b) => a && b ? `${signed(Math.round((a.v - b.v) / b.v * 100))}%` : 'n/a';
+    const garminLines = !health.length ? ['- No Garmin data synced yet'] : [
+      `- Last 7 days (avg/day): ${garmin.last7.active?.v ?? '?'} active + ${garmin.last7.resting?.v ?? '?'} resting = ${total7 ?? '?'} kcal burned; ${garmin.last7.steps?.v?.toLocaleString() ?? '?'} steps (plan: 15,000)`,
+      `- Previous 4 weeks (avg/day): ${garmin.prior28.active?.v ?? '?'} active, ${garmin.prior28.steps?.v?.toLocaleString() ?? '?'} steps → last 7 days vs that: active ${pct(garmin.last7.active, garmin.prior28.active)}, steps ${pct(garmin.last7.steps, garmin.prior28.steps)}`,
+      `- 90-day baseline (avg/day): ${garmin.d90.active?.v ?? '?'} active, ${garmin.d90.resting?.v ?? '?'} resting, ${garmin.d90.steps?.v?.toLocaleString() ?? '?'} steps (${garmin.d90.active?.n ?? 0} days of data)`,
+    ];
 
     // ── Habits ──
     const logs = {};
@@ -182,7 +211,16 @@ HOW TO READ THE DATA:
 - An outdoor walk is not a workout here; walks support the daily step goal.
 
 CALORIES (critical):
-- The daily calorie target ALREADY includes their activity (lifting 6x/week, 15k steps/day). Never subtract exercise calories from food, never compute a "true deficit", never suggest eating back exercise calories.
+- The daily calorie target ALREADY includes their activity. When its source is "Garmin", it is their measured 7-day average burn (resting + active) minus the planned deficit. Never add exercise or workout calories on top of it, never compute a separate "true deficit", never suggest eating back exercise calories.
+- Garmin burn numbers are estimates; the weight trend is the ground truth. Don't claim to know their intake when food logging is sparse.
+
+TARGET ADJUSTMENTS (how a good coach does it):
+- The app holds the calorie target steady (4-week Garmin average, refreshed weekly). You decide whether it should change, based on the weight trend.
+- Only consider a change when the 28-day pace misses the plan by more than 0.25 lb/week (see "Pace gap").
+- Check adherence FIRST. If food logs are sparse, use the user's notes. If they describe eating over target, the fix is adherence, not a lower number: say that plainly and don't lower the target.
+- If adherence looks good and loss is too slow, recommend lowering the target by 100-150 kcal. If loss is faster than planned, recommend raising it by 100-150. Give the exact new number.
+- If there aren't enough weigh-ins, ask for more consistent weigh-ins before any change.
+- Use the 90-day Garmin baseline to judge whether recent activity is normal for them, and say so plainly when it has dropped.
 
 TONE:
 - Honest and proportional. Name what is working and what is not. No lecturing or moralizing, no hype.
@@ -195,16 +233,21 @@ PROFILE & PLAN
 - ${settings.sex || 'male'}, ${settings.age || '?'}, ${settings.heightFt || '?'}'${settings.heightIn || 0}"
 - Goal: ${goal}${goal !== 'maintain' ? ` at ${rate} lb/week` : ''}
 - Daily targets: ${goals.cal || '?'} kcal, ${goals.pro || '?'}g protein, ${goals.carb || '?'}g carbs, ${goals.fat || '?'}g fat
+- Calorie target source: ${target.source === 'garmin' ? `Garmin — measured burn ${target.tdee} kcal/day (avg of ${target.days} recent days) minus deficit` : 'estimate from activity level (not enough Garmin data yet)'}
 - Training plan: ${plannedSessions} workouts per week plus 15k steps/day
 
 WEIGHT
 - Latest: ${latest ? `${latest.lbs} lbs on ${latest.date}${daysBetween(latest.date, today) > 3 ? ` (${daysBetween(latest.date, today)} days ago — weigh-ins have lapsed)` : ''}` : 'no weigh-ins'}
 - 7-day average: ${avg7 ?? 'n/a'}${avgPrev7 != null && avg7 != null ? ` vs ${avgPrev7} the week before (${signed(round1(avg7 - avgPrev7))} lbs)` : ''}
 - Pace over the last 28 days (${n28} weigh-ins): ${paceLabel}
+- Pace gap vs plan: ${paceGap == null ? 'n/a (need 6+ weigh-ins in 28 days)' : `${signed(paceGap)} lb/wk (${Math.abs(paceGap) > 0.25 ? 'beyond' : 'within'} the 0.25 adjustment threshold)`}
 - 90-day change: ${latest && w90 ? `${signed(round1(latest.lbs - w90.lbs))} lbs since ${w90.date}` : 'n/a'}
 
 ACTIVITY (workout days per week vs plan of ${plannedSessions}; outdoor walks counted separately)
-${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 1 ? '' : 's'}, ${w.walks} outdoor walk${w.walks === 1 ? '' : 's'}`).join('\n')}
+${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 1 ? '' : 's'}${w.workoutMins ? ` (${w.workoutMins} min)` : ''}, ${w.walks} outdoor walk${w.walks === 1 ? '' : 's'}`).join('\n')}
+
+GARMIN DAILY BURN & STEPS (completed days only)
+${garminLines.join('\n')}
 
 HABITS
 ${habitLines.length ? habitLines.join('\n') : '- No habits set up'}

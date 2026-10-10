@@ -285,6 +285,25 @@
   .coach-notes-input { width: 100%; resize: vertical; min-height: 72px; padding: 10px 12px; font: 16px/1.4 'DM Sans', system-ui, sans-serif; color: var(--text); background: var(--bg); border: 0.5px solid var(--border-med); border-radius: var(--radius); outline: none; }
   .coach-notes-input:focus { border-color: var(--text-3); }
   .coach-notes-hint { font-size: 11px; color: var(--text-3); margin-top: 5px; }
+  /* ── Coach: Garmin card ── */
+  .garmin-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .garmin-title { font-size: 15px; font-weight: 600; }
+  .garmin-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .garmin-sync-btn { flex-shrink: 0; height: 34px; padding: 0 14px; border: none; border-radius: 17px; background: var(--text); color: var(--bg); font: 600 13px 'DM Sans', system-ui, sans-serif; cursor: pointer; }
+  .garmin-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .garmin-stats:empty { display: none; }
+  .garmin-stat { background: var(--bg); border-radius: var(--radius); padding: 8px 10px; }
+  .garmin-stat .v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .garmin-stat .l { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+  .garmin-stat .d { font-size: 10px; margin-top: 2px; }
+  .garmin-setup { margin-top: 12px; font-size: 12px; color: var(--text-2); }
+  .garmin-setup summary { cursor: pointer; color: var(--text-3); }
+  .garmin-setup-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .garmin-setup-row span { flex-shrink: 0; width: 84px; color: var(--text-3); }
+  .garmin-setup-row code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px 'DM Mono', monospace; }
+  .garmin-setup-row button { flex-shrink: 0; border: 0.5px solid var(--border-med); background: var(--surface); border-radius: 8px; padding: 3px 8px; font-size: 11px; color: var(--text-2); cursor: pointer; }
+  .garmin-log-sync { width: 100%; margin-top: 10px; padding: 8px 12px; background: none; border: 0.5px solid var(--border-med); border-radius: var(--radius); font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--text-2); cursor: pointer; }
+  .src-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--bg); color: var(--text-3); font-size: 10px; font-weight: 500; vertical-align: middle; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -858,10 +877,7 @@
     <div class="card"style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
       <div id="exerciseItems"><div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div></div>
-      <button id="stravaDaySyncBtn" onclick="syncStravaForActiveDate()" style="display:none;width:100%;margin-top:10px;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:8px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;display:none;align-items:center;justify-content:center;gap:6px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        Sync this day with Strava
-      </button>
+      <button class="garmin-log-sync" onclick="runHealthSync()">Sync Garmin activity</button>
       <div style="margin-top:1rem;border-top:0.5px solid var(--border);padding-top:1rem;">
         <div class="section-title">Log exercise</div>
         <div class="exercise-add-row">
@@ -1038,15 +1054,6 @@
               </label>
             </div>
           </div>
-          <div class="habit-modal-field" id="editHabitStravaField" style="display:none;">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:13px;font-weight:500;color:var(--text);">Auto-complete from Strava</div>
-                <div style="font-size:12px;color:var(--text-3);margin-top:2px;">Checks this off once the day's Strava workouts add up to 15+ min. Outdoor walks and hikes don't count.</div>
-              </div>
-              <button class="ios-switch" id="editHabitStrava" role="switch" aria-checked="false" onclick="toggleHabitStrava()"><span></span></button>
-            </div>
-          </div>
           <button class="habit-modal-delete"onclick="deleteHabitFromModal()">Delete habit</button>
         </div>
       </div>
@@ -1111,20 +1118,6 @@
     </div>
 
     <div class="card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;">Strava integration</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Auto-import workouts into your exercise log</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button id="stravaConnectBtn" onclick="connectStrava()" style="flex:1;background:none;border:0.5px solid var(--border-med);border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;color:#FC4C02;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Connect Strava</button>
-        <button id="stravaSyncBtn" onclick="syncStravaRecent()" style="flex:1;background:#FC4C02;color:#fff;border:none;border-radius:var(--radius);padding:9px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;">Sync last 14 days</button>
-      </div>
-    </div>
-
-    <div class="card">
       <div class="section-title">About you</div>
       <div class="settings-grid">
         <div class="settings-field">
@@ -1168,7 +1161,14 @@
         </div>
       </div>
       <div class="settings-field" style="margin-bottom:1rem;">
-        <label class="settings-label">Activity level</label>
+        <label class="settings-label">Calorie target based on</label>
+        <select class="settings-select" id="sTargetMode" onchange="recalcGoals()">
+          <option value="garmin">Garmin burn (4-week average, via Apple Health)</option>
+          <option value="estimate">Activity level estimate</option>
+        </select>
+      </div>
+      <div class="settings-field" style="margin-bottom:1rem;">
+        <label class="settings-label">Activity level <span style="font-weight:400;color:var(--text-3);">(used when Garmin data isn't available)</span></label>
         <select class="settings-select" id="sActivity" onchange="recalcGoals()">
           <option value="1.2">Sedentary — desk job, little exercise</option>
           <option value="1.375">Lightly active — 1–3×/week</option>
@@ -1211,6 +1211,22 @@
       <div class="header-top">
         <div class="header-meta" id="headerMetaCoach"></div>
       </div>
+    </div>
+    <div class="card garmin-card">
+      <div class="garmin-top">
+        <div style="min-width:0;">
+          <div class="garmin-title">Garmin activity</div>
+          <div class="garmin-sub" id="garminSub">Not synced yet</div>
+        </div>
+        <button class="garmin-sync-btn" onclick="runHealthSync()">Sync now</button>
+      </div>
+      <div class="garmin-stats" id="garminStats"></div>
+      <details class="garmin-setup">
+        <summary>Shortcut setup details</summary>
+        <div class="garmin-setup-row"><span>Profile ID</span><code id="garminPid"></code><button onclick="copyText(activeProfileId, 'Profile ID copied')">Copy</button></div>
+        <div class="garmin-setup-row"><span>URL</span><code>https://macrotracker12.netlify.app/api/health-sync</code><button onclick="copyText('https://macrotracker12.netlify.app/api/health-sync', 'URL copied')">Copy</button></div>
+        <div class="garmin-setup-row"><span>Shortcut name</span><code>Log Health Sync</code></div>
+      </details>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -1456,6 +1472,7 @@ function hydrateFromCache() {
   _customFoods = cacheGet('customFoods') || [];
   _customExercises = cacheGet('customExercises') || [];
   _habits = habits || [];
+  _healthDaily = cacheGet('healthDaily') || [];
   const logs = cacheGet('habitLogs');
   _habitLogs = logs || {};
   _habitLogsReady = !!logs;
@@ -1469,17 +1486,17 @@ function revealApp() {
   showView(LANDING_VIEW);
 }
 
-// All server loads run in parallel (settings + Strava status included).
+// All server loads run in parallel.
 async function refreshFromServer() {
   const pid = activeProfileId;
   await Promise.all([
     loadAllFromServer(), loadWeightsFromServer(), loadExerciseFromServer(),
     loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(),
-    loadHabitsFromServer(), loadHabitLogsFromServer(),
-    initSettings(), checkStravaConnection(),
+    loadHabitsFromServer(), loadHabitLogsFromServer(), loadHealthDailyFromServer(),
+    initSettings(),
   ]);
   if (pid !== activeProfileId) return; // profile switched mid-refresh
-  await handleStravaOAuthCallback();
+  if (_settings) applySettings(_settings); // Garmin data may change the calorie target
   rerenderAfterRefresh();
 }
 
@@ -1632,7 +1649,7 @@ const HABIT_COLORS = ['#E05252','#E8823A','#E8B84B','#8DC63F','#3DBD6D','#2DC4A0
 
 const DEFAULT_SETTINGS = {
   sex: 'male', age: 30, heightFt: 6, heightIn: 0, weight: 183,
-  activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial'};
+  activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial', targetMode: 'garmin'};
 
 // ── Server data loaders ──────────────────────────────────────────
 async function loadAllFromServer() {
@@ -1685,12 +1702,24 @@ async function loadExerciseFromServer() {
     _exercise = {};
     rows.forEach(r => {
       if (!_exercise[r.date]) _exercise[r.date] = [];
-      _exercise[r.date].push({ id: r.id, name: r.name, calories_burned: r.calories_burned, source: r.source || 'manual', strava_id: r.strava_id || null });
+      _exercise[r.date].push({ id: r.id, name: r.name, calories_burned: r.calories_burned, source: r.source || 'manual', strava_id: r.strava_id || null, moving_time: r.moving_time || null });
     });
     cacheSet('exercise', _exercise);
   } catch(e) {
     const cached = cacheGet('exercise');
     if (cached) _exercise = cached;
+  }
+}
+
+// Garmin daily totals (steps, active + resting kcal) synced from Apple Health
+let _healthDaily = [];
+async function loadHealthDailyFromServer() {
+  try {
+    const rows = await api(`health-sync?profile_id=${activeProfileId}&days=120`);
+    if (Array.isArray(rows)) { _healthDaily = rows; cacheSet('healthDaily', rows); }
+  } catch (e) {
+    const cached = cacheGet('healthDaily');
+    if (cached) _healthDaily = cached;
   }
 }
 
@@ -1958,14 +1987,19 @@ function calcGoals(s) {
   const age = parseFloat(s.age) || 30;
   let bmr = s.sex === 'male'? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
     : 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
-  const tdee = Math.round(bmr * parseFloat(s.activity));
+  let tdee = Math.round(bmr * parseFloat(s.activity));
+  let tdeeSource = 'estimate', tdeeDays = 0, floor = 1200;
+  if ((s.targetMode || 'garmin') === 'garmin') {
+    const m = measuredBurn();
+    if (m) { tdee = weeklyTdee(m); tdeeSource = 'garmin'; tdeeDays = m.days; floor = Math.max(1200, m.resting); }
+  }
   // Weekly rate → daily deficit/surplus (3,500 kcal per lb)
   const rate = parseFloat(s.rate) || 1;
   const dailyAdj = Math.round((rate * 3500) / 7);
   let adj = 0;
   if (s.goal === 'cut') adj = -dailyAdj;
   else if (s.goal === 'gain') adj = Math.round(dailyAdj * 0.5); // smaller surplus for lean gain
-  const cal = Math.max(1200, tdee + adj);
+  const cal = Math.max(floor, tdee + adj); // never below resting burn
 
   // Macro split (protein%, carb%, fat%)
   const splits = {
@@ -1986,15 +2020,42 @@ function calcGoals(s) {
   const fib    = Math.round(Math.max(25, 14 * (cal / 1000))); // 14g per 1000 kcal, min 25g
   const sod    = 2300; // standard health guideline, constant
 
-  return { cal, pro, carb, fat, satFat, sug, sod, fib, tdee };
+  return { cal, pro, carb, fat, satFat, sug, sod, fib, tdee, tdeeSource, tdeeDays };
+}
+
+// Average Garmin burn (resting + active) over the last 28 COMPLETED days —
+// long enough to stay steady week to week, the way a coach holds a target.
+// Today is excluded: Garmin only reaches Apple Health after Connect syncs.
+// Needs at least 7 days of data. Weight-trend adjustments come from the Coach.
+function measuredBurn() {
+  const today = todayStr(), from = addDaysStr(today, -28);
+  const rows = (_healthDaily || []).filter(r => r.date >= from && r.date < today && r.active_kcal > 0 && r.resting_kcal > 0);
+  if (rows.length < 7) return null;
+  return {
+    tdee: Math.round(avg(rows.map(r => r.active_kcal + r.resting_kcal))),
+    resting: Math.round(avg(rows.map(r => r.resting_kcal))),
+    days: rows.length,
+  };
+}
+
+// The target is refreshed once per week (Monday) so it doesn't drift day to day.
+function weeklyTdee(m) {
+  const key = `garminTdee_${activeProfileId}`, week = startOfWeekStr(todayStr());
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
+  if (st && st.week === week && st.tdee) return st.tdee;
+  try { localStorage.setItem(key, JSON.stringify({ week, tdee: m.tdee })); } catch (_) {}
+  return m.tdee;
 }
 
 async function recalcGoals() {
   const s = readSettingsFromForm();
   updateRateFieldVisibility(s.goal);
   await saveSettings(s);
+  _settings = s;
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
+  _targetMeta = { source: g.tdeeSource, tdee: g.tdee, days: g.tdeeDays };
   updateSettingsSummary(s, g);
   renderToday();
   // Flash saved confirmation
@@ -2018,6 +2079,7 @@ function readSettingsFromForm() {
     rate:     document.getElementById('sRate')?.value || '1',
     split:    document.getElementById('sSplit').value,
     units:    document.getElementById('sUnits').value,
+    targetMode: document.getElementById('sTargetMode')?.value || 'garmin',
   };
 }
 
@@ -2032,6 +2094,7 @@ function populateSettingsForm(s) {
   if (document.getElementById('sRate')) document.getElementById('sRate').value = s.rate || '1';
   document.getElementById('sSplit').value    = s.split;
   document.getElementById('sUnits').value    = s.units;
+  if (document.getElementById('sTargetMode')) document.getElementById('sTargetMode').value = s.targetMode || 'garmin';
   updateRateFieldVisibility(s.goal);
 }
 
@@ -2049,7 +2112,7 @@ function updateSettingsSummary(s, g) {
   if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
-    ['TDEE (total daily energy expenditure)', `${g.tdee.toLocaleString()} kcal`],
+    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg, updated Mondays)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
     ['Protein',  `${g.pro}g`],
     ['Carbs',    `${g.carb}g`],
     ['Fat',      `${g.fat}g`],
@@ -2069,11 +2132,14 @@ async function initSettings() {
   applySettings(await loadSettings());
 }
 
+let _settings = null, _targetMeta = { source: 'estimate' };
 function applySettings(s) {
+  _settings = s;
   populateSettingsForm(s);
   updateRateFieldVisibility(s.goal);
   const g = calcGoals(s);
   GOALS = { cal: g.cal, pro: g.pro, carb: g.carb, fat: g.fat, satFat: g.satFat, sug: g.sug, sod: g.sod, fib: g.fib, water: GOALS.water||128 };
+  _targetMeta = { source: g.tdeeSource, tdee: g.tdee, days: g.tdeeDays };
   updateSettingsSummary(s, g);
 }
 
@@ -2195,6 +2261,7 @@ function showView(name, direction) {
   if (name === 'history') renderHistory();
   if (name === 'habits')  renderHabits();
   if (name === 'today')   renderDayStrip(); // strip can't scroll to the right week while hidden
+  if (name === 'coach')   renderGarminCard();
 }
 
 // ── Liquid Glass tab bar ──────────────────────────────────────────
@@ -3184,23 +3251,19 @@ function renderExercise() {
   const items = _exercise[activeDate] || [];
   const c = document.getElementById('exerciseItems');
   if (!items.length) { c.innerHTML = '<div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div>'; return; }
-  const stravaSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="#FC4C02" style="flex-shrink:0;vertical-align:middle;margin-left:6px;" title="From Strava"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>`;
-  // Sort: Strava entries first (chronological by id), then manual.
-  const sorted = [...items].sort((a, b) => {
-    const aStrava = a.source === 'strava' ? 0 : 1;
-    const bStrava = b.source === 'strava' ? 0 : 1;
-    if (aStrava !== bStrava) return aStrava - bStrava;
-    return (a.id || 0) - (b.id || 0);
-  });
+  // Synced entries (Garmin via Apple Health, or older Strava imports) first, then manual
+  const synced = e => e.source === 'health' || e.source === 'strava';
+  const sorted = [...items].sort((a, b) => (synced(b) - synced(a)) || ((a.id || 0) - (b.id || 0)));
   c.innerHTML = sorted.map(e => {
-    const isStrava = e.source === 'strava';
     const cal = e.calories_burned || 0;
-    const calDisplay = cal > 0 ? `−${cal} kcal` : '<span style="color:var(--text-3);font-size:11px;">no kcal</span>';
-    const delBtn = isStrava
-      ? `<button class="del-btn" title="From Strava — manage in Strava app" disabled style="opacity:0.25;cursor:not-allowed;">×</button>`
+    const calDisplay = cal > 0 ? `${cal} kcal` : '<span style="color:var(--text-3);font-size:11px;">no kcal</span>';
+    const mins = e.moving_time ? ` · ${Math.round(e.moving_time / 60)} min` : '';
+    const badge = e.source === 'health' ? '<span class="src-badge">Garmin</span>' : e.source === 'strava' ? '<span class="src-badge">Strava</span>' : '';
+    const delBtn = synced(e)
+      ? `<button class="del-btn" title="Synced automatically" disabled style="opacity:0.25;cursor:not-allowed;">×</button>`
       : `<button class="del-btn" onclick="removeExercise(${e.id})" title="Remove">×</button>`;
     return `<div class="exercise-row">
-      <span class="exercise-name">${escapeHtml(e.name)}${isStrava ? stravaSvg : ''}</span>
+      <span class="exercise-name">${escapeHtml(e.name)}${badge}<span style="color:var(--text-3);font-size:11px;">${mins}</span></span>
       <span class="exercise-burned">${calDisplay}</span>
       ${delBtn}
     </div>`;
@@ -3208,153 +3271,6 @@ function renderExercise() {
 }
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-// ── Strava integration ────────────────────────────────────────────
-// Strava activities are persisted to exercise_logs alongside manual entries.
-// The frontend reads them via the normal exercise loader; there's no separate
-// in-memory cache. Sync triggers a server-side pull-and-upsert.
-let _stravaConnected = false;
-
-async function checkStravaConnection() {
-  if (!activeProfileId) return;
-  try {
-    const res = await api(`strava-auth?profile_id=${activeProfileId}`);
-    _stravaConnected = !!res?.connected;
-    updateStravaButton();
-  } catch(e) { _stravaConnected = false; }
-}
-
-// Per-day sync — fetches just the activities for the currently active date
-// and persists them. Used by the button on the Log tab. Faster than the full
-// 14-day sync since it only touches one day's worth of activities, and it
-// DOES fetch per-activity calorie details since the volume is small enough
-// to fit under the proxy timeout.
-async function syncStravaForActiveDate() {
-  if (!_stravaConnected) { showToast('Connect Strava first'); return; }
-  if (!activeProfileId || !activeDate) return;
-  const btn = document.getElementById('stravaDaySyncBtn');
-  const orig = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.innerHTML = 'Syncing...'; }
-  try {
-    const res = await api('strava-activities', {
-      method: 'POST',
-      body: { profile_id: activeProfileId, date: activeDate },
-    });
-    if (res?.error) {
-      showToast('Sync error: ' + res.error);
-    } else {
-      await Promise.all([loadExerciseFromServer(), loadHabitLogsFromServer()]);
-      renderExercise(); renderNetBanner();
-      const n = res?.synced || 0;
-      showToast(n > 0 ? `Synced ${n} activit${n === 1 ? 'y' : 'ies'} for this day` : 'No Strava activities for this day');
-    }
-  } catch(e) {
-    showToast('Sync error: ' + (e.message || 'unknown'));
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
-  }
-}
-
-// Manual sync — fetches the last 14 days of Strava activities,
-// upserting each into exercise_logs. After sync, we reload _exercise from the
-// server so the new rows are visible everywhere.
-async function syncStravaRecent() {
-  if (!_stravaConnected) { showToast('Connect Strava first'); return; }
-  if (!activeProfileId) { showToast('Select a profile first'); return; }
-  const btn = document.getElementById('stravaSyncBtn');
-  const origText = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
-  try {
-    const res = await api('strava-activities', {
-      method: 'POST',
-      body: { profile_id: activeProfileId, days: 14 },
-    });
-    if (res?.error) {
-      showToast('Sync error: ' + res.error);
-    } else {
-      // Reload exercise from server to pull in newly persisted Strava rows
-      await Promise.all([loadExerciseFromServer(), loadHabitLogsFromServer()]);
-      renderExercise(); renderNetBanner();
-      const ticked = res?.habits_ticked ? ' · habits updated' : '';
-      showToast(`Synced ${res?.synced || 0} activit${res?.synced === 1 ? 'y' : 'ies'} from Strava${ticked}`);
-    }
-  } catch(e) {
-    showToast('Sync error: ' + (e.message || 'unknown'));
-    console.error('[strava] sync failed:', e);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
-  }
-}
-
-function connectStrava() {
-  if (!activeProfileId) { showToast('Select a profile first'); return; }
-  const redirect = window.location.origin + '/';
-  const url = `https://www.strava.com/oauth/authorize?client_id=223909&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all&state=strava`;
-  window.location.href = url;
-}
-
-async function disconnectStrava() {
-  if (!confirm('Disconnect Strava? Already-synced activities will remain in your log.')) return;
-  try {
-    await api('strava-auth', { method: 'POST', body: { profile_id: activeProfileId, action: 'disconnect' } });
-    _stravaConnected = false;
-    updateStravaButton();
-    showToast('Strava disconnected');
-  } catch(e) { showToast('Could not disconnect'); }
-}
-
-function updateStravaButton() {
-  const btn = document.getElementById('stravaConnectBtn');
-  const syncBtn = document.getElementById('stravaSyncBtn');
-  const daySyncBtn = document.getElementById('stravaDaySyncBtn');
-  if (!btn) return;
-  if (_stravaConnected) {
-    btn.textContent = '✓ Connected — disconnect';
-    btn.onclick = disconnectStrava;
-    btn.style.color = '#1D9E75';
-    if (syncBtn) syncBtn.style.display = '';
-    if (daySyncBtn) daySyncBtn.style.display = 'flex';
-  } else {
-    btn.textContent = 'Connect Strava';
-    btn.onclick = connectStrava;
-    btn.style.color = '#FC4C02';
-    if (syncBtn) syncBtn.style.display = 'none';
-    if (daySyncBtn) daySyncBtn.style.display = 'none';
-  }
-}
-
-// On app load, check for ?code=...&state=strava (OAuth callback) and exchange
-async function handleStravaOAuthCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
-  if (!code || state !== 'strava') return;
-  if (!activeProfileId) {
-    showToast('Select a profile first, then reconnect Strava');
-    return; // Leave URL params intact so user can retry after picking profile
-  }
-  try {
-    showToast('Connecting Strava...');
-    const res = await api('strava-auth', { method: 'POST', body: { profile_id: activeProfileId, code } });
-    if (res?.connected) {
-      // Strip params only AFTER successful exchange so a failure leaves
-      // them available for retry/inspection.
-      const cleanUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, '', cleanUrl);
-      _stravaConnected = true;
-      updateStravaButton();
-      // Auto-sync the last 90 days right after connecting so the user
-      // immediately sees their history without a separate Sync tap.
-      syncStravaRecent();
-      showToast('Strava connected!');
-    } else {
-      showToast('Strava: unexpected response');
-    }
-  } catch(e) {
-    showToast('Strava connection failed: ' + (e.message || 'unknown'));
-    console.error('[strava] OAuth exchange failed:', e);
-  }
-}
 
 function getExerciseBurned() {
   return (_exercise[activeDate]||[]).reduce((a,e) => a + (e.calories_burned||0), 0);
@@ -3364,6 +3280,63 @@ function getExerciseBurned() {
 let _coachLoadedOnce = false;
 
 function coachCacheKey() { return `coach_${activeProfileId}`; }
+
+// ── Garmin (Apple Health) ─────────────────────────────────────────
+function renderGarminCard() {
+  const sub = document.getElementById('garminSub'), stats = document.getElementById('garminStats');
+  const pidEl = document.getElementById('garminPid');
+  if (pidEl) pidEl.textContent = activeProfileId || '';
+  if (!sub || !stats) return;
+  const rows = (_healthDaily || []).filter(r => r.date < todayStr()).sort((x, y) => x.date < y.date ? -1 : 1);
+  if (!rows.length) { sub.textContent = 'Not synced yet — set up the Shortcut, then tap Sync now'; stats.innerHTML = ''; return; }
+  const last = rows[rows.length - 1];
+  const synced = (_healthDaily || []).map(r => r.updated_at).filter(Boolean).sort().pop();
+  sub.textContent = `Through ${fmtDate(last.date, { month: 'short', day: 'numeric' })}` + (synced ? ` · synced ${timeAgo(synced)}` : '');
+  const today = todayStr();
+  const win = (from, to) => rows.filter(r => r.date >= from && r.date <= to);
+  const a7 = win(addDaysStr(today, -7), addDaysStr(today, -1)), a28 = win(addDaysStr(today, -35), addDaysStr(today, -8));
+  const mean = (rs, f) => { const v = rs.map(f).filter(x => x > 0); return v.length ? Math.round(avg(v)) : null; };
+  const cell = (label, cur, prev, fmt = v => v.toLocaleString()) => {
+    const d = cur != null && prev ? Math.round((cur - prev) / prev * 100) : null;
+    const dTxt = d == null ? '' : `<div class="d" style="color:${d >= 0 ? 'var(--green)' : 'var(--red, #E24B4A)'}">${d > 0 ? '+' : ''}${d}% vs 4 wks</div>`;
+    return `<div class="garmin-stat"><div class="v">${cur == null ? '—' : fmt(cur)}</div><div class="l">${label}</div>${dTxt}</div>`;
+  };
+  stats.innerHTML =
+    cell('burned / day', mean(a7, r => (r.active_kcal || 0) + (r.resting_kcal || 0)), mean(a28, r => (r.active_kcal || 0) + (r.resting_kcal || 0))) +
+    cell('active / day', mean(a7, r => r.active_kcal), mean(a28, r => r.active_kcal)) +
+    cell('steps / day', mean(a7, r => r.steps), mean(a28, r => r.steps));
+}
+
+function timeAgo(iso) {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  if (m < 1440) return `${Math.round(m / 60)}h ago`;
+  return `${Math.round(m / 1440)}d ago`;
+}
+
+function copyText(text, msg) {
+  navigator.clipboard?.writeText(text).then(() => showToast(msg || 'Copied'), () => showToast('Copy failed'));
+}
+
+// Runs the iOS Shortcut. Passing "open" tells it to open Garmin Connect first
+// so the watch syncs into Apple Health before it reads anything.
+function runHealthSync() {
+  try { sessionStorage.setItem('healthSyncPending', String(Date.now())); } catch (_) {}
+  location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent('Log Health Sync') + '&input=text&text=open';
+}
+
+// Coming back to Lōg after the Shortcut ran: pull in the fresh data
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !activeProfileId) return;
+  let t = 0; try { t = parseInt(sessionStorage.getItem('healthSyncPending') || '0'); } catch (_) {}
+  if (!t || Date.now() - t > 10 * 60000) return;
+  try { sessionStorage.removeItem('healthSyncPending'); } catch (_) {}
+  await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer()]);
+  if (_settings) applySettings(_settings);
+  renderGarminCard(); renderToday();
+  showToast('Garmin data updated');
+});
 
 function coachNotesKey() { return `coachNotes_${activeProfileId}`; }
 let _coachNotesTimer = null;
@@ -3416,6 +3389,7 @@ async function refreshCoachAnalysis() {
       profile_id: activeProfileId,
       today: todayStr(), // local date — the server runs in UTC
       goals: { cal: GOALS.cal, pro: GOALS.pro, carb: GOALS.carb, fat: GOALS.fat },
+      target: _targetMeta,
       notes: document.getElementById('coachNotes')?.value || '',
     }});
     if (res?.message) {
@@ -5133,9 +5107,6 @@ function openHabitModal(habitId) {
   const importantCb = document.getElementById('editHabitImportant');
   const track = document.getElementById('editHabitImportantTrack');
   const thumb = document.getElementById('editHabitImportantThumb');
-  const stravaField = document.getElementById('editHabitStravaField');
-  if (stravaField) stravaField.style.display = (_stravaConnected || h.auto_source === 'strava') ? '' : 'none';
-  document.getElementById('editHabitStrava')?.setAttribute('aria-checked', String(h.auto_source === 'strava'));
   const isImportant = h.important !== false; // default true
   if (importantCb) importantCb.checked = isImportant;
   if (track) track.style.background = isImportant ? 'var(--green)' : 'var(--border-med)';
@@ -5207,26 +5178,6 @@ function selectEditHabitColor(el) {
   document.querySelectorAll('#editHabitColorPicker .habit-color-swatch').forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
   autoSaveHabit();
-}
-
-// Saved with its own PATCH so regular habit edits keep working even before the
-// auto_source column exists in Supabase.
-async function toggleHabitStrava() {
-  const id = parseInt(document.getElementById('editHabitId').value);
-  const h = _habits.find(x => x.id === id);
-  const sw = document.getElementById('editHabitStrava');
-  if (!h || !sw) return;
-  const on = sw.getAttribute('aria-checked') !== 'true';
-  sw.setAttribute('aria-checked', String(on));
-  try {
-    await api(`habits?id=${id}`, { method: 'PATCH', body: { auto_source: on ? 'strava' : null } });
-    h.auto_source = on ? 'strava' : null;
-    cacheSet('habits', _habits);
-    showToast(on ? `${h.name} will check off from Strava workouts` : 'Strava auto-complete off');
-  } catch (e) {
-    sw.setAttribute('aria-checked', String(!on));
-    showToast('Could not save — has the Supabase update been run?');
-  }
 }
 
 function toggleHabitImportant() {
