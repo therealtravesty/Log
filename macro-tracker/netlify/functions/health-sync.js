@@ -9,6 +9,8 @@
 //       steps      : "2026-10-09|16234\n2026-10-10|9120"
 //       active     : "2026-10-09|610\n..."          (Active Energy, kcal)
 //       resting    : "2026-10-09|2253\n..."         (Resting Energy, kcal)
+//       steps_watch / active_watch / resting_watch     same, Source = Apple Watch
+//                    (fallback for days Garmin has nothing — e.g. Apple Watch days)
 //       workouts   : "Running|2026-10-10 09:34|2026-10-10 10:05|214|3.31\n..."
 //                    activity | start | end | kcal | distance (optional)
 //     → upserts health_daily (one row per day) and exercise_logs (one row per
@@ -51,7 +53,7 @@ function isDate(s) {
   return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
 }
 // Plausible daily ranges — anything outside is a Shortcut wiring mistake, not data
-const LIMITS = { steps: [1, 100000], active: [1, 8000], resting: [500, 5000] };
+const LIMITS = { steps: [1, 100000], active: [1, 6000], resting: [800, 4500] }; // same bounds as the app
 const inLimits = (k, v) => v >= LIMITS[k][0] && v <= LIMITS[k][1];
 const lines = t => String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 // "2026-10-10 09:34" or "2026-10-10T09:34:00" → Date treated as local wall time
@@ -101,17 +103,24 @@ exports.handler = async (event) => {
   try {
     // Daily totals — a zero/missing field never overwrites a real value,
     // so a day Garmin hasn't synced yet can't wipe out good data.
-    const steps = dayValues(body.steps), active = dayValues(body.active), resting = dayValues(body.resting);
-    const dates = [...new Set([...Object.keys(steps), ...Object.keys(active), ...Object.keys(resting)])];
-    let skipped = 0;
+    // Garmin (Source = Connect) first; Apple Watch only fills a field Garmin left empty.
+    // Never summed, so a day you switched watches can't double count.
+    const g = { steps: dayValues(body.steps), active: dayValues(body.active), resting: dayValues(body.resting) };
+    const w = { steps: dayValues(body.steps_watch), active: dayValues(body.active_watch), resting: dayValues(body.resting_watch) };
+    const dates = [...new Set([...Object.values(g), ...Object.values(w)].flatMap(Object.keys))];
+    let skipped = 0, watchDays = 0;
     const byShape = {};
     dates.forEach(date => {
       const row = { profile_id, date, updated_at: new Date().toISOString() };
-      if (inLimits('steps', steps[date])) row.steps = steps[date];
-      if (inLimits('active', active[date])) row.active_kcal = active[date];
-      if (inLimits('resting', resting[date])) row.resting_kcal = resting[date];
-      else if (resting[date] > 0 || active[date] > 0) skipped++;
+      const used = new Set();
+      for (const [k, col] of [['steps', 'steps'], ['active', 'active_kcal'], ['resting', 'resting_kcal']]) {
+        if (inLimits(k, g[k][date])) { row[col] = g[k][date]; used.add('garmin'); }
+        else if (inLimits(k, w[k][date])) { row[col] = w[k][date]; used.add('apple_watch'); }
+        else if (g[k][date] > 0 || w[k][date] > 0) skipped++;
+      }
       if (Object.keys(row).length <= 3) return;
+      row.source = used.size > 1 ? 'mixed' : [...used][0];
+      if (used.has('apple_watch')) watchDays++;
       const shape = Object.keys(row).sort().join(',');
       (byShape[shape] = byShape[shape] || []).push(row);
     });
@@ -145,7 +154,8 @@ exports.handler = async (event) => {
 
     const badLines = lines(body.workouts).length - workouts.length;
     const warn = skipped || badLines ? ` (skipped ${skipped + badLines} odd value${skipped + badLines === 1 ? '' : 's'} — check the Shortcut)` : '';
-    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}`;
+    const watchNote = watchDays ? ` (${watchDays} from Apple Watch)` : '';
+    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'}${watchNote} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}`;
     return json(200, { ok: true, days: dates.length, workouts: workouts.length, message });
   } catch (e) {
     console.error('[health-sync]', e.message);

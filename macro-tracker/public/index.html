@@ -1473,7 +1473,7 @@ function hydrateFromCache() {
   _customFoods = cacheGet('customFoods') || [];
   _customExercises = cacheGet('customExercises') || [];
   _habits = habits || [];
-  _healthDaily = cacheGet('healthDaily') || [];
+  _healthDaily = cleanHealthRows(cacheGet('healthDaily'));
   const logs = cacheGet('habitLogs');
   _habitLogs = logs || {};
   _habitLogsReady = !!logs;
@@ -1715,10 +1715,21 @@ async function loadExerciseFromServer() {
 
 // Garmin daily totals (steps, active + resting kcal) synced from Apple Health
 let _healthDaily = [];
+// Watch glitches happen (e.g. 8,779 active kcal in one day). Values outside
+// what a person can plausibly burn or walk are dropped everywhere — History,
+// the Garmin card, the calorie target, and what the Coach sees.
+const HEALTH_BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500] };
+function cleanHealthRows(rows) {
+  return (rows || []).map(r => {
+    const c = { ...r };
+    for (const [k, [lo, hi]] of Object.entries(HEALTH_BOUNDS)) if (c[k] != null && (c[k] < lo || c[k] > hi)) c[k] = null;
+    return c;
+  });
+}
 async function loadHealthDailyFromServer() {
   try {
     const rows = await api(`health-sync?profile_id=${activeProfileId}&days=120`);
-    if (Array.isArray(rows)) { _healthDaily = rows; cacheSet('healthDaily', rows); }
+    if (Array.isArray(rows)) { _healthDaily = cleanHealthRows(rows); cacheSet('healthDaily', _healthDaily); }
   } catch (e) {
     const cached = cacheGet('healthDaily');
     if (cached) _healthDaily = cached;
@@ -4249,7 +4260,12 @@ function renderHistChart(w) {
     cfg = {
       type: 'bar', data: { labels, datasets },
       options: { ...chartDefaults, scales: baseScales({ beginAtZero: true }),
-        plugins: { ...chartDefaults.plugins, tooltip: tooltip(ctx => ctx.datasetIndex === 1 ? ` ${ctx.dataset.label}` : (ctx.parsed.y == null ? '' : ` ${ctx.parsed.y.toLocaleString()}${m.unit}${per}`)) } },
+        plugins: { ...chartDefaults.plugins, tooltip: tooltip(ctx => ctx.datasetIndex === 1 ? ` ${ctx.dataset.label}` : (ctx.parsed.y == null ? '' : ` ${ctx.parsed.y.toLocaleString()}${m.unit}${per}`), {
+          footer: items => {
+            if (w.unit !== 'day' || key === 'workouts') return '';
+            const src = healthOn(w.buckets[items[0].dataIndex].start)?.source;
+            return src === 'apple_watch' ? 'From Apple Watch' : src === 'mixed' ? 'Garmin + Apple Watch' : '';
+          } }) } },
     };
   }
 

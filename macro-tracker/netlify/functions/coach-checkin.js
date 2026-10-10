@@ -147,7 +147,13 @@ exports.handler = async (event) => {
     });
 
     // ── Garmin daily totals (via Apple Health), completed days only ──
-    const health = (healthRows || []).filter(h => h.date < today);
+    // Drop watch glitches (same bounds as the app) before averaging
+    const BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500] };
+    const health = (healthRows || []).filter(h => h.date < today).map(h => {
+      const c = { ...h };
+      for (const [k, [lo, hi]] of Object.entries(BOUNDS)) if (c[k] != null && (c[k] < lo || c[k] > hi)) c[k] = null;
+      return c;
+    });
     const hAvg = (from, to, f) => { const r = health.filter(h => inRange(h.date, from, to) && h[f]); return r.length ? { v: Math.round(r.reduce((a, h) => a + h[f], 0) / r.length), n: r.length } : null; };
     const yest = addDays(today, -1);
     const garmin = {
