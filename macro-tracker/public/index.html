@@ -1066,6 +1066,7 @@
   <div class="view" id="view-history">
     <div class="hist-seg-wrap" id="histGroupTabs">
       <button class="hist-seg active" data-group="habits" onclick="setHistGroup('habits')">Habits</button>
+      <button class="hist-seg" data-group="activity" onclick="setHistGroup('activity')">Activity</button>
       <button class="hist-seg" data-group="weight" onclick="setHistGroup('weight')">Weight</button>
       <button class="hist-seg" data-group="nutrition" onclick="setHistGroup('nutrition')">Nutrition</button>
       <button class="hist-seg" data-group="drinks" onclick="setHistGroup('drinks')">Drinks</button>
@@ -1497,6 +1498,7 @@ async function refreshFromServer() {
   ]);
   if (pid !== activeProfileId) return; // profile switched mid-refresh
   if (_settings) applySettings(_settings); // Garmin data may change the calorie target
+  setTimeout(maybeAutoRefreshCoach, 1500); // fresh read in the background, ready for the Coach tab
   rerenderAfterRefresh();
 }
 
@@ -2008,10 +2010,16 @@ function calcGoals(s) {
     lowcarb:     [0.40, 0.20, 0.40],
     balanced:    [0.333, 0.333, 0.333],
   };
-  const [pPct, cPct, fPct] = splits[s.split] || splits.highprotein;
-  const pro  = Math.round((cal * pPct) / 4);
-  const carb = Math.round((cal * cPct) / 4);
-  const fat  = Math.round((cal * fPct) / 9);
+  const [, cPct, fPct] = splits[s.split] || splits.highprotein;
+  // Protein is set by bodyweight (1 g per lb, the standard coaching guideline),
+  // not as a % of calories. Carbs and fat split what's left in the chosen ratio,
+  // with fat kept at or above 0.3 g per lb.
+  const lbs = bodyweightLbs(s);
+  const pro = Math.round(lbs);
+  const rest = Math.max(0, cal - pro * 4);
+  let fat = Math.round((rest * fPct / (cPct + fPct)) / 9);
+  fat = Math.max(fat, Math.round(lbs * 0.3));
+  const carb = Math.max(0, Math.round((rest - fat * 9) / 4));
 
   // Derived limits — scale with calories
   const calScale = cal / 2000;
@@ -2023,13 +2031,25 @@ function calcGoals(s) {
   return { cal, pro, carb, fat, satFat, sug, sod, fib, tdee, tdeeSource, tdeeDays };
 }
 
+// Latest weigh-in from the last 30 days, else the weight in Goals (in lb)
+function bodyweightLbs(s) {
+  const cutoff = typeof addDaysStr === 'function' ? addDaysStr(todayStr(), -30) : '';
+  const recent = Object.keys(_weights || {}).filter(d => d >= cutoff && _weights[d]).sort().pop();
+  if (recent) return parseFloat(_weights[recent]);
+  const w = parseFloat(s.weight) || 183;
+  return s.units === 'metric' ? w * 2.20462 : w;
+}
+
 // Average Garmin burn (resting + active) over the last 28 COMPLETED days —
 // long enough to stay steady week to week, the way a coach holds a target.
 // Today is excluded: Garmin only reaches Apple Health after Connect syncs.
 // Needs at least 7 days of data. Weight-trend adjustments come from the Coach.
 function measuredBurn() {
   const today = todayStr(), from = addDaysStr(today, -28);
-  const rows = (_healthDaily || []).filter(r => r.date >= from && r.date < today && r.active_kcal > 0 && r.resting_kcal > 0);
+  // Plausibility bounds keep a bad sync (e.g. step counts in a calorie field)
+  // from ever setting the target
+  const rows = (_healthDaily || []).filter(r => r.date >= from && r.date < today &&
+    r.resting_kcal >= 800 && r.resting_kcal <= 4500 && r.active_kcal > 0 && r.active_kcal <= 6000);
   if (rows.length < 7) return null;
   return {
     tdee: Math.round(avg(rows.map(r => r.active_kcal + r.resting_kcal))),
@@ -2038,15 +2058,9 @@ function measuredBurn() {
   };
 }
 
-// The target is refreshed once per week (Monday) so it doesn't drift day to day.
-function weeklyTdee(m) {
-  const key = `garminTdee_${activeProfileId}`, week = startOfWeekStr(todayStr());
-  let st = null;
-  try { st = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
-  if (st && st.week === week && st.tdee) return st.tdee;
-  try { localStorage.setItem(key, JSON.stringify({ week, tdee: m.tdee })); } catch (_) {}
-  return m.tdee;
-}
+// A 28-day average barely moves day to day, so no extra locking is needed.
+function weeklyTdee(m) { return m.tdee; }
+try { Object.keys(localStorage).filter(k => k.startsWith('garminTdee_')).forEach(k => localStorage.removeItem(k)); } catch (_) {}
 
 async function recalcGoals() {
   const s = readSettingsFromForm();
@@ -2112,8 +2126,8 @@ function updateSettingsSummary(s, g) {
   if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
-    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg, updated Mondays)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
-    ['Protein',  `${g.pro}g`],
+    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
+    ['Protein',  `${g.pro}g (1 g/lb bodyweight)`],
     ['Carbs',    `${g.carb}g`],
     ['Fat',      `${g.fat}g`],
     ['Sat fat',  `${g.satFat}g limit`],
@@ -2261,7 +2275,7 @@ function showView(name, direction) {
   if (name === 'history') renderHistory();
   if (name === 'habits')  renderHabits();
   if (name === 'today')   renderDayStrip(); // strip can't scroll to the right week while hidden
-  if (name === 'coach')   renderGarminCard();
+  if (name === 'coach')   { renderGarminCard(); setTimeout(maybeAutoRefreshCoach, 300); }
 }
 
 // ── Liquid Glass tab bar ──────────────────────────────────────────
@@ -3336,6 +3350,7 @@ document.addEventListener('visibilitychange', async () => {
   if (_settings) applySettings(_settings);
   renderGarminCard(); renderToday();
   showToast('Garmin data updated');
+  maybeAutoRefreshCoach();
 });
 
 function coachNotesKey() { return `coachNotes_${activeProfileId}`; }
@@ -3372,16 +3387,45 @@ function renderCoachMessage(message, generated_at) {
     else if (mins < 60) label = `${mins} min ago`;
     else if (mins < 1440) label = `${Math.round(mins/60)} hr ago`;
     else label = `${Math.round(mins/1440)} day${Math.round(mins/1440) === 1 ? '' : 's'} ago`;
-    timestamp.textContent = `Last analysis: ${label}`;
+    timestamp.textContent = `Updated ${label} · updates automatically`;
   }
 }
 
-async function refreshCoachAnalysis() {
+// ── Automatic coach updates ──
+// The coach re-runs by itself when its inputs change (new Garmin sync, weigh-in,
+// workouts, notes, or target), at most once every 3 hours, and at least daily.
+// Each run is one Claude call, so this stays to a few a day at most.
+let _coachBusy = false;
+const COACH_MIN_GAP = 3 * 3600e3, COACH_MAX_AGE = 20 * 3600e3;
+function coachDataStamp() {
+  const lastSync = (_healthDaily || []).map(r => r.updated_at || '').sort().pop() || '';
+  const lastW = Object.keys(_weights || {}).filter(d => _weights[d]).sort().pop() || '';
+  const since = addDaysStr(todayStr(), -14);
+  const ex = Object.keys(_exercise || {}).filter(d => d >= since).reduce((a, d) => a + (_exercise[d] || []).length, 0);
+  let notes = document.getElementById('coachNotes')?.value || '';
+  if (!notes) { try { notes = localStorage.getItem(coachNotesKey()) || ''; } catch (_) {} }
+  return [lastSync, lastW, lastW && _weights[lastW], ex, GOALS.cal, notes.length, notes.slice(-40)].join('|');
+}
+function maybeAutoRefreshCoach() {
+  if (_coachBusy || !activeProfileId || !navigator.onLine) return;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(coachCacheKey()) || 'null'); } catch (_) {}
+  const age = cached?.generated_at ? Date.now() - new Date(cached.generated_at) : Infinity;
+  if (age < COACH_MIN_GAP) return;
+  if (!cached || age > COACH_MAX_AGE || cached.stamp !== coachDataStamp()) refreshCoachAnalysis({ silent: true });
+}
+
+async function refreshCoachAnalysis(opts = {}) {
   if (!activeProfileId) { showToast('Select a profile first'); return; }
+  if (_coachBusy) return;
+  _coachBusy = true;
+  const silent = !!opts.silent;
   const btn = document.getElementById('coachRefreshBtn');
   const content = document.getElementById('coachContent');
+  const stamp = document.getElementById('coachUpdatedAt');
   if (btn) { btn.textContent = 'Analyzing...'; btn.disabled = true; }
-  if (content) {
+  if (silent && stamp) stamp.textContent = 'Updating with your latest data…';
+  if (content && !silent) {
     content.innerHTML = '<div style="color:var(--text-3);font-size:13px;text-align:center;padding:2rem 1rem;">Comparing your weight, workouts, and habits to your plan...<br>This usually takes 5-10 seconds.</div>';
   }
   try {
@@ -3395,17 +3439,19 @@ async function refreshCoachAnalysis() {
     if (res?.message) {
       renderCoachMessage(res.message, res.generated_at);
       try {
-        localStorage.setItem(coachCacheKey(), JSON.stringify({ message: res.message, generated_at: res.generated_at }));
+        localStorage.setItem(coachCacheKey(), JSON.stringify({ message: res.message, generated_at: res.generated_at, stamp: coachDataStamp() }));
       } catch(_) {}
-    } else {
+    } else if (!silent) {
       content.textContent = 'No response from coach. Try again.';
     }
   } catch(e) {
+    if (silent) { loadCoachFromCache(); return; } // keep the last analysis on a background failure
     if (content) {
       content.innerHTML = `<div style="color:var(--red-text);font-size:13px;padding:1rem;">Coach error: ${e.message || 'unknown'}</div>`;
     }
     showToast('Coach error: ' + (e.message || 'unknown'));
   } finally {
+    _coachBusy = false;
     if (btn) { btn.textContent = 'Refresh'; btn.disabled = false; }
   }
 }
@@ -3863,7 +3909,20 @@ const HIST_RANGES = {
 let _histRange  = '30d';
 let _histOffset = 0;            // windows back from today (‹ › stepper)
 let _histGroup  = 'habits';     // habits | weight | nutrition | drinks
-const _histMetric = { nutrition: 'calories', habits: 'all' };
+const _histMetric = { nutrition: 'calories', habits: 'all', activity: 'steps' };
+const ACTIVITY_METRICS = {
+  steps:    { label: 'Steps',          unit: '',       goal: 15000, goalWord: 'Goal' },
+  active:   { label: 'Active calories', unit: ' kcal' },
+  burn:     { label: 'Total burned',   unit: ' kcal' },
+  workouts: { label: 'Workouts',       unit: ' min' },
+};
+// Outdoor walks/hikes count toward steps, not workouts (treadmill walks count)
+function isWorkoutEntry(e) {
+  if (e.source !== 'health' && e.source !== 'strava') return true; // manual entries
+  const t = String(e.name || '');
+  return !(/walk|hik/i.test(t) && !/treadmill|indoor/i.test(t));
+}
+function healthOn(d) { return (_healthDaily || []).find(r => r.date === d); }
 
 const NUTRI_METRICS = {
   calories: { label: 'Calories', unit: ' kcal', fn: t => t.cal,      goal: () => GOALS.cal, word: 'Target', good: 'under', color: '55,138,221' },
@@ -3902,6 +3961,7 @@ function histEarliest(group) {
   let c = [];
   if (group === 'weight') c = Object.keys(_weights).filter(d => _weights[d]);
   else if (group === 'habits') c = _habits.map(habitStartDate);
+  else if (group === 'activity') c = (_healthDaily || []).map(r => r.date);
   else c = Object.keys(_allFoods).filter(d => (_allFoods[d] || []).length);
   return c.sort()[0] || todayStr();
 }
@@ -4009,6 +4069,7 @@ function renderHistMetricChips() {
   const el = document.getElementById('histMetricChips');
   let items = [];
   if (_histGroup === 'nutrition') items = Object.entries(NUTRI_METRICS).map(([k, m]) => ({ key: k, label: m.label }));
+  if (_histGroup === 'activity') items = Object.entries(ACTIVITY_METRICS).map(([k, m]) => ({ key: k, label: m.label }));
   if (_histGroup === 'habits' && _histMetric.habits !== 'all' && !_habits.some(h => String(h.id) === _histMetric.habits)) _histMetric.habits = 'all';
   el.style.display = items.length ? '' : 'none';
   el.innerHTML = items.map(i => `<button class="chart-tab${_histMetric[_histGroup] === i.key ? ' active' : ''}" onclick="setHistMetric('${i.key}')">${i.color ? `<span class="hist-chip-dot" style="background:${i.color}"></span>` : ''}${i.label}</button>`).join('');
@@ -4149,6 +4210,47 @@ function renderHistChart(w) {
       heat.style.display = 'block';
       renderHabitHeatmap(habits, w.start, w.end, sel === 'all' ? null : habits[0].color);
     }
+  }
+
+  // ── Activity: Garmin steps / calories (avg per day with data) and workout minutes ──
+  else if (_histGroup === 'activity') {
+    const key = _histMetric.activity, m = ACTIVITY_METRICS[key];
+    titleEl.textContent = m.label;
+    const today = todayStr();
+    const val = d => {
+      const h = healthOn(d);
+      if (key === 'steps') return h?.steps || null;
+      if (key === 'active') return h?.active_kcal || null;
+      if (key === 'burn') return h && h.active_kcal && h.resting_kcal ? h.active_kcal + h.resting_kcal : null;
+      // workouts: minutes per day, counting rest days as 0 once Garmin data exists for that day
+      const mins = (_exercise[d] || []).filter(isWorkoutEntry).reduce((a, e) => a + Math.round((e.moving_time || 0) / 60), 0);
+      return mins || (h ? 0 : null);
+    };
+    // Today is still syncing, so it's left out of averages
+    const perBucket = w.buckets.map(b => b.days.filter(d => d < today).map(val).filter(v => v != null));
+    const data = perBucket.map(vs => vs.length ? Math.round(avg(vs)) : null);
+    const all = perBucket.flat();
+    if (!all.length) { headEl.textContent = '—'; return histEmpty('No Garmin data in this range. Tap Sync now on the Coach tab.'); }
+    const overall = Math.round(avg(all));
+    headEl.textContent = `${overall.toLocaleString()}${m.unit}`;
+    if (key === 'workouts') {
+      const days = w.days.filter(d => d < today && (_exercise[d] || []).some(isWorkoutEntry)).length;
+      // Only count weeks that have Garmin or workout data, so ranges reaching back
+      // before syncing started don't dilute the weekly rate
+      const weeks = Math.max(1, w.days.filter(d => d < today && (healthOn(d) || (_exercise[d] || []).length)).length / 7);
+      subEl.textContent = `Avg per day · ${days} workout days (${(days / weeks).toFixed(1)} per week, plan 6)`;
+    } else if (key === 'steps') {
+      const hit = all.filter(v => v >= m.goal).length;
+      subEl.textContent = `Daily average · hit 15k on ${hit} of ${all.length} days`;
+    } else subEl.textContent = `Daily average · ${all.length} days of Garmin data`;
+    const color = key === 'steps' ? '55,138,221' : key === 'workouts' ? '58,125,68' : '216,90,48';
+    const datasets = [{ data, backgroundColor: data.map(v => v == null ? 'transparent' : (m.goal && v < m.goal ? `rgba(${color},0.4)` : `rgba(${color},0.85)`)), borderRadius: 4, minBarLength: 2 }];
+    if (m.goal) datasets.push(goalLine(m.goal, `${m.goalWord}: ${m.goal.toLocaleString()}`));
+    cfg = {
+      type: 'bar', data: { labels, datasets },
+      options: { ...chartDefaults, scales: baseScales({ beginAtZero: true }),
+        plugins: { ...chartDefaults.plugins, tooltip: tooltip(ctx => ctx.datasetIndex === 1 ? ` ${ctx.dataset.label}` : (ctx.parsed.y == null ? '' : ` ${ctx.parsed.y.toLocaleString()}${m.unit}${per}`)) } },
+    };
   }
 
   // ── Weight: average weigh-in per bucket, gaps bridged ──

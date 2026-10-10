@@ -43,12 +43,21 @@ function num(v) {
   const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : null;
 }
-const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s);
+// A real calendar date (rejects things like 2026-29-14 from a lowercase-mm format)
+function isDate(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+// Plausible daily ranges — anything outside is a Shortcut wiring mistake, not data
+const LIMITS = { steps: [1, 100000], active: [1, 8000], resting: [500, 5000] };
+const inLimits = (k, v) => v >= LIMITS[k][0] && v <= LIMITS[k][1];
 const lines = t => String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 // "2026-10-10 09:34" or "2026-10-10T09:34:00" → Date treated as local wall time
 function wall(s) {
   const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
-  return m ? { date: `${m[1]}-${m[2]}-${m[3]}`, mins: Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000, iso: `${m[1]}-${m[2]}-${m[3]}T${m[4].padStart(2, '0')}:${m[5]}` } : null;
+  return m && isDate(`${m[1]}-${m[2]}-${m[3]}`) ? { date: `${m[1]}-${m[2]}-${m[3]}`, mins: Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000, iso: `${m[1]}-${m[2]}-${m[3]}T${m[4].padStart(2, '0')}:${m[5]}` } : null;
 }
 
 // Parses "date|value" lines into { date: value }
@@ -94,12 +103,14 @@ exports.handler = async (event) => {
     // so a day Garmin hasn't synced yet can't wipe out good data.
     const steps = dayValues(body.steps), active = dayValues(body.active), resting = dayValues(body.resting);
     const dates = [...new Set([...Object.keys(steps), ...Object.keys(active), ...Object.keys(resting)])];
+    let skipped = 0;
     const byShape = {};
     dates.forEach(date => {
       const row = { profile_id, date, updated_at: new Date().toISOString() };
-      if (steps[date] > 0) row.steps = steps[date];
-      if (active[date] > 0) row.active_kcal = active[date];
-      if (resting[date] > 0) row.resting_kcal = resting[date];
+      if (inLimits('steps', steps[date])) row.steps = steps[date];
+      if (inLimits('active', active[date])) row.active_kcal = active[date];
+      if (inLimits('resting', resting[date])) row.resting_kcal = resting[date];
+      else if (resting[date] > 0 || active[date] > 0) skipped++;
       if (Object.keys(row).length <= 3) return;
       const shape = Object.keys(row).sort().join(',');
       (byShape[shape] = byShape[shape] || []).push(row);
@@ -132,7 +143,9 @@ exports.handler = async (event) => {
       });
     }
 
-    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}`;
+    const badLines = lines(body.workouts).length - workouts.length;
+    const warn = skipped || badLines ? ` (skipped ${skipped + badLines} odd value${skipped + badLines === 1 ? '' : 's'} — check the Shortcut)` : '';
+    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}`;
     return json(200, { ok: true, days: dates.length, workouts: workouts.length, message });
   } catch (e) {
     console.error('[health-sync]', e.message);
