@@ -304,6 +304,144 @@
   .garmin-setup-row button { flex-shrink: 0; border: 0.5px solid var(--border-med); background: var(--surface); border-radius: 8px; padding: 3px 8px; font-size: 11px; color: var(--text-2); cursor: pointer; }
   .garmin-log-sync { width: 100%; margin-top: 10px; padding: 8px 12px; background: none; border: 0.5px solid var(--border-med); border-radius: var(--radius); font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--text-2); cursor: pointer; }
   .src-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--bg); color: var(--text-3); font-size: 10px; font-weight: 500; vertical-align: middle; }
+
+  /* ── Liquid Glass material (shared) ── */
+  .glass { background: rgba(255,255,255,0.62); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8);
+    border: 0.5px solid rgba(255,255,255,0.75); box-shadow: 0 10px 30px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.03); }
+  @media (prefers-color-scheme: dark) { .glass { background: rgba(38,38,36,0.58); border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.3); } }
+
+  /* ── Left today ── */
+  .left-card { width: 100%; display: flex; align-items: stretch; gap: 16px; padding: 14px 40px 14px 16px; margin: 4px 0 10px; border-radius: 20px; text-align: left; cursor: pointer; position: relative; font-family: 'DM Sans', system-ui, sans-serif; color: var(--text); -webkit-tap-highlight-color: transparent; transition: transform 0.15s; }
+  .left-card:active { transform: scale(0.985); }
+  .left-col { flex: 1; min-width: 0; }
+  .left-lbl { font-size: 11px; color: var(--text-2); font-weight: 500; }
+  .left-lbl.over { color: var(--red, #E24B4A); }
+  .left-val { font-size: 28px; font-weight: 650; letter-spacing: -0.6px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .left-val small { font-size: 12px; font-weight: 500; color: var(--text-3); margin-left: 3px; letter-spacing: 0; }
+  .left-bar { height: 5px; border-radius: 3px; background: rgba(128,128,128,0.18); margin-top: 7px; overflow: hidden; }
+  .left-bar span { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--blue); transition: width 0.5s cubic-bezier(.32,.72,0,1); }
+  .left-bar.pro span { background: var(--green); }
+  .left-chev { position: absolute; right: 14px; top: 50%; width: 16px; height: 16px; margin-top: -8px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.25s; }
+  .left-card[aria-expanded="true"] .left-chev { transform: rotate(180deg); }
+  .nutrient-details { display: none; }
+  .nutrient-details.open { display: block; animation: fadeDown 0.25s ease; }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  /* ── Food log rows ── */
+  .meal-section + .meal-section { margin-top: 6px; }
+  .meal-header { gap: 8px; }
+  .meal-sum { font: 11px 'DM Mono', monospace; color: var(--text-2); white-space: nowrap; }
+  .meal-add { width: 30px; height: 30px; flex-shrink: 0; border-radius: 15px; border: 0.5px solid var(--border-med); background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .meal-add svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+  .meal-add:active { transform: scale(0.92); background: var(--bg); }
+  .meal-save { font-size: 11px; color: var(--text-3); background: none; border: none; padding: 4px 2px; cursor: pointer; }
+  .food-swipe { position: relative; overflow: hidden; border-bottom: 0.5px solid var(--border); }
+  .food-swipe:last-of-type { border-bottom: none; }
+  .food-del { position: absolute; top: 0; right: 0; bottom: 0; width: 84px; border: none; background: #E24B4A; color: #fff; font: 600 13px 'DM Sans', system-ui, sans-serif; cursor: pointer; }
+  .food-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; background: var(--surface); cursor: pointer; transition: transform 0.28s cubic-bezier(.32,.72,0,1); touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+  .food-row.dragging { transition: none; }
+  .food-row:active { background: var(--bg); }
+  .food-row-main { flex: 1; min-width: 0; }
+  .food-row-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .food-row-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .food-row-nums { text-align: right; font: 12px 'DM Mono', monospace; color: var(--text-2); line-height: 1.35; flex-shrink: 0; }
+  .food-row-nums b { font-weight: 600; color: var(--text); font-size: 14px; }
+  .meal-empty-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0 8px; font-size: 13px; color: var(--text-3); }
+  .repeat-chip { font: 500 12px 'DM Sans', system-ui, sans-serif; padding: 6px 11px; border-radius: 14px; border: none; background: rgba(55,138,221,0.12); color: var(--blue); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%; }
+  .log-hint { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 10px; }
+
+  /* ── Floating Log food button ── */
+  .log-fab { position: fixed; z-index: 190; left: 50%; bottom: calc(max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)) + 76px); transform: translateX(-50%) translateY(16px) scale(0.96); opacity: 0; pointer-events: none;
+    display: flex; align-items: center; gap: 7px; height: 46px; padding: 0 20px 0 16px; border-radius: 23px; font: 600 15px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.25s ease, transform 0.35s cubic-bezier(.34,1.4,.64,1); }
+  .log-fab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  body.log-view .log-fab { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+  body.log-view .log-fab:active { transform: translateX(-50%) scale(0.95); }
+  body.sheet-open .log-fab { opacity: 0; pointer-events: none; }
+  body.log-view { padding-bottom: calc(170px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ── Add-food sheet ── */
+  .sheet-backdrop { position: fixed; inset: 0; z-index: 240; background: rgba(0,0,0,0.28); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+  body.sheet-open .sheet-backdrop { opacity: 1; pointer-events: auto; }
+  .log-sheet { position: fixed; z-index: 250; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto; max-height: 88vh; display: flex; flex-direction: column;
+    border-radius: 28px 28px 0 0; border-bottom: none; background: rgba(250,249,246,0.86); transform: translateY(105%); visibility: hidden;
+    transition: transform 0.42s cubic-bezier(.32,.72,0,1), visibility 0s linear 0.42s; }
+  @media (prefers-color-scheme: dark) { .log-sheet { background: rgba(30,30,28,0.86); } }
+  body.sheet-open .log-sheet { transform: translateY(0); visibility: visible; transition: transform 0.42s cubic-bezier(.32,.72,0,1); }
+  .log-sheet.dragging { transition: none !important; }
+  .sheet-grab-zone { padding: 9px 0 6px; cursor: grab; touch-action: none; }
+  .sheet-grab { width: 38px; height: 5px; border-radius: 3px; background: rgba(128,128,128,0.4); margin: 0 auto; }
+  .sheet-head { display: flex; align-items: center; gap: 10px; padding: 2px 16px 0; touch-action: none; }
+  .sheet-title { font-size: 17px; font-weight: 650; white-space: nowrap; }
+  .meal-chips { margin: 0 !important; background: none !important; border: none !important; padding: 0 !important; gap: 4px !important; overflow-x: auto; scrollbar-width: none; justify-content: flex-end; }
+  .meal-chips::-webkit-scrollbar { display: none; }
+  .meal-chips .meal-tab { flex: 0 0 auto; padding: 6px 11px; border-radius: 15px; border: 0.5px solid var(--border-med); background: transparent; font-size: 12px; }
+  .meal-chips .meal-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .sheet-seg { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px 16px 6px; padding: 3px; border-radius: 13px; background: rgba(128,128,128,0.13); }
+  .sheet-seg button { position: relative; z-index: 1; height: 32px; border: none; background: none; font: 500 13px 'DM Sans', system-ui, sans-serif; color: var(--text-2); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 0.2s; }
+  .sheet-seg button.on { color: var(--text); font-weight: 600; }
+  .sheet-seg-lens { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 4); border-radius: 10px; background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,1);
+    transform: translateX(calc(var(--i) * 100%)); transition: transform 0.38s cubic-bezier(.34,1.3,.64,1); }
+  @media (prefers-color-scheme: dark) { .sheet-seg-lens { background: rgba(255,255,255,0.14); box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15); } }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 6px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .sheet-panel { display: none; }
+  .sheet-panel.on { display: block; animation: panelIn 0.22s ease; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .sheet-empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 28px 12px; line-height: 1.5; }
+  .sheet-sec { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); margin: 14px 2px 4px; }
+  .repeat-card { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 16px; background: rgba(55,138,221,0.11); margin-top: 6px; }
+  .repeat-card .rc-main { flex: 1; min-width: 0; }
+  .repeat-card .rc-title { font-size: 14px; font-weight: 600; color: var(--blue); }
+  .repeat-card .rc-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill-btn { height: 34px; padding: 0 16px; border-radius: 17px; border: none; background: var(--text); color: var(--bg); font: 600 13px 'DM Sans', system-ui, sans-serif; cursor: pointer; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+  .pill-btn:active { transform: scale(0.95); }
+  .pill-btn.done { background: var(--green); color: #fff; }
+  .rec-item { border-radius: 14px; margin: 0 -8px; padding: 0 8px; transition: background 0.2s; }
+  .rec-item.open { background: rgba(128,128,128,0.10); }
+  .rec-row { display: flex; align-items: center; gap: 12px; min-height: 56px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .rec-main { flex: 1; min-width: 0; }
+  .rec-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rec-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rec-plus { width: 32px; height: 32px; flex-shrink: 0; border-radius: 16px; border: none; background: rgba(128,128,128,0.14); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .rec-plus svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .rec-plus.added { background: var(--green); color: #fff; }
+  .rec-serv { display: none; align-items: center; gap: 6px; padding: 0 0 12px; }
+  .rec-item.open .rec-serv { display: flex; }
+  .serv-chip { flex: 1; height: 34px; border-radius: 10px; border: 0.5px solid var(--border-med); background: var(--surface); font: 500 14px 'DM Mono', monospace; color: var(--text); cursor: pointer; }
+  .serv-chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .serv-macro { flex: 1.6; font: 11px 'DM Mono', monospace; color: var(--text-2); text-align: right; line-height: 1.3; }
+  .search-area.in-sheet { margin: 4px 0 0; border: none; padding: 0; }
+  .search-area.in-sheet .search-wrap { flex-direction: column; }
+  .search-area.in-sheet .search-textarea { min-height: 84px; border-radius: 14px; }
+  .search-area.in-sheet .lookup-btn { width: 100%; height: 44px; border-radius: 22px; font-size: 15px; }
+  .search-area.in-sheet .search-wrap > div { width: 100%; }
+  .search-area.in-sheet .search-hint { margin-top: 6px; }
+  #resultArea .confirm-btn { height: 42px; padding: 0 20px; border-radius: 21px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  #savedMealsArea .saved-meal-row { min-height: 56px; }
+  .photo-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 6px; }
+  .photo-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px 14px; border-radius: 18px; border: 0.5px solid var(--border-med); background: var(--surface); text-align: left; cursor: pointer; color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .photo-tile:active { transform: scale(0.97); }
+  .photo-tile svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 6px; }
+  .pt-title { font-size: 14px; font-weight: 600; }
+  .pt-sub { font-size: 11px; color: var(--text-3); line-height: 1.35; }
+  #resultArea:not(:empty) { margin-top: 12px; }
+  .toast { z-index: 400 !important; }
+  body.sheet-open .toast { bottom: auto; top: calc(14px + env(safe-area-inset-top, 0px)); }
+  @media (prefers-reduced-motion: reduce) { .log-sheet, .food-row, .sheet-seg-lens, .log-fab { transition: none !important; } }
+  /* ── Similar-foods check ── */
+  .sim-box { margin: 0 0 10px; padding: 10px 12px 4px; border-radius: 14px; background: rgba(29,158,117,0.09); }
+  .sim-box.off { background: rgba(239,159,39,0.13); }
+  .sim-head { font-size: 12px; line-height: 1.45; color: var(--text-2); margin-bottom: 4px; }
+  .sim-box.off .sim-head { color: var(--text); }
+  .sim-row { display: flex; align-items: center; gap: 10px; min-height: 46px; border-top: 0.5px solid rgba(128,128,128,0.18); }
+  .sim-main { flex: 1; min-width: 0; }
+  .sim-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sim-sub { font-size: 11px; color: var(--text-3); }
+  .sim-nums { font: 11px 'DM Mono', monospace; color: var(--text-2); text-align: right; line-height: 1.35; }
+  .sim-nums b { color: var(--text); font-size: 13px; }
+  .sim-use { height: 30px; padding: 0 12px; border-radius: 15px; border: 0.5px solid var(--border-med); background: var(--surface); font: 600 12px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; }
+  .sim-use.on { background: var(--text); color: var(--bg); border-color: var(--text); }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -780,6 +918,21 @@
       </div>
     </div>
 
+    <!-- Left today (tap to show every nutrient) -->
+    <button class="left-card glass" id="leftCard" onclick="toggleNutrients()" aria-expanded="false">
+      <div class="left-col">
+        <div class="left-lbl" id="leftCalLbl">Calories left</div>
+        <div class="left-val"><span id="leftCal">—</span><small>kcal</small></div>
+        <div class="left-bar"><span id="leftCalBar"></span></div>
+      </div>
+      <div class="left-col">
+        <div class="left-lbl" id="leftProLbl">Protein to go</div>
+        <div class="left-val"><span id="leftPro">—</span><small>g</small></div>
+        <div class="left-bar pro"><span id="leftProBar"></span></div>
+      </div>
+      <svg class="left-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="nutrient-details" id="nutrientDetails">
     <div class="summary-grid">
       <div class="metric-card" onclick="showMacroBreakdown('cal','Calories','kcal')"><span class="metric-goal"id="goalCal"></span><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal" style="background:var(--blue);width:0%"></div></div></div>
       <div class="metric-card" onclick="showMacroBreakdown('pro','Protein','g')"><span class="metric-goal"id="goalPro"></span><div class="metric-label">Protein</div><div class="metric-val"id="totPro">0g</div><div class="progress-bar"><div class="progress-fill"id="barPro" style="background:var(--green);width:0%"></div></div></div>
@@ -804,6 +957,7 @@
       <div class="net-item"style="text-align:right;"><div class="net-item-label">Burned <span style="font-size:9px;color:var(--text-3);font-weight:normal;">(info)</span></div><div class="net-item-val"id="netExercise" style="color:var(--text-2);">0</div></div>
       <span id="netTarget" style="display:none;">2,850</span>
     </div>
+    </div><!-- /nutrient-details -->
 
     <!-- Weight — standalone card -->
     <div class="card"style="margin-bottom:1rem;">
@@ -821,56 +975,8 @@
       <div class="section-title">Food log</div>
       <div id="foodItems"></div>
 
-      <!-- Saved meals quick-log -->
-      <div id="savedMealsArea"style="display:none;margin-top:0.75rem;">
-        <div class="section-title"style="margin-bottom:8px;">Saved meals</div>
-        <div id="savedMealsList"></div>
-      </div>
+      <div class="log-hint" id="logHint">Tap a food to edit · swipe left to delete</div>
 
-      <div class="search-area">
-        <div class="section-title">Look up food</div>
-        <!-- Meal picker tabs -->
-        <div class="meal-tabs"id="mealTabs">
-          <button class="meal-tab active"data-meal="breakfast"onclick="selectMealTab(this)">Breakfast</button>
-          <button class="meal-tab"data-meal="lunch"onclick="selectMealTab(this)">Lunch</button>
-          <button class="meal-tab"data-meal="dinner"onclick="selectMealTab(this)">Dinner</button>
-          <button class="meal-tab"data-meal="snacks"onclick="selectMealTab(this)">Snacks</button>
-        </div>
-        <div class="search-wrap">
-          <div style="position:relative;flex:1;display:flex;">
-            <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..." style="width:100%;padding-right:28px;" oninput="document.getElementById('searchClearBtn').style.display=this.value?'block':'none'"></textarea>
-            <button onclick="clearSearchInput()" id="searchClearBtn" style="display:none;position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;">×</button>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-            <button class="lookup-btn"id="lookupBtn"onclick="lookupFood()">Look up</button>
-            <button class="lookup-btn" onclick="document.getElementById('foodImageInput').click()" style="display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;white-space:nowrap;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              Upload photo
-            </button>
-          </div>
-          <input type="file" id="foodImageInput" accept="image/*" style="display:none;" onchange="lookupFoodFromImage(this)"/>
-        </div>
-        <div style="min-height:16px;">
-          <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
-        </div>
-        <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
-        <div style="position:relative;height:0;">
-          <div id="foodDbDropdown" style="display:none;position:absolute;top:4px;left:0;right:0;z-index:50;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
-        </div>
-        <div id="resultArea"></div>
-      </div>
-
-      <!-- Recent foods — collapsible, below search -->
-      <div id="recentFoodsArea"style="display:none;margin-top:0.5rem;"class="recents-section">
-        <div class="recents-toggle"onclick="toggleRecents()">
-          <div class="recents-toggle-left">
-            <span class="recents-toggle-label">Recent foods</span>
-            <span class="recents-toggle-count"id="recentCount"></span>
-          </div>
-          <span class="recents-toggle-arrow"id="recentChevron">▼</span>
-        </div>
-        <div id="recentFoodsList"style="display:none;padding-top:4px;"></div>
-      </div>
     </div>
 
     <!-- Exercise -->
@@ -1252,6 +1358,76 @@
     </div>
   </div>
 
+
+
+  <!-- ═══ Add-food sheet ═══ -->
+  <div class="sheet-backdrop" id="logSheetBackdrop" onclick="closeLogSheet()"></div>
+  <div class="log-sheet glass" id="logSheet" role="dialog" aria-modal="true" aria-label="Add food">
+    <div class="sheet-grab-zone" id="sheetGrab"><div class="sheet-grab"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Add to</div>
+      <div class="meal-tabs meal-chips" id="mealTabs">
+        <button class="meal-tab active" data-meal="breakfast" onclick="selectMealTab(this)">Breakfast</button>
+        <button class="meal-tab" data-meal="lunch" onclick="selectMealTab(this)">Lunch</button>
+        <button class="meal-tab" data-meal="dinner" onclick="selectMealTab(this)">Dinner</button>
+        <button class="meal-tab" data-meal="snacks" onclick="selectMealTab(this)">Snack</button>
+      </div>
+    </div>
+    <div class="sheet-seg" id="sheetSeg" style="--i:0">
+      <div class="sheet-seg-lens"></div>
+      <button data-tab="recent" class="on" onclick="setSheetTab('recent')">Recent</button>
+      <button data-tab="saved" onclick="setSheetTab('saved')">Saved</button>
+      <button data-tab="describe" onclick="setSheetTab('describe')">Describe</button>
+      <button data-tab="photo" onclick="setSheetTab('photo')">Photo</button>
+    </div>
+    <div class="sheet-body" id="sheetBody">
+      <div class="sheet-panel on" data-panel="recent"><div id="sheetRecent"></div></div>
+      <div class="sheet-panel" data-panel="saved">
+        <div id="savedMealsArea" style="display:none;"><div id="savedMealsList"></div></div>
+        <div class="sheet-empty" id="savedEmpty">No saved meals yet. Log a meal, then tap <b>Save</b> on its header to reuse it in one tap.</div>
+      </div>
+      <div class="sheet-panel" data-panel="describe">
+<div class="search-area in-sheet">
+        
+        <div class="search-wrap">
+          <div style="position:relative;flex:1;display:flex;">
+            <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..." style="width:100%;padding-right:28px;" oninput="document.getElementById('searchClearBtn').style.display=this.value?'block':'none'"></textarea>
+            <button onclick="clearSearchInput()" id="searchClearBtn" style="display:none;position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;">×</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <button class="lookup-btn"id="lookupBtn"onclick="lookupFood()">Look up</button>
+            
+          </div>
+          <input type="file" id="foodImageInput" accept="image/*" style="display:none;" onchange="lookupFoodFromImage(this)"/>
+        </div>
+        <div style="min-height:16px;">
+          <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
+        </div>
+        <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
+        <div style="position:relative;height:0;">
+          <div id="foodDbDropdown" style="display:none;position:absolute;top:4px;left:0;right:0;z-index:50;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
+        </div>
+        
+      </div>
+      </div>
+      <div class="sheet-panel" data-panel="photo">
+        <div class="photo-tiles">
+          <button class="photo-tile" onclick="pickFoodPhoto('food')">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <span class="pt-title">Photo of food</span><span class="pt-sub">A plate, a menu, or an order receipt</span>
+          </button>
+          <button class="photo-tile" onclick="pickFoodPhoto('label')">
+            <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 10.5h8M8 14h5M8 17.5h3"/></svg>
+            <span class="pt-title">Nutrition label</span><span class="pt-sub">Reads the exact numbers off the package</span>
+          </button>
+        </div>
+      </div>
+      <div id="resultArea"></div>
+    </div>
+  </div>
+  <button class="log-fab glass" id="logFab" onclick="openLogSheet()" aria-label="Log food">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Log food</span>
+  </button>
 
   <!-- Liquid Glass bottom tab bar: tap a tab, or press and slide across it -->
   <nav class="gnav no-anim" id="gnav" aria-label="Sections">
@@ -2255,6 +2431,8 @@ function showView(name, direction) {
   const tabEl = document.getElementById('tab-'+name);
   if (tabEl) tabEl.classList.add('active');
   positionGnav(name);
+  document.body.classList.toggle('log-view', name === 'today');
+  if (name !== 'today' && document.body.classList.contains('sheet-open')) closeLogSheet();
 
   // First visit to Coach tab → auto-load if we have no analysis yet
   if (name === 'coach' && !_coachLoadedOnce) {
@@ -2288,6 +2466,249 @@ function showView(name, direction) {
   if (name === 'today')   renderDayStrip(); // strip can't scroll to the right week while hidden
   if (name === 'coach')   { renderGarminCard(); setTimeout(maybeAutoRefreshCoach, 300); }
 }
+
+
+// ════════ Log tab: Left today, swipe rows, add-food sheet ════════
+function renderLeftCard(t) {
+  const calLeft = Math.round((GOALS.cal || 0) - t.cal), proLeft = Math.round((GOALS.pro || 0) - t.pro);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('leftCal', Math.abs(calLeft).toLocaleString());
+  set('leftPro', Math.abs(proLeft));
+  const cl = document.getElementById('leftCalLbl'), pl = document.getElementById('leftProLbl');
+  if (cl) { cl.textContent = calLeft >= 0 ? 'Calories left' : 'Calories over'; cl.classList.toggle('over', calLeft < 0); }
+  if (pl) { pl.textContent = proLeft > 0 ? 'Protein to go' : 'Protein goal hit'; }
+  const pct = (v, g) => `${Math.min(100, g ? v / g * 100 : 0)}%`;
+  const cb = document.getElementById('leftCalBar'), pb = document.getElementById('leftProBar');
+  if (cb) { cb.style.width = pct(t.cal, GOALS.cal); cb.style.background = calLeft < 0 ? '#E24B4A' : ''; }
+  if (pb) pb.style.width = pct(t.pro, GOALS.pro);
+}
+function toggleNutrients() {
+  const d = document.getElementById('nutrientDetails'), c = document.getElementById('leftCard');
+  const open = !d.classList.contains('open');
+  d.classList.toggle('open', open); c.setAttribute('aria-expanded', String(open));
+}
+
+// Most recent earlier day (within a week) that has foods in this meal
+function findRepeatSource(meal) {
+  for (let i = 1; i <= 7; i++) {
+    const d = addDaysStr(activeDate, -i);
+    const fs = (_allFoods[d] || []).filter(f => (f.meal || 'uncategorized') === meal);
+    if (fs.length) return { date: d, foods: fs, label: i === 1 ? 'yesterday' : fmtDate(d, { weekday: 'long' }) };
+  }
+  return null;
+}
+function emptyMealRow(meal) {
+  const src = findRepeatSource(meal);
+  const names = src ? src.foods.map(f => f.name).join(', ') : '';
+  return `<div class="meal-empty-row"><span>Nothing yet</span>${src ? `<button class="repeat-chip" onclick="repeatMeal('${meal}')">↻ ${src.label === 'yesterday' ? 'Yesterday' : src.label}: ${escapeHtml(names)}</button>` : ''}</div>`;
+}
+async function repeatMeal(meal, btn) {
+  const src = findRepeatSource(meal);
+  if (!src) return;
+  try {
+    let seq = 0;
+    for (const f of src.foods) { const { dbId, ...rest } = f; await addFood({ ...rest, id: Date.now() + (seq++) }, meal); }
+    renderToday();
+    showToast(`Added ${src.foods.length} item${src.foods.length === 1 ? '' : 's'} from ${src.label}`);
+    if (btn) { btn.textContent = 'Added ✓'; btn.classList.add('done'); btn.disabled = true; }
+  } catch (e) { showToast('Could not add — try again'); }
+}
+
+// ── Swipe-to-delete rows ──
+let _rowSwipe = null, _openRow = null, _suppressTap = 0;
+function closeOpenRow() { if (_openRow) { _openRow.style.transform = ''; _openRow = null; } }
+document.addEventListener('touchstart', e => {
+  const row = e.target.closest('.food-row');
+  if (_openRow && row !== _openRow && !e.target.closest('.food-del')) closeOpenRow();
+  if (!row) return;
+  _rowSwipe = { row, x: e.touches[0].clientX, y: e.touches[0].clientY, base: row === _openRow ? -84 : 0, lock: null };
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (!_rowSwipe) return;
+  const dx = e.touches[0].clientX - _rowSwipe.x, dy = e.touches[0].clientY - _rowSwipe.y;
+  if (!_rowSwipe.lock) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; _rowSwipe.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; }
+  if (_rowSwipe.lock !== 'h') return;
+  const x = Math.max(-110, Math.min(0, _rowSwipe.base + dx));
+  _rowSwipe.row.classList.add('dragging');
+  _rowSwipe.row.style.transform = `translateX(${x}px)`;
+  _rowSwipe.cur = x;
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  if (!_rowSwipe) return;
+  const r = _rowSwipe; _rowSwipe = null;
+  r.row.classList.remove('dragging');
+  if (r.lock !== 'h') return;
+  _suppressTap = Date.now();
+  if ((r.cur ?? 0) < -44) {
+    r.row.style.transform = 'translateX(-84px)'; _openRow = r.row;
+    try { localStorage.setItem('logHintSeen', '1'); } catch (_) {}
+  } else { r.row.style.transform = ''; if (_openRow === r.row) _openRow = null; }
+});
+function onFoodRowTap(id) {
+  if (Date.now() - _suppressTap < 350) return;
+  if (_openRow) { closeOpenRow(); return; }
+  toggleFoodEdit(id);
+}
+
+// ── Sheet ──
+let _sheetTab = 'recent', _openRec = null, _servMult = {};
+const SHEET_TABS = ['recent', 'saved', 'describe', 'photo'];
+function openLogSheet(meal, tab) {
+  closeOpenRow();
+  const m = meal || mealForNow();
+  const chip = document.querySelector(`.meal-tab[data-meal="${m}"]`);
+  if (chip) selectMealTab(chip);
+  setSheetTab(tab || _sheetTab || 'recent', true);
+  renderSheetRecent(); renderSavedMeals();
+  document.body.classList.add('sheet-open', 'modal-open');
+  fitSheetToViewport();
+}
+function closeLogSheet() {
+  document.body.classList.remove('sheet-open', 'modal-open');
+  document.activeElement?.blur?.();
+  const sh = document.getElementById('logSheet'); sh.style.transform = '';
+}
+function mealForNow() {
+  const h = new Date().getHours();
+  return h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 20 ? 'dinner' : 'snacks';
+}
+function setSheetTab(tab, silent) {
+  _sheetTab = tab;
+  const i = SHEET_TABS.indexOf(tab);
+  document.getElementById('sheetSeg').style.setProperty('--i', i);
+  document.querySelectorAll('#sheetSeg button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('.sheet-panel').forEach(p => p.classList.toggle('on', p.dataset.panel === tab));
+  if (tab === 'describe' && !silent) setTimeout(() => document.getElementById('searchInput')?.focus(), 250);
+  if (tab === 'recent') renderSheetRecent();
+}
+// Re-render when the meal chip changes (recents are ranked per meal)
+const _origSelectMealTab = selectMealTab;
+selectMealTab = function (el) { _origSelectMealTab(el); if (document.body.classList.contains('sheet-open')) renderSheetRecent(); };
+
+// Rank foods by how often they're logged for this meal, then overall, then recency
+function rankedRecents(meal, limit = 20) {
+  const since = addDaysStr(todayStr(), -90), stats = {};
+  Object.keys(_allFoods).filter(d => d >= since).sort().forEach(d => {
+    (_allFoods[d] || []).forEach(f => {
+      const k = (f.name || '').toLowerCase().trim(); if (!k) return;
+      const st = stats[k] || (stats[k] = { f, total: 0, inMeal: 0, last: '' });
+      st.total++; if ((f.meal || '') === meal) st.inMeal++;
+      if (d >= st.last) { st.last = d; st.f = f; }
+    });
+  });
+  const todayNames = new Set(getActiveFoods().filter(f => f.meal === meal).map(f => (f.name || '').toLowerCase().trim()));
+  return Object.entries(stats)
+    .filter(([k]) => !todayNames.has(k))
+    .map(([k, st]) => ({ ...st, score: st.inMeal * 3 + st.total + (st.last >= addDaysStr(todayStr(), -7) ? 2 : 0) }))
+    .sort((a, b) => b.score - a.score || (a.last < b.last ? 1 : -1))
+    .slice(0, limit);
+}
+function baseOf(f) {
+  const m = f.servingMult || 1;
+  const b = k => f['base' + k[0].toUpperCase() + k.slice(1)];
+  const keys = ['cal', 'pro', 'carb', 'fat', 'satFat', 'sug', 'sod', 'fib'];
+  const out = {};
+  keys.forEach(k => { out[k] = b(k) != null ? b(k) : (f[k] || 0) / m; });
+  return out;
+}
+function scaledFood(f, mult) {
+  const base = baseOf(f), out = { ...f };
+  Object.entries(base).forEach(([k, v]) => {
+    out[k] = Math.round(v * mult);
+    out['base' + k[0].toUpperCase() + k.slice(1)] = v;
+  });
+  out.servingMult = mult;
+  delete out.dbId;
+  return out;
+}
+function renderSheetRecent() {
+  const el = document.getElementById('sheetRecent'); if (!el) return;
+  const meal = getActiveMealTab();
+  const label = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snacks: 'snack' }[meal] || meal;
+  const src = findRepeatSource(meal);
+  _recentFoodsCache = rankedRecents(meal);
+  let html = '';
+  if (src) {
+    const t = totals(src.foods);
+    html += `<div class="repeat-card"><div class="rc-main"><div class="rc-title">Repeat ${src.label === 'yesterday' ? "yesterday's" : src.label + "'s"} ${label}</div>
+      <div class="rc-sub">${src.foods.length} item${src.foods.length === 1 ? '' : 's'} · ${t.cal} kcal · ${t.pro}g P — ${escapeHtml(src.foods.map(f => f.name).join(', '))}</div></div>
+      <button class="pill-btn" onclick="repeatMeal('${meal}', this)">Add</button></div>`;
+  }
+  if (!_recentFoodsCache.length) {
+    el.innerHTML = html + `<div class="sheet-empty">Foods you log show up here, with the ones you usually eat at ${label} first.</div>`;
+    return;
+  }
+  html += `<div class="sheet-sec">${_recentFoodsCache.some(r => r.inMeal) ? `Usually at ${label}` : 'Recent'}</div>`;
+  html += _recentFoodsCache.map((r, i) => {
+    const f = r.f, mult = _servMult[i] || f.servingMult || 1, sf = scaledFood(f, mult);
+    const times = r.total > 1 ? `${r.total}× · ` : '';
+    const chips = [0.5, 1, 1.5, 2].map(v => `<button class="serv-chip${v === mult ? ' on' : ''}" onclick="event.stopPropagation();setRecServ(${i},${v})">${v === 0.5 ? '½' : v === 1.5 ? '1½' : v}</button>`).join('');
+    return `<div class="rec-item${_openRec === i ? ' open' : ''}" id="rec-${i}">
+      <div class="rec-row" onclick="toggleRec(${i})">
+        <div class="rec-main"><div class="rec-name">${escapeHtml(f.name)}</div>
+          <div class="rec-sub">${times}${sf.cal} kcal · ${sf.pro}g P${f.servingLabel && f.servingLabel !== '1 serving' ? ' · ' + escapeHtml(f.servingLabel) : ''}</div></div>
+        <button class="rec-plus" id="recadd-${i}" onclick="event.stopPropagation();addRecent(${i})" aria-label="Add ${escapeHtml(f.name)}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <div class="rec-serv">${chips}<div class="serv-macro">${sf.cal} kcal<br>${sf.pro}g P · ${sf.carb}g C</div></div>
+    </div>`;
+  }).join('');
+  el.innerHTML = html;
+}
+function toggleRec(i) { _openRec = _openRec === i ? null : i; renderSheetRecent(); }
+function setRecServ(i, v) { _servMult[i] = v; _openRec = i; renderSheetRecent(); }
+async function addRecent(i) {
+  const r = _recentFoodsCache[i]; if (!r) return;
+  const mult = _servMult[i] || r.f.servingMult || 1;
+  const btn = document.getElementById('recadd-' + i);
+  try {
+    await addFood({ ...scaledFood(r.f, mult), id: Date.now() }, getActiveMealTab());
+    if (btn) { btn.classList.add('added'); btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; }
+    showToast(`Added ${r.f.name}`);
+    _servMult = {}; _openRec = null;
+    renderToday();
+    setTimeout(renderSheetRecent, 600); // let the ✓ register before the list re-ranks
+  } catch (e) { showToast('Could not add — try again'); }
+}
+function pickFoodPhoto(mode) {
+  window._photoMode = mode;
+  document.getElementById('foodImageInput').click();
+}
+
+// ── Drag the sheet down to close ──
+(function () {
+  let y0 = null, dy = 0, t0 = 0;
+  const sheet = () => document.getElementById('logSheet');
+  const start = e => { y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); sheet().classList.add('dragging'); };
+  const move = e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); sheet().style.transform = `translateY(${dy}px)`; };
+  const end = () => {
+    if (y0 == null) return;
+    const v = dy / Math.max(1, Date.now() - t0);
+    sheet().classList.remove('dragging');
+    y0 = null;
+    if (dy > 120 || v > 0.6) closeLogSheet(); else sheet().style.transform = '';
+  };
+  ['sheetGrab'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: true });
+    el.addEventListener('touchend', end);
+  });
+  document.querySelector('.sheet-head')?.addEventListener('touchstart', start, { passive: true });
+  document.querySelector('.sheet-head')?.addEventListener('touchmove', move, { passive: true });
+  document.querySelector('.sheet-head')?.addEventListener('touchend', end);
+})();
+
+// Keep the sheet above the iOS keyboard (Describe tab)
+function fitSheetToViewport() {
+  const vv = window.visualViewport, sh = document.getElementById('logSheet');
+  if (!vv || !sh) return;
+  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  sh.style.bottom = kb + 'px';
+  sh.style.maxHeight = Math.round((kb ? vv.height - 8 : vv.height * 0.88)) + 'px';
+}
+window.visualViewport?.addEventListener('resize', fitSheetToViewport);
+window.visualViewport?.addEventListener('scroll', fitSheetToViewport);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) closeLogSheet(); });
 
 // ── Liquid Glass tab bar ──────────────────────────────────────────
 // x/width of a tab button inside the bar's padding box (where the lens is positioned)
@@ -2402,7 +2823,7 @@ document.addEventListener('touchstart', e => {
   // Don't intercept if modal is open or touch is inside modal
   _swipeLock = null;
   if (document.body.classList.contains('modal-open')) return;
-  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen, .gnav, .day-strip, .hist-chips, .hist-heatmap')) return;
+  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen, .gnav, .day-strip, .hist-chips, .hist-heatmap, .food-row, .log-sheet, .sheet-backdrop')) return;
   _swipeStartX = e.touches[0].clientX;
   _swipeStartY = e.touches[0].clientY;
   _swipeActive = true;
@@ -2477,29 +2898,106 @@ function loadActiveWeight() {
 }
 
 // Food lookup — checks internal saved foods first, then AI with brand priority
+// ── Personal food library matching ──
+// The library (custom_foods) is checked before asking Claude, but only when
+// the match is unambiguous: one food, and a name that clearly matches.
+// A leading quantity ("2 bananas", "1.5 kashi go") becomes the serving count.
+// Multi-item descriptions ("eggs with toast", "chicken, rice") always go to
+// Claude, since a single saved food can't represent the whole plate.
+const QTY_WORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, half: 0.5, '½': 0.5, '¼': 0.25, '¾': 0.75, '1½': 1.5 };
+function parseQuantity(query) {
+  const q = query.trim().toLowerCase();
+  // Digits may touch the food ("2x banana"); words need a space ("a banana", not "air fry…")
+  const m = q.match(/^(?:(\d+\/\d+|1½|\d+(?:\.\d+)?|½|¼|¾)\s*|(a|an|one|two|three|four|half)\s+)(?:x\s+|×\s*|servings? of\s+)?(.+)$/);
+  if (!m) return { qty: 1, rest: q };
+  const tok = m[1] || m[2];
+  let n = QTY_WORDS[tok] ?? (tok.includes('/') ? tok.split('/').reduce((x, y) => x / y) : parseFloat(tok));
+  if (!n || n <= 0 || n > 20) return { qty: 1, rest: q };
+  return { qty: n, rest: m[3] };
+}
+function foodTokens(str) {
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 1 && !['of', 'the', 'and', 'with', 'oz', 'g', 'cup', 'cups', 'serving', 'servings'].includes(w))
+    .map(w => w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w); // bananas → banana
+}
 function findInternalFood(query) {
   if (!_customFoods || !_customFoods.length) return null;
-  const q = query.toLowerCase().trim();
-  // Exact match first
-  let match = _customFoods.find(f => f.name.toLowerCase() === q);
-  if (match) return match;
-  // Contains match — query contains the food name or vice versa
-  match = _customFoods.find(f => {
-    const n = f.name.toLowerCase();
-    return q.includes(n) || n.includes(q);
-  });
-  if (match) return match;
-  // Word overlap — at least 2 significant words in common
-  const qWords = q.split(/\s+/).filter(w => w.length > 2);
-  match = _customFoods.find(f => {
-    const fWords = f.name.toLowerCase().split(/\s+/);
-    return qWords.filter(w => fWords.includes(w)).length >= 2;
-  });
-  return match || null;
+  const raw = query.trim().toLowerCase();
+  if (/,|\+|\band\b|\bwith\b|\bplus\b|&/.test(raw)) return null; // more than one food
+  const { qty, rest } = parseQuantity(raw);
+  const q = foodTokens(rest);
+  if (!q.length) return null;
+  let best = null, bestScore = 0;
+  for (const f of _customFoods) {
+    const n = foodTokens(f.name);
+    if (!n.length) continue;
+    const shared = q.filter(w => n.includes(w)).length;
+    // Every word of the saved name must be in the query, and the query may add
+    // at most one extra word ("kashi go peanut butter" ≈ "kashi go peanut butter cereal")
+    const score = shared / Math.max(q.length, n.length);
+    if (shared === n.length && q.length - shared <= 1 && score > bestScore) { best = f; bestScore = score; }
+  }
+  return best ? { ...best, _qty: qty } : null;
+}
+
+// ── Similar foods from your library (sanity check for new lookups) ──
+// "Sola Bagel Everything" vs a saved "Sola Bagel Plain": products in the same
+// line share most of their name, and their macros are usually close.
+function findSimilarFoods(text, limit = 3) {
+  if (!_customFoods?.length || !text) return [];
+  const q = foodTokens(parseQuantity(text.toLowerCase()).rest);
+  if (q.length < 2) return [];
+  return _customFoods.map(f => {
+    const n = foodTokens(f.name);
+    const shared = q.filter(w => n.includes(w)).length;
+    const sameBrand = n[0] && q[0] === n[0];
+    const exact = shared === n.length && shared === q.length;
+    // Two shared words, or the same leading (brand) word plus one more
+    const ok = !exact && (shared >= 2 || (sameBrand && shared >= 1 && n.length >= 2 && q.length >= 2 && q.slice(1).some(w => n.includes(w))));
+    return ok ? { f, score: shared / Math.max(q.length, n.length) + (sameBrand ? 0.2 : 0) } : null;
+  }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.f);
+}
+
+// Shown under a new lookup: your similar saved foods, flagged if far apart
+function renderSimilarCheck(food, similar) {
+  const area = document.getElementById('resultArea');
+  if (!area || !similar.length) return;
+  const pct = (a, b) => b ? Math.round((a - b) / b * 100) : 0;
+  const ref = similar[0];
+  const calGap = pct(food.cal, ref.cal), proGap = food.pro - ref.pro;
+  const off = Math.abs(calGap) > 20 || (Math.abs(proGap) >= 5 && Math.abs(pct(food.pro, ref.pro)) > 25);
+  const rows = similar.map((f, i) => `<div class="sim-row">
+      <div class="sim-main"><div class="sim-name">${escapeHtml(f.name)}</div><div class="sim-sub">${escapeHtml(f.servingLabel || '1 serving')}</div></div>
+      <div class="sim-nums"><b>${f.cal}</b> kcal<br>${f.pro}g P</div>
+      <button class="sim-use" onclick="useSimilarMacros(${i})">Use</button>
+    </div>`).join('');
+  const box = document.createElement('div');
+  box.className = 'sim-box' + (off ? ' off' : '');
+  box.innerHTML = `<div class="sim-head">${off
+      ? `⚠︎ ${Math.abs(calGap)}% ${calGap > 0 ? 'more' : 'fewer'} calories than your saved <b>${escapeHtml(ref.name)}</b>. Products in the same line are usually close, so check the package, or tap <b>Use</b> to start from your numbers.`
+      : `Close to similar foods you've logged before (within ${Math.max(Math.abs(calGap), 1)}% on calories).`}</div>${rows}`;
+  window._similarFoods = similar;
+  area.insertBefore(box, area.firstChild); // above the card, so you see it before adding
+}
+
+// Copies a similar food's per-serving macros into the result card (name kept)
+function useSimilarMacros(i) {
+  const f = window._similarFoods?.[i]; if (!f) return;
+  const sv = document.getElementById('re_servings');
+  const mult = parseFloat(sv?.value) || 1;
+  const base = { cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat, satFat: f.satFat || 0, sug: f.sug || 0, sod: f.sod || 0, fib: f.fib || 0 };
+  window._baseMacros = { ...base };
+  for (const [k, v] of Object.entries(base)) {
+    const el = document.getElementById('re_' + k);
+    if (el) el.value = Math.round(v * mult);
+  }
+  document.querySelectorAll('.sim-use').forEach((b, j) => { b.textContent = j === i ? 'Using' : 'Use'; b.classList.toggle('on', j === i); });
+  showToast(`Using ${f.name}'s numbers — adjust if needed`);
 }
 
 async function lookupFood(excludeSource = null) {
   const query = document.getElementById('searchInput').value.trim();
+  const dd = document.getElementById('foodDbDropdown'); if (dd) dd.style.display = 'none';
   if (!query) { document.getElementById('searchInput').focus(); return; }
   const btn = document.getElementById('lookupBtn');
   const resultArea = document.getElementById('resultArea');
@@ -2516,6 +3014,10 @@ async function lookupFood(excludeSource = null) {
       window._lastSource = 'Previously saved';
       window._internalMatch = internal; // track so we don't re-save on confirm
       renderFoodResult(pendingFood, internal.servingLabel || '1 serving', 'Previously saved', true);
+      if (internal._qty && internal._qty !== 1) {
+        const sv = document.getElementById('re_servings');
+        if (sv) { sv.value = internal._qty; scaleServings(internal._qty); }
+      }
       btn.disabled = false;
       return;
     }
@@ -2528,7 +3030,9 @@ async function lookupFood(excludeSource = null) {
     const res = await fetch('/api/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json'},
-      body: JSON.stringify({ query, excludeSource })
+      // Similar foods you've logged go along as a reference for Claude
+      body: JSON.stringify({ query, excludeSource,
+        references: findSimilarFoods(query, 5).map(f => ({ name: f.name, serving: f.servingLabel || '1 serving', cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat, sug: f.sug || 0 })) })
     });
     if (!res.ok) {
       const rawErr = await res.text();
@@ -2550,6 +3054,12 @@ async function lookupFood(excludeSource = null) {
     window._lastSource = sourceText;
     const servingLabel = data.serving_size || '1 serving';
     renderFoodResult(pendingFood, servingLabel, sourceText, false);
+    // Compare against similar foods in your library (by what you typed and what came back)
+    const seen = new Set(), similar = [];
+    for (const f of [...findSimilarFoods(data.name || ''), ...findSimilarFoods(query)]) {
+      if (!seen.has(f.name.toLowerCase())) { seen.add(f.name.toLowerCase()); similar.push(f); }
+    }
+    renderSimilarCheck(pendingFood, similar.slice(0, 3));
   } catch(e) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed: '+ e.message + '</div>';
   }
@@ -2580,7 +3090,7 @@ async function lookupFoodFromImage(input) {
     const res = await fetch('/api/lookup-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageData, mediaType })
+      body: JSON.stringify({ imageData, mediaType, mode: window._photoMode || 'food' })
     });
 
     if (!res.ok) {
@@ -2968,16 +3478,10 @@ async function confirmAdd() {
     const servingLabel = servingsEl ? servingsEl.closest('div')?.querySelector('span:last-child')?.textContent?.replace('× ','') : '1 serving';
     pendingFood.servingMult  = mult;
     pendingFood.servingLabel = servingLabel || '1 serving';
-    // Store per-unit base macros so edit scaler always has a clean 1x reference
-    if (window._baseMacros) {
-      pendingFood.baseCal    = window._baseMacros.cal;
-      pendingFood.basePro    = window._baseMacros.pro;
-      pendingFood.baseCarb   = window._baseMacros.carb;
-      pendingFood.baseFat    = window._baseMacros.fat;
-      pendingFood.baseSatFat = window._baseMacros.satFat;
-      pendingFood.baseSug    = window._baseMacros.sug;
-      pendingFood.baseSod    = window._baseMacros.sod;
-      pendingFood.baseFib    = window._baseMacros.fib;
+    // Per-serving numbers = what's on the card ÷ servings, so any corrections
+    // you made are what the library remembers (not the original estimate)
+    for (const k of ['cal', 'pro', 'carb', 'fat', 'satFat', 'sug', 'sod', 'fib']) {
+      pendingFood['base' + k[0].toUpperCase() + k.slice(1)] = Math.round((pendingFood[k] || 0) / mult);
     }
   }
   const meal = getActiveMealTab() || 'uncategorized';
@@ -2986,24 +3490,9 @@ async function confirmAdd() {
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
     await addFood(pendingFood, meal);
-    // Auto-save to internal database if macros were edited from the AI result
-    // Skip if this was already an internal match (no need to re-save)
-    if (!window._internalMatch) {
-      const orig = window._baseMacros;
-      const edited = pendingFood;
-      const wasEdited = orig && (orig.cal !== edited.cal || orig.pro !== edited.pro ||
-        orig.carb !== edited.carb || orig.fat !== edited.fat);
-      // Always save — accumulates a personal food database over time
-      saveCustomFood({ ...pendingFood }, true).catch(() => {});
-    } else {
-      // Update the internal entry if macros were changed from the saved version
-      const saved = window._internalMatch;
-      if (saved.cal !== pendingFood.cal || saved.pro !== pendingFood.pro ||
-          saved.carb !== pendingFood.carb || saved.fat !== pendingFood.fat) {
-        // Use saved name for exact server-side dedup match
-        saveCustomFood({ ...pendingFood, name: saved.name }, true).catch(() => {});
-      }
-    }
+    // addFood() already saved this to your food library (per serving, deduped
+    // by name), so there's no second save here — it used to overwrite the
+    // library with the multiplied totals when servings weren't 1.
     pendingFood = null;
     document.getElementById('searchInput').value = '';
     document.getElementById('resultArea').innerHTML = '';
@@ -3527,6 +4016,8 @@ async function deleteSavedMeal(id) {
 function renderSavedMeals() {
   const area = document.getElementById('savedMealsArea');
   const list = document.getElementById('savedMealsList');
+  const empty = document.getElementById('savedEmpty');
+  if (empty) empty.style.display = _savedMeals.length ? 'none' : '';
   if (!_savedMeals.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
   list.innerHTML = _savedMeals.map(m => {
@@ -3590,27 +4081,7 @@ function getRecentFoods(limit = 15) {
   return recents;
 }
 
-function renderRecentFoods() {
-  const area = document.getElementById('recentFoodsArea');
-  const list = document.getElementById('recentFoodsList');
-  const countEl = document.getElementById('recentCount');
-  const todayNames = new Set(getActiveFoods().map(f => f.name.toLowerCase().trim()));
-  _recentFoodsCache = getRecentFoods(15).filter(f => !todayNames.has(f.name.toLowerCase().trim()));
-  if (!_recentFoodsCache.length) { area.style.display = 'none'; return; }
-  area.style.display = 'block';
-  if (countEl) countEl.textContent = `${_recentFoodsCache.length} items`;
-  list.innerHTML = _recentFoodsCache.map((f, i) => {
-    const mult = f.servingMult || 1;
-    const label = f.servingLabel || '1 serving';
-    const servingInfo = mult !== 1
-      ? ` · ${mult}× ${label}` : (label !== '1 serving' ? ` · ${label}` : '');
-    return `<div class="recent-item" onclick="logRecentFood(${i})">
-      <span class="recent-item-name">${f.name}</span>
-      <span class="recent-item-meta">${f.cal} kcal · ${f.pro}g P · ${f.carb}g C · ${f.fat}g F${servingInfo}</span>
-      <span class="recent-item-add">+</span>
-    </div>`;
-  }).join('');
-}
+function renderRecentFoods() { if (document.body.classList.contains('sheet-open')) renderSheetRecent(); }
 
 async function logRecentFood(idx) {
   const f = _recentFoodsCache[idx];
@@ -3809,9 +4280,7 @@ function renderToday() {
   const MEALS = ['breakfast','lunch','dinner','snacks'];
   const MEAL_LABELS = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks'};
   const c = document.getElementById('foodItems');
-  if (!foods.length) {
-    c.innerHTML = '<div class="empty-msg">No foods logged yet — look up a food below to get started</div>';
-  } else {
+  {
     c.innerHTML = MEALS.map(meal => {
       const mf = foods.filter(f => (f.meal||'uncategorized') === meal);
       const mt = totals(mf);
@@ -3820,24 +4289,19 @@ function renderToday() {
         <div class="meal-header">
           <div class="meal-color-bar" style="background:${MEAL_COLORS[meal]};"></div>
           <span class="meal-title" style="flex:1;">${MEAL_LABELS[meal]}</span>
-          <span style="display:flex;align-items:center;gap:8px;">
-            ${mf.length ? `<button class="meal-save-btn"onclick="saveMeal('${meal}')">Save meal</button>` : ''}
-            <span class="meal-kcal">${mf.length ? mt.cal+'kcal': '—'}</span>
-          </span>
+          ${mf.length > 1 ? `<button class="meal-save" onclick="saveMeal('${meal}')">Save</button>` : ''}
+          <span class="meal-sum">${mf.length ? `${mt.cal} · ${mt.pro}g P` : ''}</span>
+          <button class="meal-add" onclick="openLogSheet('${meal}')" aria-label="Add to ${MEAL_LABELS[meal]}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
-        ${mf.length ? mf.map(f=>`<div class="food-item"id="food-item-${f.id}">
-          <span class="food-name">${f.name}</span>
-          <span class="food-macros">
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.pro}g P</span>
-            <span><span class="macro-dot" style="background:var(--amber)"></span>${f.carb}g C</span>
-            <span><span class="macro-dot" style="background:var(--pink)"></span>${f.fat}g F</span>
-            <span><span class="macro-dot" style="background:var(--coral)"></span>${f.satFat||0}g SF</span>
-            <span><span class="macro-dot" style="background:var(--blue)"></span>${f.sod||0}mg Na</span>
-            <span><span class="macro-dot" style="background:var(--green)"></span>${f.fib||0}g Fb</span>
-          </span>
-          <span class="food-kcal">${f.cal} kcal</span>
-          <button class="edit-btn" onclick="toggleFoodEdit(${f.id})" title="Edit macros">✎</button>
-          <button class="del-btn" onclick="delFood(${f.id})" title="Remove">×</button>
+        ${mf.length ? mf.map(f=>`<div class="food-swipe" data-id="${f.id}">
+          <button class="food-del" onclick="delFood(${f.id})">Delete</button>
+          <div class="food-row" id="food-item-${f.id}" onclick="onFoodRowTap(${f.id})">
+            <div class="food-row-main">
+              <div class="food-row-name">${escapeHtml(f.name)}</div>
+              <div class="food-row-sub">${f.servingMult && f.servingMult !== 1 ? `${f.servingMult}× ${escapeHtml(f.servingLabel || 'serving')} · ` : ''}${f.carb}g C · ${f.fat}g F</div>
+            </div>
+            <div class="food-row-nums"><b>${f.cal}</b> kcal<br>${f.pro}g P</div>
+          </div>
         </div>
         <div id="food-edit-${f.id}"style="display:none;">
           <div class="food-edit-form"style="display:block;padding:10px 0 12px;">
@@ -3873,12 +4337,15 @@ function renderToday() {
             <div class="food-edit-actions">
               <button class="food-edit-save"onclick="saveEditedFood(${f.id})">Save changes</button>
               <button class="food-edit-cancel"onclick="toggleFoodEdit(${f.id})">Cancel</button>
+              <button class="food-edit-cancel" style="color:#E24B4A;margin-left:auto;" onclick="delFood(${f.id})">Delete</button>
             </div>
           </div>
-        </div>`).join('') : '<div class="meal-empty">Nothing logged yet</div>'}
+        </div>`).join('') : emptyMealRow(meal)}
       </div>`;
     }).join('');
   }
+  renderLeftCard(t);
+  document.getElementById('logHint').style.display = foods.length && !localStorage.getItem('logHintSeen') ? '' : 'none';
 
   renderNetBanner();
   renderDrinkCount();

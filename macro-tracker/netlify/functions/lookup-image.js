@@ -12,7 +12,7 @@ async function fetchWithTimeout(url, options, ms = 20000) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
-  const { imageData, mediaType } = JSON.parse(event.body || '{}');
+  const { imageData, mediaType, mode } = JSON.parse(event.body || '{}');
   if (!imageData) return { statusCode: 400, body: JSON.stringify({ error: 'Missing image data' }) };
 
   // Guard: base64 PNG screenshots can be large — reject if over 5MB encoded
@@ -36,7 +36,14 @@ DATA SOURCE PRIORITY:
 2. If a nutrition label is shown → read exact values from the label
 3. Otherwise → estimate based on visible ingredients and portions
 
-Return ONLY a raw JSON array, no markdown, no explanation:
+${mode === 'label' ? `THIS IMAGE IS A NUTRITION FACTS LABEL (the user chose "Nutrition label").
+- Return exactly ONE item: the packaged product, per ONE serving as printed on the label.
+- Copy every number exactly as printed: calories, protein, total carbohydrate, total fat, saturated fat, total sugars, sodium, dietary fiber.
+- serving_size = the label's serving size text (e.g. "3/4 cup (52g)").
+- name = the brand and product name if visible anywhere in the photo; otherwise "Packaged food (label)".
+- note = "Nutrition label".
+
+` : ''}Return ONLY a raw JSON array, no markdown, no explanation:
 [{"name":"exact item name with size/quantity","category":"entree|side|drink|other","serving_size":"description of one serving","note":"source used","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}]
 
 Rules:

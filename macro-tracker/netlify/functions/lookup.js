@@ -15,14 +15,24 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { query, excludeSource } = JSON.parse(event.body || '{}');
+    const { query, excludeSource, references } = JSON.parse(event.body || '{}');
     if (!query) return { statusCode: 400, body: JSON.stringify({ error: 'Missing query' }) };
 
     const excludeClause = excludeSource
       ? `\nIMPORTANT: Do NOT use "${excludeSource}" as your source this time. Find a different source.`
       : '';
 
-    const prompt = `You are a nutrition database. The user logged: "${query}"${excludeClause}
+    // Similar products the user has logged before (their own saved numbers).
+    // Variants in the same product line (flavors, sizes) usually have close
+    // macros, so these act as a sanity check on the lookup.
+    const refs = Array.isArray(references) ? references.slice(0, 5).filter(r => r && r.name) : [];
+    const refClause = refs.length ? `
+
+REFERENCE — similar products this user has logged before (per serving, their saved numbers):
+${refs.map(r => `- ${String(r.name).slice(0, 80)} (${String(r.serving || '1 serving').slice(0, 40)}): ${Math.round(r.cal)} kcal, ${Math.round(r.pro)}g protein, ${Math.round(r.carb)}g carbs, ${Math.round(r.fat)}g fat, ${Math.round(r.sug || 0)}g sugar`).join('\n')}
+If the logged item is a variant of one of these (another flavor or version of the same product line), expect similar macros per serving. Still use the official published data for the exact item; if it differs from the reference by more than ~20% in calories or protein, double-check it and explain the difference briefly in "note".` : '';
+
+    const prompt = `You are a nutrition database. The user logged: "${query}"${excludeClause}${refClause}
 
 Source priority:
 1. Named brand/restaurant → use their official published nutrition facts
