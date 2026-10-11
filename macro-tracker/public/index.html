@@ -18,7 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"rel="stylesheet"media="print"onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"rel="stylesheet"></noscript>
 <!-- Chart.js: defer so it doesn't block HTML parsing or rendering -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"defer></script>
+<!-- Chart.js loads on demand the first time History opens (see withChartJs) -->
 <style>
   :root {
     --bg: #f7f6f3; --surface: #ffffff;
@@ -442,6 +442,25 @@
   .sim-nums b { color: var(--text); font-size: 13px; }
   .sim-use { height: 30px; padding: 0 12px; border-radius: 15px; border: 0.5px solid var(--border-med); background: var(--surface); font: 600 12px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; }
   .sim-use.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+  /* ── Lookup sources + library check ── */
+  .src-link { font-size: 11px; color: var(--blue); text-decoration: none; margin-left: 6px; white-space: nowrap; }
+  .result-source-badge.conf-low { background: rgba(239,159,39,0.15); color: #B7791F; }
+  .src-note { font-size: 11px; color: var(--text-3); margin: -4px 0 10px; line-height: 1.4; }
+  .alt-box { margin-top: 10px; background: rgba(55,138,221,0.08); }
+  .lib-sum { font-size: 14px; font-weight: 600; margin: 2px 0 4px; }
+  .lib-hint { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-bottom: 6px; }
+  .lib-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 0.5px solid var(--border); }
+  .lib-main { flex: 1; min-width: 0; }
+  .lib-name { font-size: 14px; }
+  .lib-sub { font: 11px 'DM Mono', monospace; color: var(--text-3); margin-top: 2px; }
+  .lib-res:not(:empty) { margin-top: 8px; }
+  .lib-cmp { font-size: 12px; line-height: 1.5; padding: 8px 10px; border-radius: 10px; background: rgba(29,158,117,0.09); }
+  .lib-cmp.off { background: rgba(239,159,39,0.13); }
+  .lib-acts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .lib-acts .pill-btn { height: 30px; font-size: 12px; padding: 0 14px; }
+  .lib-wait { font-size: 12px; color: var(--text-3); }
+  .update-pill { position: fixed; z-index: 450; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -80px); height: 38px; padding: 0 18px; border-radius: 19px; font: 600 13px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; transition: transform 0.45s cubic-bezier(.34,1.4,.64,1); }
+  .update-pill.on { transform: translate(-50%, 0); }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1453,12 +1472,23 @@ let _syncDB = null;
 if ('serviceWorker'in navigator && !location.hostname.includes('claudeusercontent')) {
   navigator.serviceWorker.register('/sw.js').then(() => {
     navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'NEW_VERSION') showUpdatePill();
       if (e.data?.type === 'SYNC_COMPLETE') {
         showOfflineBar('syncing', 'Back online — all changes synced');
         setTimeout(hideOfflineBar, 3000);
       }
     });
   }).catch(() => {});
+}
+
+function showUpdatePill() {
+  if (document.getElementById('updatePill')) return;
+  const b = document.createElement('button');
+  b.id = 'updatePill'; b.className = 'update-pill glass';
+  b.textContent = 'Update ready · Tap to refresh';
+  b.onclick = () => location.reload();
+  document.body.appendChild(b);
+  requestAnimationFrame(() => b.classList.add('on'));
 }
 
 window.addEventListener('online',  () => { _isOnline = true;  onConnectionRestored(); });
@@ -1537,9 +1567,29 @@ async function flushOfflineQueue() {
   }
 }
 
+// Startup data fetched in one go by /api/bootstrap; each loader's first GET
+// is answered from here instead of making its own request.
+let _bootData = null;
+function bootKey(path) {
+  const base = path.split('?')[0];
+  return base === 'custom-foods' && /type=exercise/.test(path) ? 'custom-foods:exercise' : base;
+}
+async function loadBootstrap() {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
+    const res = await fetch(`/api/bootstrap?profile_id=${encodeURIComponent(activeProfileId)}&since=${foodsSince()}`, { signal: ctl.signal });
+    clearTimeout(t);
+    if (res.ok) _bootData = await res.json();
+  } catch (_) { _bootData = null; } // each loader falls back to its own request
+}
+
 async function api(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const isWrite = method !== 'GET';
+  if (!isWrite && _bootData) {
+    const k = bootKey(path);
+    if (k in _bootData) { const v = _bootData[k]; delete _bootData[k]; return v; }
+  }
 
   const doFetch = () => fetch('/api/'+ path, {
     method,
@@ -1666,6 +1716,7 @@ function revealApp() {
 // All server loads run in parallel.
 async function refreshFromServer() {
   const pid = activeProfileId;
+  await loadBootstrap();
   await Promise.all([
     loadAllFromServer(), loadWeightsFromServer(), loadExerciseFromServer(),
     loadSavedMealsFromServer(), loadCustomFoodsFromServer(), loadCustomExercisesFromServer(),
@@ -1674,6 +1725,7 @@ async function refreshFromServer() {
   ]);
   if (pid !== activeProfileId) return; // profile switched mid-refresh
   if (_settings) applySettings(_settings); // Garmin data may change the calorie target
+  _bootData = null;
   setTimeout(maybeAutoRefreshCoach, 1500); // fresh read in the background, ready for the Coach tab
   rerenderAfterRefresh();
 }
@@ -1830,19 +1882,45 @@ const DEFAULT_SETTINGS = {
   activity: '1.725', goal: 'cut', rate: '1', split: 'highprotein', units: 'imperial', targetMode: 'garmin'};
 
 // ── Server data loaders ──────────────────────────────────────────
+// Startup loads the last 120 days of food logs (that's all the Log tab, Recent,
+// and 3-month History use). Older days load when History or Export needs them.
+const FOOD_WINDOW_DAYS = 120;
+let _foodsFloor = null; // earliest date currently loaded ('' = everything)
+function foodsSince() { return addDaysStr(todayStr(), -FOOD_WINDOW_DAYS); }
+let _olderFoodsPromise = null;
+function loadOlderFoods() {
+  if (_foodsFloor === '') return Promise.resolve(true);
+  if (_olderFoodsPromise) return _olderFoodsPromise;
+  const before = _foodsFloor || foodsSince();
+  _olderFoodsPromise = api(`foods?profile_id=${activeProfileId}&before=${before}`).then(rows => {
+    (rows || []).forEach(r => { (_allFoods[r.date] = _allFoods[r.date] || []).push(dbRowToFood(r)); });
+    _foodsFloor = '';
+    return true;
+  }).catch(() => false).finally(() => { _olderFoodsPromise = null; }); // false = don't retry-render
+  return _olderFoodsPromise;
+}
+
 async function loadAllFromServer() {
   try {
-    const rows = await api(`foods?profile_id=${activeProfileId}`);
+    const since = foodsSince();
+    const rows = await api(`foods?profile_id=${activeProfileId}&since=${since}`);
     if (!Array.isArray(rows)) {
       console.warn('[loadAllFromServer] unexpected response:', rows);
       throw new Error('bad response');
     }
-    _allFoods = {};
+    // Keep any older days already loaded this session; replace the recent window
+    const keepOld = _foodsFloor === '';
+    const next = {};
+    if (keepOld) Object.keys(_allFoods).filter(d => d < since).forEach(d => { next[d] = _allFoods[d]; });
     rows.forEach(r => {
-      if (!_allFoods[r.date]) _allFoods[r.date] = [];
-      _allFoods[r.date].push(dbRowToFood(r));
+      if (!next[r.date]) next[r.date] = [];
+      next[r.date].push(dbRowToFood(r));
     });
-    cacheSet('allFoods', _allFoods);
+    _allFoods = next;
+    if (!keepOld) _foodsFloor = since;
+    // Only the recent window is saved on the phone (keeps local storage small)
+    const recent = {}; Object.keys(_allFoods).filter(d => d >= since).forEach(d => { recent[d] = _allFoods[d]; });
+    cacheSet('allFoods', recent);
   } catch(e) {
     console.warn('[loadAllFromServer] falling back to cache:', e.message);
     const cached = cacheGet('allFoods');
@@ -1931,7 +2009,8 @@ async function loadCustomFoodsFromServer() {
         cal: f.cal||0, pro: f.pro||0, carb: f.carb||0, fat: f.fat||0,
         satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
         isDrink: f.isDrink === true,
-        servingLabel: f.servingLabel||'1 serving' };
+        servingLabel: f.servingLabel||'1 serving',
+        verified: f.verified === true, source: f.source || '', sourceUrl: f.sourceUrl || '' };
     });
     cacheSet('customFoods', _customFoods);
   } catch(e) {
@@ -1953,7 +2032,8 @@ async function saveCustomFood(food, silent = false) {
       profile_id: activeProfileId, name: food.name,
       cal: food.cal, pro: food.pro, carb: food.carb, fat: food.fat,
       satFat: food.satFat||0, sug: food.sug||0, sod: food.sod||0, fib: food.fib||0,
-      servingLabel: food.servingLabel||'1 serving'
+      servingLabel: food.servingLabel||'1 serving',
+      verified: food.verified === true, source: food.source || '', sourceUrl: food.sourceUrl || ''
     }});
     await loadCustomFoodsFromServer();
     if (!silent) showToast(`"${food.name}" saved to My Foods`);
@@ -2094,6 +2174,13 @@ async function autoLearnCustomFood(food) {
     servingLabel: food.servingLabel || '1 serving',
   };
   if (!entry.cal && !entry.pro && !entry.carb && !entry.fat) return;
+  // Keep "verified" when re-logging the same numbers (e.g. from Recent, which
+  // doesn't carry the flag); drop it if the numbers were changed by hand.
+  const prev = _customFoods.find(f => f.name.toLowerCase() === lc);
+  const same = prev && ['cal', 'pro', 'carb', 'fat'].every(k => Math.round(prev[k] || 0) === entry[k]);
+  entry.verified = food.verified === true || !!(prev?.verified && same);
+  entry.source = food.source || (same ? prev?.source : '') || '';
+  entry.sourceUrl = food.sourceUrl || (same ? prev?.sourceUrl : '') || '';
   // Update local copy: replace existing entry with same name, or append.
   const existingIdx = _customFoods.findIndex(f => f.name.toLowerCase() === lc);
   if (existingIdx !== -1) {
@@ -2465,6 +2552,7 @@ function showView(name, direction) {
   if (name === 'habits')  renderHabits();
   if (name === 'today')   renderDayStrip(); // strip can't scroll to the right week while hidden
   if (name === 'coach')   { renderGarminCard(); setTimeout(maybeAutoRefreshCoach, 300); }
+  if (name === 'goals')   renderLibraryCheck();
 }
 
 
@@ -2929,6 +3017,7 @@ function findInternalFood(query) {
   if (!q.length) return null;
   let best = null, bestScore = 0;
   for (const f of _customFoods) {
+    if (!f.verified) continue; // older memory-based estimates get looked up properly instead
     const n = foodTokens(f.name);
     if (!n.length) continue;
     const shared = q.filter(w => n.includes(w)).length;
@@ -2947,7 +3036,7 @@ function findSimilarFoods(text, limit = 3) {
   if (!_customFoods?.length || !text) return [];
   const q = foodTokens(parseQuantity(text.toLowerCase()).rest);
   if (q.length < 2) return [];
-  return _customFoods.map(f => {
+  return _customFoods.filter(f => f.verified).map(f => {
     const n = foodTokens(f.name);
     const shared = q.filter(w => n.includes(w)).length;
     const sameBrand = n[0] && q[0] === n[0];
@@ -2995,6 +3084,116 @@ function useSimilarMacros(i) {
   showToast(`Using ${f.name}'s numbers — adjust if needed`);
 }
 
+// Renders a lookup: the main result card, where it came from, other sources
+// or versions to switch to, and the similar-foods check.
+function showLookupResult(data, query) {
+  const pick = o => ({ id: Date.now(), name: o.name,
+    cal: Math.round(o.calories || 0), pro: Math.round(o.protein_g || 0), carb: Math.round(o.carbs_g || 0), fat: Math.round(o.fat_g || 0),
+    satFat: Math.round(o.sat_fat_g || 0), sug: Math.round(o.sugar_g || 0), sod: Math.round(o.sodium_mg || 0), fib: Math.round(o.fiber_g || 0),
+    servingLabel: o.serving_size || '1 serving',
+    // Verified = backed by a page/label we can point to
+    verified: !!o.source_url && (data.confidence !== 'low' || o !== data), source: o.source || '', sourceUrl: o.source_url || '' });
+  pendingFood = pick(data);
+  window._baseMacros = { ...pendingFood };
+  window._lastSource = data.source || data.note || 'Estimate';
+  window._lookupData = data; window._lookupQuery = query;
+  renderFoodResult(pendingFood, data.serving_size || '1 serving', data.source || 'Estimate', false);
+  // Source line: name, link, confidence, what was checked
+  const badge = document.querySelector('#resultArea .result-source-badge');
+  if (badge) {
+    const conf = data.confidence || (data.source_url ? 'medium' : 'low');
+    const link = data.source_url ? ` <a href="${data.source_url}" target="_blank" rel="noopener" class="src-link">view source ↗</a>` : '';
+    badge.outerHTML = `<span class="result-source-badge conf-${conf}">${escapeHtml(data.source || 'Estimate')}${conf === 'low' ? ' · estimate' : ''}</span>${link}`;
+  }
+  const card = document.querySelector('#resultArea .result-card');
+  if (card && (data.note || data.sources_checked)) {
+    const n = document.createElement('div');
+    n.className = 'src-note';
+    n.textContent = [data.note && data.note !== data.source ? data.note : '', data.sources_checked?.length ? `Checked: ${data.sources_checked.join(', ')}` : ''].filter(Boolean).join(' · ');
+    if (n.textContent) card.querySelector('.result-source')?.after(n);
+  }
+  // Other versions / sources
+  const alts = data.alternatives || [];
+  if (alts.length) {
+    const box = document.createElement('div');
+    box.className = 'sim-box alt-box';
+    box.innerHTML = `<div class="sim-head">Other versions or sources</div>` + alts.map((a, i) => `<div class="sim-row">
+        <div class="sim-main"><div class="sim-name">${escapeHtml(a.name)}</div><div class="sim-sub">${escapeHtml(a.serving_size || '')}${a.source ? ' · ' + (a.source_url ? `<a href="${a.source_url}" target="_blank" rel="noopener" class="src-link">${escapeHtml(a.source)} ↗</a>` : escapeHtml(a.source)) : ''}</div></div>
+        <div class="sim-nums"><b>${Math.round(a.calories)}</b> kcal<br>${Math.round(a.protein_g)}g P</div>
+        <button class="sim-use" onclick="useAlternative(${i})">Use</button>
+      </div>`).join('');
+    card?.after(box);
+  }
+  // Compare against similar verified foods in your library
+  const seen = new Set(), similar = [];
+  for (const f of [...findSimilarFoods(data.name || ''), ...findSimilarFoods(query)]) {
+    if (!seen.has(f.name.toLowerCase())) { seen.add(f.name.toLowerCase()); similar.push(f); }
+  }
+  renderSimilarCheck(pendingFood, similar.slice(0, 3));
+}
+// Swap an alternative into the main slot (the previous main becomes an alternative)
+function useAlternative(i) {
+  const d = window._lookupData; if (!d?.alternatives?.[i]) return;
+  const alt = d.alternatives[i];
+  const { alternatives, ...main } = d;
+  const others = alternatives.filter((_, j) => j !== i);
+  showLookupResult({ ...d, ...alt, confidence: alt.source_url ? 'medium' : 'low', note: '', alternatives: [main, ...others].slice(0, 3) }, window._lookupQuery);
+  showToast(`Switched to ${alt.name}`);
+}
+
+// ── Food library check: re-verify older estimate entries ──
+function renderLibraryCheck() {
+  const goals = document.getElementById('view-goals'); if (!goals) return;
+  let card = document.getElementById('libraryCheck');
+  if (!card) { card = document.createElement('div'); card.id = 'libraryCheck'; card.className = 'card'; goals.appendChild(card); }
+  const all = _customFoods || [], est = all.filter(f => !f.verified);
+  const ver = all.length - est.length;
+  card.innerHTML = `<div class="section-title">Food library</div>
+    <div class="lib-sum">${ver} verified · ${est.length} older estimate${est.length === 1 ? '' : 's'}</div>
+    ${est.length ? `<div class="lib-hint">These were saved from memory-based lookups before Lōg checked real sources. Check each one against USDA, Open Food Facts and the web, keep it as is, or delete it.</div>` : '<div class="lib-hint">Everything in your library is backed by a label or a cited source.</div>'}
+    <div id="libList">${est.slice(0, 40).map(f => `<div class="lib-row" id="lib-${f.id}">
+      <div class="lib-main"><div class="lib-name">${escapeHtml(f.name)}</div><div class="lib-sub">${f.cal} kcal · ${f.pro}g P · ${escapeHtml(f.servingLabel || '1 serving')}</div><div class="lib-res" id="libres-${f.id}"></div></div>
+      <div class="lib-btns"><button class="sim-use" onclick="checkLibraryFood(${f.id})">Check</button></div>
+    </div>`).join('')}</div>`;
+}
+async function checkLibraryFood(id) {
+  const f = _customFoods.find(x => x.id === id); if (!f) return;
+  const out = document.getElementById('libres-' + id);
+  out.innerHTML = '<span class="lib-wait">Checking sources…</span>';
+  try {
+    const res = await fetch('/api/lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `1 serving of ${f.name}` }) });
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || 'Lookup failed');
+    window['_lib' + id] = d;
+    const diff = Math.abs(d.calories - f.cal) > Math.max(15, f.cal * 0.1) || Math.abs(d.protein_g - f.pro) >= 3;
+    out.innerHTML = `<div class="lib-cmp ${diff ? 'off' : ''}">${diff ? 'Sources say' : 'Matches'}: <b>${Math.round(d.calories)} kcal · ${Math.round(d.protein_g)}g P</b> (${escapeHtml(d.serving_size || '')})
+      ${d.source_url ? `<a href="${d.source_url}" target="_blank" rel="noopener" class="src-link">${escapeHtml(d.source || 'source')} ↗</a>` : escapeHtml(d.source || 'estimate')}</div>
+      <div class="lib-acts">${diff ? `<button class="pill-btn" onclick="updateLibraryFood(${id})">Update</button>` : `<button class="pill-btn" onclick="updateLibraryFood(${id})">Mark verified</button>`}
+      <button class="sim-use" onclick="keepLibraryFood(${id})">Keep mine</button>
+      <button class="sim-use" style="color:#E24B4A" onclick="removeLibraryFood(${id})">Delete</button></div>`;
+  } catch (e) { out.innerHTML = `<span class="lib-wait">Couldn't check: ${escapeHtml(e.message)}</span>`; }
+}
+async function updateLibraryFood(id) {
+  const f = _customFoods.find(x => x.id === id), d = window['_lib' + id]; if (!f || !d) return;
+  await saveCustomFood({ name: f.name, cal: Math.round(d.calories), pro: Math.round(d.protein_g), carb: Math.round(d.carbs_g), fat: Math.round(d.fat_g),
+    satFat: Math.round(d.sat_fat_g || 0), sug: Math.round(d.sugar_g || 0), sod: Math.round(d.sodium_mg || 0), fib: Math.round(d.fiber_g || 0),
+    servingLabel: d.serving_size || f.servingLabel, verified: !!d.source_url, source: d.source, sourceUrl: d.source_url }, true);
+  showToast(`Updated ${f.name}`); renderLibraryCheck();
+}
+async function keepLibraryFood(id) {
+  const f = _customFoods.find(x => x.id === id); if (!f) return;
+  await saveCustomFood({ ...f, verified: true, source: 'Confirmed by you', sourceUrl: '' }, true);
+  showToast(`Kept ${f.name}`); renderLibraryCheck();
+}
+async function removeLibraryFood(id) {
+  const f = _customFoods.find(x => x.id === id); if (!f) return;
+  try {
+    await api(`custom-foods?id=${id}`, { method: 'DELETE' });
+    _customFoods = _customFoods.filter(x => x.id !== id); cacheSet('customFoods', _customFoods);
+    showToast(`Removed ${f.name}`); renderLibraryCheck();
+  } catch (e) { showToast('Could not remove'); }
+}
+
 async function lookupFood(excludeSource = null) {
   const query = document.getElementById('searchInput').value.trim();
   const dd = document.getElementById('foodDbDropdown'); if (dd) dd.style.display = 'none';
@@ -3009,7 +3208,8 @@ async function lookupFood(excludeSource = null) {
     if (internal) {
       pendingFood = { id: Date.now(), name: internal.name,
         cal: internal.cal, pro: internal.pro, carb: internal.carb, fat: internal.fat,
-        satFat: internal.satFat||0, sug: internal.sug||0, sod: internal.sod||0, fib: internal.fib||0 };
+        satFat: internal.satFat||0, sug: internal.sug||0, sod: internal.sod||0, fib: internal.fib||0,
+        servingLabel: internal.servingLabel, verified: true, source: internal.source, sourceUrl: internal.sourceUrl };
       window._baseMacros = { ...pendingFood };
       window._lastSource = 'Previously saved';
       window._internalMatch = internal; // track so we don't re-save on confirm
@@ -3024,7 +3224,7 @@ async function lookupFood(excludeSource = null) {
   }
 
   window._internalMatch = null;
-  resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Looking up macros...</div>';
+  resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Checking USDA, Open Food Facts and the web…</div>';
 
   try {
     const res = await fetch('/api/lookup', {
@@ -3044,22 +3244,8 @@ async function lookupFood(excludeSource = null) {
     const s = rawText.indexOf('{'), e = rawText.lastIndexOf('}');
     if (s === -1) throw new Error('No data returned — try again');
     const data = JSON.parse(rawText.slice(s, e + 1));
-    pendingFood = { id: Date.now(), name: data.name,
-      cal: Math.round(data.calories), pro: Math.round(data.protein_g),
-      carb: Math.round(data.carbs_g), fat: Math.round(data.fat_g),
-      satFat: Math.round(data.sat_fat_g||0), sug: Math.round(data.sugar_g),
-      sod: Math.round(data.sodium_mg||0), fib: Math.round(data.fiber_g||0) };
-    window._baseMacros = { ...pendingFood };
-    const sourceText = data.note || 'USDA estimate';
-    window._lastSource = sourceText;
-    const servingLabel = data.serving_size || '1 serving';
-    renderFoodResult(pendingFood, servingLabel, sourceText, false);
-    // Compare against similar foods in your library (by what you typed and what came back)
-    const seen = new Set(), similar = [];
-    for (const f of [...findSimilarFoods(data.name || ''), ...findSimilarFoods(query)]) {
-      if (!seen.has(f.name.toLowerCase())) { seen.add(f.name.toLowerCase()); similar.push(f); }
-    }
-    renderSimilarCheck(pendingFood, similar.slice(0, 3));
+    if (data.error) throw new Error(data.error);
+    showLookupResult(data, query);
   } catch(e) {
     resultArea.innerHTML = '<div class="err-msg">Lookup failed: '+ e.message + '</div>';
   }
@@ -3115,6 +3301,7 @@ async function lookupFoodFromImage(input) {
         satFat: Math.round(item.sat_fat_g||0), sug: Math.round(item.sugar_g||0),
         sod: Math.round(item.sodium_mg||0), fib: Math.round(item.fiber_g||0)
       };
+      if (window._photoMode === 'label') Object.assign(pendingFood, { verified: true, source: 'Nutrition label photo', servingLabel: item.serving_size || '1 serving' });
       window._baseMacros = { ...pendingFood };
       window._lastSource = item.note || 'Image scan';
       window._internalMatch = null;
@@ -4517,10 +4704,18 @@ function stepHistRange(dir) {
   renderHistory();
 }
 
+// Chart.js (69 KB) is only needed for History, so it isn't loaded at startup.
+// The service worker keeps a copy, so after the first time this is instant.
+let _chartWaiters = null;
 function withChartJs(fn) {
   if (window.Chart) return fn();
-  const s = document.querySelector('script[src*="chart.umd"]');
-  if (s) s.addEventListener('load', fn, { once: true });
+  if (_chartWaiters) { _chartWaiters.push(fn); return; }
+  _chartWaiters = [fn];
+  const sc = document.createElement('script');
+  sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  sc.onload = () => { const w = _chartWaiters; _chartWaiters = null; w.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); };
+  sc.onerror = () => { _chartWaiters = null; };
+  document.head.appendChild(sc);
 }
 
 // ── Main render ──
@@ -4528,6 +4723,8 @@ function renderHistory() {
   const view = document.getElementById('view-history');
   if (!view || !view.offsetWidth) return; // hidden — rendered again when the tab opens
   const w = histBuckets();
+  const usesFood = _histGroup === 'nutrition' || _histGroup === 'drinks' || _histRange === 'all';
+  if (usesFood && _foodsFloor && w.start < _foodsFloor) { loadOlderFoods().then(ok => { if (ok) renderHistory(); }); }
 
   // Controls
   document.querySelectorAll('#histGroupTabs .hist-seg').forEach(b => b.classList.toggle('active', b.dataset.group === _histGroup));
@@ -4934,7 +5131,8 @@ function exportDayById(d) {
   dlCSV(csv, `macros-${d}.csv`); showToast('Exported '+d);
 }
 
-function exportAll() {
+async function exportAll() {
+  if (_foodsFloor) { showToast('Gathering your full history…'); await loadOlderFoods(); }
   const days = Object.keys(_allFoods).sort();
   if (!days.length) { showToast('No history to export'); return; }
   let csv = 'Date,Weight (lbs),Food,Calories,Protein (g),Carbs (g),Fat (g),Sat Fat (g),Sugar (g),Sodium (mg),Fiber (g)\n';

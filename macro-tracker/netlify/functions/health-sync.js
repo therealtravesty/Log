@@ -10,7 +10,7 @@
 //       active     : "2026-10-09|610\n..."          (Active Energy, kcal)
 //       resting    : "2026-10-09|2253\n..."         (Resting Energy, kcal)
 //       steps_watch / active_watch / resting_watch     same, Source = Apple Watch
-//                    (fallback for days Garmin has nothing — e.g. Apple Watch days)
+//                    (covers Apple Watch days — see the per-field rule below)
 //       workouts   : "Running|2026-10-10 09:34|2026-10-10 10:05|214|3.31\n..."
 //                    activity | start | end | kcal | distance (optional)
 //     → upserts health_daily (one row per day) and exercise_logs (one row per
@@ -103,8 +103,10 @@ exports.handler = async (event) => {
   try {
     // Daily totals — a zero/missing field never overwrites a real value,
     // so a day Garmin hasn't synced yet can't wipe out good data.
-    // Garmin (Source = Connect) first; Apple Watch only fills a field Garmin left empty.
-    // Never summed, so a day you switched watches can't double count.
+    // Per field, pick ONE source — never summed, so wearing both can't double count:
+    //   steps / active: whichever watch recorded MORE that day (the one you actually
+    //     wore; a watch put on briefly only has a partial count)
+    //   resting: Garmin first (it reports a full day even when off the wrist)
     const g = { steps: dayValues(body.steps), active: dayValues(body.active), resting: dayValues(body.resting) };
     const w = { steps: dayValues(body.steps_watch), active: dayValues(body.active_watch), resting: dayValues(body.resting_watch) };
     const dates = [...new Set([...Object.values(g), ...Object.values(w)].flatMap(Object.keys))];
@@ -114,8 +116,11 @@ exports.handler = async (event) => {
       const row = { profile_id, date, updated_at: new Date().toISOString() };
       const used = new Set();
       for (const [k, col] of [['steps', 'steps'], ['active', 'active_kcal'], ['resting', 'resting_kcal']]) {
-        if (inLimits(k, g[k][date])) { row[col] = g[k][date]; used.add('garmin'); }
-        else if (inLimits(k, w[k][date])) { row[col] = w[k][date]; used.add('apple_watch'); }
+        const gv = inLimits(k, g[k][date]) ? g[k][date] : null;
+        const wv = inLimits(k, w[k][date]) ? w[k][date] : null;
+        const useWatch = wv != null && (gv == null || (k !== 'resting' && wv > gv));
+        if (useWatch) { row[col] = wv; used.add('apple_watch'); }
+        else if (gv != null) { row[col] = gv; used.add('garmin'); }
         else if (g[k][date] > 0 || w[k][date] > 0) skipped++;
       }
       if (Object.keys(row).length <= 3) return;

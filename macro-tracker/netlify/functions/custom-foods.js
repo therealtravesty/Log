@@ -124,6 +124,10 @@ exports.handler = async (event) => {
             fib:    Number(body.fib)    || 0,
             isDrink: body.isDrink === true,
             servingLabel: body.servingLabel || '1 serving',
+            // Where the numbers came from: verified = a label scan or a cited source
+            verified: body.verified === true,
+            source: String(body.source || '').slice(0, 120),
+            sourceUrl: /^https?:\/\//.test(body.sourceUrl || '') ? String(body.sourceUrl).slice(0, 500) : '',
           }],
         };
       }

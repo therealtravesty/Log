@@ -53,25 +53,32 @@ Rules:
 - For custom build-your-own items (bowls, burritos), estimate the full assembled item as one entry
 - Do not split toppings/dressings unless they appear as explicitly separate line items on a receipt`;
 
-  const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageData } },
-          { type: 'text', text: prompt }
-        ]
-      }]
-    })
-  });
+  // Models get retired over time (this is what broke photo lookups), so try the
+  // newest first and fall back if one is no longer available (404).
+  const MODELS = ['claude-sonnet-5-5', 'claude-sonnet-4-5', 'claude-haiku-4-5-20251001'];
+  let res;
+  for (const model of MODELS) {
+    res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageData } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    if (res.status !== 404) break;
+  }
 
   if (!res.ok) {
     const err = await res.text();

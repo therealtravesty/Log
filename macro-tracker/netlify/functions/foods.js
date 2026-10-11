@@ -10,6 +10,9 @@ exports.handler = async (event) => {
       if (!profile_id) return err('Missing profile_id', 400);
       let path = `food_logs?profile_id=eq.${profile_id}&order=created_at.asc&limit=1000000`;
       if (date) path += `&date=eq.${date}`;
+      // Startup only needs recent days; older history loads when you ask for it
+      if (params.since && /^\d{4}-\d{2}-\d{2}$/.test(params.since)) path += `&date=gte.${params.since}`;
+      if (params.before && /^\d{4}-\d{2}-\d{2}$/.test(params.before)) path += `&date=lt.${params.before}`;
       const rows = await query(path);
       return ok(rows);
     }
