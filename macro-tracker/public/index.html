@@ -459,8 +459,21 @@
   .lib-acts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
   .lib-acts .pill-btn { height: 30px; font-size: 12px; padding: 0 14px; }
   .lib-wait { font-size: 12px; color: var(--text-3); }
+  .lib-all { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; flex-wrap: wrap; }
   .update-pill { position: fixed; z-index: 450; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -80px); height: 38px; padding: 0 18px; border-radius: 19px; font: 600 13px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; transition: transform 0.45s cubic-bezier(.34,1.4,.64,1); }
   .update-pill.on { transform: translate(-50%, 0); }
+  .photo-hint { width: 100%; min-height: 58px; resize: none; margin-top: 6px; padding: 10px 12px; font: 16px/1.4 'DM Sans', system-ui, sans-serif; color: var(--text); background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 14px; outline: none; }
+  .photo-hint:focus { border-color: var(--text-3); }
+  .photo-hint-sub { font-size: 11px; color: var(--text-3); margin: 5px 2px 10px; }
+  /* ── Move food between meals ── */
+  .move-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--text-3); }
+  .move-chip { height: 30px; padding: 0 12px; border-radius: 15px; border: 0.5px solid var(--border-med); background: var(--surface); font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; }
+  .drag-ghost { position: fixed; z-index: 500; left: 16px; right: 16px; pointer-events: none; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; border-radius: 16px;
+    transform: scale(1.03); box-shadow: 0 16px 40px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9); }
+  .food-swipe.lifted { opacity: 0.25; }
+  .meal-section.drop-target { background: rgba(55,138,221,0.08); border-radius: 14px; box-shadow: 0 0 0 2px rgba(55,138,221,0.45); }
+  .meal-section { transition: background 0.15s, box-shadow 0.15s; }
+  body.dragging-food, body.dragging-food * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1430,6 +1443,8 @@
       </div>
       </div>
       <div class="sheet-panel" data-panel="photo">
+        <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what should I look for? e.g. &quot;the chicken shawarma bowl, large&quot;"></textarea>
+        <div class="photo-hint-sub">Helps with menus, receipts and shared plates. Leave blank to log everything in the photo.</div>
         <div class="photo-tiles">
           <button class="photo-tile" onclick="pickFoodPhoto('food')">
             <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -2607,6 +2622,81 @@ async function repeatMeal(meal, btn) {
   } catch (e) { showToast('Could not add — try again'); }
 }
 
+// ── Move a food to another meal ──
+async function moveFood(id, meal) {
+  const food = getActiveFoods().find(f => f.id === id);
+  if (!food || (food.meal || 'uncategorized') === meal) return;
+  try {
+    const { dbId, ...rest } = food;
+    await removeFood(food);
+    await addFood({ ...rest, meal, id: Date.now() }, meal);
+    renderToday();
+    showToast(`Moved ${food.name} to ${({ breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' })[meal] || meal}`);
+  } catch (e) { showToast('Could not move — try again'); }
+}
+
+// Press and hold a food (~0.4s) to pick it up, drag over another meal, let go.
+// A quick horizontal swipe still reveals Delete; a normal scroll still scrolls.
+let _drag = null;
+document.addEventListener('touchstart', e => {
+  const row = e.target.closest('.food-row');
+  if (!row || e.touches.length > 1) return;
+  const t = e.touches[0];
+  const id = parseInt(row.id.replace('food-item-', ''));
+  _drag = { id, row, x: t.clientX, y: t.clientY, active: false };
+  _drag.timer = setTimeout(() => startFoodDrag(t.clientX, t.clientY), 420);
+}, { passive: true });
+function startFoodDrag(x, y) {
+  if (!_drag) return;
+  _drag.active = true;
+  _rowSwipe = null; // cancel swipe-to-delete for this touch
+  const r = _drag.row.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'drag-ghost glass';
+  ghost.innerHTML = _drag.row.innerHTML;
+  ghost.style.top = r.top + 'px';
+  document.body.appendChild(ghost);
+  _drag.ghost = ghost; _drag.offset = y - r.top;
+  _drag.row.closest('.food-swipe')?.classList.add('lifted');
+  document.body.classList.add('dragging-food');
+  _drag.home = _drag.row.closest('.meal-section')?.dataset.meal;
+}
+document.addEventListener('touchmove', e => {
+  if (!_drag) return;
+  const t = e.touches[0];
+  if (!_drag.active) {
+    // Moved before the hold finished → it's a scroll or a swipe, not a drag
+    if (Math.abs(t.clientX - _drag.x) > 8 || Math.abs(t.clientY - _drag.y) > 8) { clearTimeout(_drag.timer); _drag = null; }
+    return;
+  }
+  e.preventDefault(); // dragging: stop the page from scrolling under your finger
+  _drag.ghost.style.top = (t.clientY - _drag.offset) + 'px';
+  // Auto-scroll near the top/bottom edges
+  const edge = 90, vh = window.innerHeight;
+  if (t.clientY < edge) window.scrollBy(0, -12); else if (t.clientY > vh - edge - 80) window.scrollBy(0, 12);
+  _drag.ghost.style.display = 'none';
+  const under = document.elementFromPoint(t.clientX, t.clientY)?.closest('.meal-section');
+  _drag.ghost.style.display = '';
+  document.querySelectorAll('.meal-section.drop-target').forEach(m => { if (m !== under) m.classList.remove('drop-target'); });
+  if (under && under.dataset.meal !== _drag.home) under.classList.add('drop-target');
+  _drag.target = under && under.dataset.meal !== _drag.home ? under.dataset.meal : null;
+}, { passive: false });
+function endFoodDrag() {
+  if (!_drag) return;
+  clearTimeout(_drag.timer);
+  const d = _drag; _drag = null;
+  if (!d.active) return;
+  _suppressTap = Date.now();
+  d.ghost?.remove();
+  d.row.closest('.food-swipe')?.classList.remove('lifted');
+  document.body.classList.remove('dragging-food');
+  document.querySelectorAll('.meal-section.drop-target').forEach(m => m.classList.remove('drop-target'));
+  if (d.target) moveFood(d.id, d.target);
+}
+document.addEventListener('touchend', endFoodDrag);
+document.addEventListener('touchcancel', endFoodDrag);
+document.addEventListener('contextmenu', e => { if (e.target.closest('.food-row')) e.preventDefault(); }); // no iOS callout on long-press
+
 // ── Swipe-to-delete rows ──
 let _rowSwipe = null, _openRow = null, _suppressTap = 0;
 function closeOpenRow() { if (_openRow) { _openRow.style.transform = ''; _openRow = null; } }
@@ -2617,7 +2707,7 @@ document.addEventListener('touchstart', e => {
   _rowSwipe = { row, x: e.touches[0].clientX, y: e.touches[0].clientY, base: row === _openRow ? -84 : 0, lock: null };
 }, { passive: true });
 document.addEventListener('touchmove', e => {
-  if (!_rowSwipe) return;
+  if (!_rowSwipe || _drag?.active) return;
   const dx = e.touches[0].clientX - _rowSwipe.x, dy = e.touches[0].clientY - _rowSwipe.y;
   if (!_rowSwipe.lock) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; _rowSwipe.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; }
   if (_rowSwipe.lock !== 'h') return;
@@ -3155,7 +3245,8 @@ function renderLibraryCheck() {
   const ver = all.length - est.length;
   card.innerHTML = `<div class="section-title">Food library</div>
     <div class="lib-sum">${ver} verified · ${est.length} older estimate${est.length === 1 ? '' : 's'}</div>
-    ${est.length ? `<div class="lib-hint">These were saved from memory-based lookups before Lōg checked real sources. Check each one against USDA, Open Food Facts and the web, keep it as is, or delete it.</div>` : '<div class="lib-hint">Everything in your library is backed by a label or a cited source.</div>'}
+    ${est.length ? `<div class="lib-hint">These were saved from memory-based lookups before Lōg checked real sources. <b>Check all</b> runs each one against USDA, Open Food Facts and the web (about a cent each): clear matches with a source are updated automatically, and anything uncertain is left below for you.</div>
+    <div class="lib-all"><button class="pill-btn" id="libAllBtn" onclick="checkAllLibrary()">Check all ${est.length}</button><span id="libAllStatus" class="lib-wait"></span></div>` : '<div class="lib-hint">Everything in your library is backed by a label or a cited source.</div>'}
     <div id="libList">${est.slice(0, 40).map(f => `<div class="lib-row" id="lib-${f.id}">
       <div class="lib-main"><div class="lib-name">${escapeHtml(f.name)}</div><div class="lib-sub">${f.cal} kcal · ${f.pro}g P · ${escapeHtml(f.servingLabel || '1 serving')}</div><div class="lib-res" id="libres-${f.id}"></div></div>
       <div class="lib-btns"><button class="sim-use" onclick="checkLibraryFood(${f.id})">Check</button></div>
@@ -3178,6 +3269,45 @@ async function checkLibraryFood(id) {
       <button class="sim-use" style="color:#E24B4A" onclick="removeLibraryFood(${id})">Delete</button></div>`;
   } catch (e) { out.innerHTML = `<span class="lib-wait">Couldn't check: ${escapeHtml(e.message)}</span>`; }
 }
+// Runs every estimate through the multi-source lookup, two at a time.
+// Auto-applies results that have a source link and aren't low-confidence;
+// everything else stays in the list with its comparison shown for review.
+let _libRunning = false;
+async function checkAllLibrary() {
+  if (_libRunning) return;
+  const queue = (_customFoods || []).filter(f => !f.verified).map(f => f.id);
+  if (!queue.length) return;
+  _libRunning = true;
+  const btn = document.getElementById('libAllBtn'), status = () => document.getElementById('libAllStatus');
+  if (btn) btn.disabled = true;
+  let done = 0, applied = 0, review = 0;
+  const total = queue.length;
+  const step = async () => {
+    while (queue.length) {
+      const id = queue.shift();
+      const f = _customFoods.find(x => x.id === id);
+      if (!f) { done++; continue; }
+      try {
+        const res = await fetch('/api/lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `1 serving of ${f.name}` }) });
+        const d = await res.json();
+        if (res.ok && !d.error && d.source_url && d.confidence !== 'low') {
+          await saveCustomFood({ name: f.name, cal: Math.round(d.calories), pro: Math.round(d.protein_g), carb: Math.round(d.carbs_g), fat: Math.round(d.fat_g),
+            satFat: Math.round(d.sat_fat_g || 0), sug: Math.round(d.sugar_g || 0), sod: Math.round(d.sodium_mg || 0), fib: Math.round(d.fiber_g || 0),
+            servingLabel: d.serving_size || f.servingLabel, verified: true, source: d.source, sourceUrl: d.source_url }, true);
+          applied++;
+        } else { window['_lib' + id] = d; review++; }
+      } catch (_) { review++; }
+      done++;
+      const st = status(); if (st) st.textContent = `Checked ${done} of ${total} · ${applied} updated · ${review} to review`;
+    }
+  };
+  await Promise.all([step(), step()]);
+  _libRunning = false;
+  renderLibraryCheck();
+  const st = status(); if (st) st.textContent = `Done · ${applied} updated${review ? ` · ${review} left for you to review` : ''}`;
+  showToast(`Library checked · ${applied} updated`);
+}
+
 async function updateLibraryFood(id) {
   const f = _customFoods.find(x => x.id === id), d = window['_lib' + id]; if (!f || !d) return;
   await saveCustomFood({ name: f.name, cal: Math.round(d.calories), pro: Math.round(d.protein_g), carb: Math.round(d.carbs_g), fat: Math.round(d.fat_g),
@@ -3281,7 +3411,8 @@ async function lookupFoodFromImage(input) {
     const res = await fetch('/api/lookup-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageData, mediaType, mode: window._photoMode || 'food' })
+      body: JSON.stringify({ imageData, mediaType, mode: window._photoMode || 'food',
+        hint: (document.getElementById('photoHint')?.value || '').trim().slice(0, 200) })
     });
 
     if (!res.ok) {
@@ -3675,6 +3806,11 @@ async function confirmAdd() {
     for (const k of ['cal', 'pro', 'carb', 'fat', 'satFat', 'sug', 'sod', 'fib']) {
       pendingFood['base' + k[0].toUpperCase() + k.slice(1)] = Math.round((pendingFood[k] || 0) / mult);
     }
+    // Changed the numbers on the card? Those are your corrections — the library keeps them
+    const bm = window._baseMacros;
+    if (bm && ['cal', 'pro', 'carb', 'fat'].some(k => Math.abs(pendingFood['base' + k[0].toUpperCase() + k.slice(1)] - Math.round(bm[k] || 0)) > 1)) {
+      Object.assign(pendingFood, { verified: true, source: 'Edited by you', sourceUrl: '' });
+    }
   }
   const meal = getActiveMealTab() || 'uncategorized';
   pendingFood.isDrink = document.getElementById('re_is_drink')?.checked || false;
@@ -3747,15 +3883,22 @@ async function saveEditedFood(foodId) {
   const newSod    = Math.round(parseFloat(document.getElementById(`fe_sod_${foodId}`).value)||0);
   const newFib    = Math.round(parseFloat(document.getElementById(`fe_fib_${foodId}`).value)||0);
   const newIsDrink = document.getElementById(`fe_isDrink_${foodId}`)?.checked === true;
-  // The edited values are at the current serving multiplier. To recompute the
-  // per-serving "base" values that auto-learn stores in the library, divide by
-  // servingMult. If servingMult is 1 (the common case), they're identical.
-  const mult = food.servingMult || 1;
+  // Use the serving count in the box (it used to keep the old count, so a 0.75
+  // serving saved as "1 serving" with 0.75× the nutrients). Per-serving "base"
+  // values = what's in the boxes ÷ servings.
+  const boxMult = parseFloat(document.getElementById(`fe_servings_${foodId}`)?.value);
+  const mult = boxMult > 0 ? boxMult : (food.servingMult || 1);
+  // Did you change the nutrients themselves (not just the servings)? Then your
+  // per-serving numbers are corrections and go to the library as confirmed.
+  const prevBase = { cal: food.baseCal ?? food.cal, pro: food.basePro ?? food.pro, carb: food.baseCarb ?? food.carb, fat: food.baseFat ?? food.fat };
+  const corrected = ['cal', 'pro', 'carb', 'fat'].some(k => Math.abs(Math.round({ cal: newCal, pro: newPro, carb: newCarb, fat: newFat }[k] / mult) - Math.round(prevBase[k] || 0)) > 1);
   const updated = {
     ...food,
     cal: newCal, pro: newPro, carb: newCarb, fat: newFat,
     satFat: newSatFat, sug: newSug, sod: newSod, fib: newFib,
     isDrink: newIsDrink,
+    servingMult: mult,
+    ...(corrected ? { verified: true, source: 'Edited by you', sourceUrl: '' } : {}),
     baseCal:    Math.round(newCal    / mult),
     basePro:    Math.round(newPro    / mult),
     baseCarb:   Math.round(newCarb   / mult),
@@ -3768,7 +3911,8 @@ async function saveEditedFood(foodId) {
   try {
     await removeFood(food);
     await addFood(updated, food.meal);
-    renderToday(); showToast('Updated!');
+    renderToday();
+    showToast(corrected ? `Updated · ${food.name} saved to your library` : 'Updated!');
   } catch(e) { showToast('Could not save edit'); }
 }
 
@@ -4079,7 +4223,7 @@ function renderCoachMessage(message, generated_at) {
     else if (mins < 60) label = `${mins} min ago`;
     else if (mins < 1440) label = `${Math.round(mins/60)} hr ago`;
     else label = `${Math.round(mins/1440)} day${Math.round(mins/1440) === 1 ? '' : 's'} ago`;
-    timestamp.textContent = `Updated ${label} · updates automatically`;
+    timestamp.textContent = `Updated ${label} · weekly check-in every Monday`;
   }
 }
 
@@ -4098,13 +4242,16 @@ function coachDataStamp() {
   if (!notes) { try { notes = localStorage.getItem(coachNotesKey()) || ''; } catch (_) {} }
   return [lastSync, lastW, lastW && _weights[lastW], ex, GOALS.cal, notes.length, notes.slice(-40)].join('|');
 }
+// Weekly check-in, like a coach: once each week, on the first app open from
+// Monday on (last week's data is complete by then). Daily numbers are noisy,
+// so it doesn't react to every sync. Tap Refresh any time for a sooner read.
+function lastMondayStart() { const d = parseYmd(startOfWeekStr(todayStr())); d.setHours(0, 0, 0, 0); return d; }
 function maybeAutoRefreshCoach() {
   if (_coachBusy || !activeProfileId || !navigator.onLine) return;
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(coachCacheKey()) || 'null'); } catch (_) {}
-  const age = cached?.generated_at ? Date.now() - new Date(cached.generated_at) : Infinity;
-  if (age < COACH_MIN_GAP) return;
-  if (!cached || age > COACH_MAX_AGE || cached.stamp !== coachDataStamp()) refreshCoachAnalysis({ silent: true });
+  const last = cached?.generated_at ? new Date(cached.generated_at) : null;
+  if (!last || last < lastMondayStart()) refreshCoachAnalysis({ silent: true });
 }
 
 async function refreshCoachAnalysis(opts = {}) {
@@ -4477,7 +4624,7 @@ function renderToday() {
       const mf = foods.filter(f => (f.meal||'uncategorized') === meal);
       const mt = totals(mf);
       const MEAL_COLORS = { breakfast:'var(--blue)', lunch:'var(--amber)', dinner:'var(--green)', snacks:'var(--pink)' };
-      return `<div class="meal-section">
+      return `<div class="meal-section" data-meal="${meal}">
         <div class="meal-header">
           <div class="meal-color-bar" style="background:${MEAL_COLORS[meal]};"></div>
           <span class="meal-title" style="flex:1;">${MEAL_LABELS[meal]}</span>
@@ -4530,6 +4677,8 @@ function renderToday() {
               <button class="food-edit-save"onclick="saveEditedFood(${f.id})">Save changes</button>
               <button class="food-edit-cancel"onclick="toggleFoodEdit(${f.id})">Cancel</button>
               <button class="food-edit-cancel" style="color:#E24B4A;margin-left:auto;" onclick="delFood(${f.id})">Delete</button>
+            </div>
+            <div class="move-row"><span>Move to</span>${MEALS.filter(m => m !== (f.meal || 'uncategorized')).map(m => `<button class="move-chip" onclick="moveFood(${f.id}, '${m}')">${MEAL_LABELS[m]}</button>`).join('')}
             </div>
           </div>
         </div>`).join('') : emptyMealRow(meal)}

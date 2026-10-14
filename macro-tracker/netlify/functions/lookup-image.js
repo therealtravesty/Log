@@ -12,7 +12,8 @@ async function fetchWithTimeout(url, options, ms = 20000) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
-  const { imageData, mediaType, mode } = JSON.parse(event.body || '{}');
+  const { imageData, mediaType, mode, hint } = JSON.parse(event.body || '{}');
+  const userHint = String(hint || '').trim().slice(0, 200);
   if (!imageData) return { statusCode: 400, body: JSON.stringify({ error: 'Missing image data' }) };
 
   // Guard: base64 PNG screenshots can be large — reject if over 5MB encoded
@@ -36,7 +37,12 @@ DATA SOURCE PRIORITY:
 2. If a nutrition label is shown → read exact values from the label
 3. Otherwise → estimate based on visible ingredients and portions
 
-${mode === 'label' ? `THIS IMAGE IS A NUTRITION FACTS LABEL (the user chose "Nutrition label").
+${userHint ? `THE USER SAYS: "${userHint.replace(/[`$]/g, '')}"
+- Return ONLY the item(s) they describe. Ignore everything else in the image (other menu items, other people's food, other receipt lines).
+- If this is a menu or receipt, find the matching line and use its size/options; if the menu prints calories, use them.
+- If what they describe isn't visible, return your best match and say so in "note".
+
+` : ''}${mode === 'label' ? `THIS IMAGE IS A NUTRITION FACTS LABEL (the user chose "Nutrition label").
 - Return exactly ONE item: the packaged product, per ONE serving as printed on the label.
 - Copy every number exactly as printed: calories, protein, total carbohydrate, total fat, saturated fat, total sugars, sodium, dietary fiber.
 - serving_size = the label's serving size text (e.g. "3/4 cup (52g)").
