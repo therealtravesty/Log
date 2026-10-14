@@ -110,20 +110,28 @@ exports.handler = async (event) => {
     const g = { steps: dayValues(body.steps), active: dayValues(body.active), resting: dayValues(body.resting) };
     const w = { steps: dayValues(body.steps_watch), active: dayValues(body.active_watch), resting: dayValues(body.resting_watch) };
     const dates = [...new Set([...Object.values(g), ...Object.values(w)].flatMap(Object.keys))];
-    let skipped = 0, watchDays = 0;
+    let skipped = 0, watchDays = 0, mismatch = 0;
     const byShape = {};
     dates.forEach(date => {
       const row = { profile_id, date, updated_at: new Date().toISOString() };
-      const used = new Set();
+      const src = {}; // which watch each field came from
       for (const [k, col] of [['steps', 'steps'], ['active', 'active_kcal'], ['resting', 'resting_kcal']]) {
         const gv = inLimits(k, g[k][date]) ? g[k][date] : null;
         const wv = inLimits(k, w[k][date]) ? w[k][date] : null;
         const useWatch = wv != null && (gv == null || (k !== 'resting' && wv > gv));
-        if (useWatch) { row[col] = wv; used.add('apple_watch'); }
-        else if (gv != null) { row[col] = gv; used.add('garmin'); }
+        if (useWatch) { row[col] = wv; src[col] = 'apple_watch'; }
+        else if (gv != null) { row[col] = gv; src[col] = 'garmin'; }
         else if (g[k][date] > 0 || w[k][date] > 0) skipped++;
       }
+      // Active identical to resting means a Shortcut block is reading the wrong
+      // data (e.g. the Apple Watch active block wired to Garmin's resting).
+      if (row.active_kcal != null && row.active_kcal === row.resting_kcal) {
+        const ga = inLimits('active', g.active[date]) && g.active[date] !== row.resting_kcal ? g.active[date] : null;
+        if (ga != null) { row.active_kcal = ga; src.active_kcal = 'garmin'; } else { delete row.active_kcal; delete src.active_kcal; }
+        mismatch++;
+      }
       if (Object.keys(row).length <= 3) return;
+      const used = new Set(Object.values(src));
       row.source = used.size > 1 ? 'mixed' : [...used][0];
       if (used.has('apple_watch')) watchDays++;
       const shape = Object.keys(row).sort().join(',');
@@ -160,7 +168,8 @@ exports.handler = async (event) => {
     const badLines = lines(body.workouts).length - workouts.length;
     const warn = skipped || badLines ? ` (skipped ${skipped + badLines} odd value${skipped + badLines === 1 ? '' : 's'} — check the Shortcut)` : '';
     const watchNote = watchDays ? ` (${watchDays} from Apple Watch)` : '';
-    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'}${watchNote} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}`;
+    const mismatchNote = mismatch ? ` ⚠︎ active matched resting on ${mismatch} day${mismatch === 1 ? '' : 's'} — check the Active Energy blocks` : '';
+    const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'}${watchNote} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}${mismatchNote}`;
     return json(200, { ok: true, days: dates.length, workouts: workouts.length, message });
   } catch (e) {
     console.error('[health-sync]', e.message);

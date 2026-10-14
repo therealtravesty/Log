@@ -1977,6 +1977,8 @@ function cleanHealthRows(rows) {
   return (rows || []).map(r => {
     const c = { ...r };
     for (const [k, [lo, hi]] of Object.entries(HEALTH_BOUNDS)) if (c[k] != null && (c[k] < lo || c[k] > hi)) c[k] = null;
+    // Active exactly equal to resting = a Shortcut block reading the wrong data
+    if (c.active_kcal != null && c.active_kcal === c.resting_kcal) c.active_kcal = null;
     return c;
   });
 }
@@ -2267,7 +2269,10 @@ function calcGoals(s) {
   let tdeeSource = 'estimate', tdeeDays = 0, floor = 1200;
   if ((s.targetMode || 'garmin') === 'garmin') {
     const m = measuredBurn();
-    if (m) { tdee = weeklyTdee(m); tdeeSource = 'garmin'; tdeeDays = m.days; floor = Math.max(1200, m.resting); }
+    // A real daily burn sits between ~1.15× and ~2.3× resting metabolism.
+    // Outside that, the data is wrong (bad sync) — use the estimate instead.
+    if (m && (m.tdee > bmr * 2.3 || m.tdee < bmr * 1.15)) { tdeeSource = 'implausible'; tdeeDays = m.tdee; }
+    else if (m) { tdee = weeklyTdee(m); tdeeSource = 'garmin'; tdeeDays = m.days; floor = Math.max(1200, m.resting); }
   }
   // Weekly rate → daily deficit/surplus (3,500 kcal per lb)
   const rate = parseFloat(s.rate) || 1;
@@ -2400,7 +2405,7 @@ function updateSettingsSummary(s, g) {
   if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
-    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
+    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg)` : g.tdeeSource === 'implausible' ? `TDEE (estimate — Garmin average of ${Number(g.tdeeDays).toLocaleString()} looks off, check the Shortcut)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
     ['Protein',  `${g.pro}g (1 g/lb bodyweight)`],
     ['Carbs',    `${g.carb}g`],
     ['Fat',      `${g.fat}g`],
