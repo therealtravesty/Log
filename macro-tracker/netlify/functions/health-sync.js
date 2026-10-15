@@ -10,6 +10,9 @@
 //       active     : "2026-10-09|610\n..."          (Active Energy, kcal)
 //       resting    : "2026-10-09|2253\n..."         (Resting Energy, kcal)
 //       steps_watch / active_watch / resting_watch     same, Source = Apple Watch
+//       sleep      : "Asleep Core|2026-10-13 23:12|2026-10-14 01:40\n..."
+//                    stage | start | end, one line per Garmin sleep segment
+//       rhr        : "2026-10-13|52\n..."      (Resting Heart Rate, bpm)
 //                    (covers Apple Watch days — see the per-field rule below)
 //       workouts   : "Running|2026-10-10 09:34|2026-10-10 10:05|214|3.31\n..."
 //                    activity | start | end | kcal | distance (optional)
@@ -53,13 +56,50 @@ function isDate(s) {
   return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
 }
 // Plausible daily ranges — anything outside is a Shortcut wiring mistake, not data
-const LIMITS = { steps: [1, 100000], active: [1, 6000], resting: [800, 4500] }; // same bounds as the app
+const LIMITS = { steps: [1, 100000], active: [1, 6000], resting: [800, 4500], sleep: [60, 960], rhr: [30, 120] }; // same bounds as the app
 const inLimits = (k, v) => v >= LIMITS[k][0] && v <= LIMITS[k][1];
 const lines = t => String(t || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 // "2026-10-10 09:34" or "2026-10-10T09:34:00" → Date treated as local wall time
 function wall(s) {
   const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
   return m && isDate(`${m[1]}-${m[2]}-${m[3]}`) ? { date: `${m[1]}-${m[2]}-${m[3]}`, mins: Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000, iso: `${m[1]}-${m[2]}-${m[3]}T${m[4].padStart(2, '0')}:${m[5]}` } : null;
+}
+
+// Sleep segments → minutes asleep per night. A night belongs to the date you
+// woke up. Awake / in-bed segments don't count; overlapping segments are
+// merged so nothing is double counted. If Garmin only wrote "In Bed" for a
+// night (no stages), that time is used instead.
+function sleepMinutes(text) {
+  const asleep = {}, inBed = {};
+  lines(text).forEach(l => {
+    const [stage, start, end] = l.split('|').map(x => (x || '').trim());
+    const s = wall(start), e = wall(end);
+    if (!s || !e || e.mins <= s.mins || e.mins - s.mins > 16 * 60) return;
+    // Stage may arrive as a name ("Asleep Core") or Apple's number code:
+    // 0 in bed · 1 asleep · 2 awake · 3 core · 4 deep · 5 REM
+    const st = stage.toLowerCase().trim();
+    const code = /^\d+$/.test(st) ? +st : null;
+    const isAwake = code != null ? code === 2 : /awake/.test(st);
+    const isInBed = code != null ? code === 0 : /in ?bed/.test(st);
+    const bucket = isAwake ? null : isInBed ? inBed : asleep;
+    if (!bucket) return;
+    (bucket[e.date] = bucket[e.date] || []).push([s.mins, e.mins]);
+  });
+  const total = ivs => {
+    ivs.sort((a, b) => a[0] - b[0]);
+    let sum = 0, cs = null, ce = null;
+    for (const [a, b] of ivs) {
+      if (cs == null || a > ce) { if (cs != null) sum += ce - cs; cs = a; ce = b; }
+      else ce = Math.max(ce, b);
+    }
+    return cs == null ? 0 : sum + (ce - cs);
+  };
+  const out = {};
+  new Set([...Object.keys(asleep), ...Object.keys(inBed)]).forEach(d => {
+    const m = asleep[d] ? total(asleep[d]) : total(inBed[d] || []);
+    if (m > 0) out[d] = Math.round(m);
+  });
+  return out;
 }
 
 // Parses "date|value" lines into { date: value }
@@ -109,7 +149,8 @@ exports.handler = async (event) => {
     //   resting: Garmin first (it reports a full day even when off the wrist)
     const g = { steps: dayValues(body.steps), active: dayValues(body.active), resting: dayValues(body.resting) };
     const w = { steps: dayValues(body.steps_watch), active: dayValues(body.active_watch), resting: dayValues(body.resting_watch) };
-    const dates = [...new Set([...Object.values(g), ...Object.values(w)].flatMap(Object.keys))];
+    const sleep = sleepMinutes(body.sleep), rhr = dayValues(body.rhr);
+    const dates = [...new Set([...Object.values(g), ...Object.values(w), sleep, rhr].flatMap(Object.keys))];
     let skipped = 0, watchDays = 0, mismatch = 0;
     const byShape = {};
     dates.forEach(date => {
@@ -123,6 +164,9 @@ exports.handler = async (event) => {
         else if (gv != null) { row[col] = gv; src[col] = 'garmin'; }
         else if (g[k][date] > 0 || w[k][date] > 0) skipped++;
       }
+      // Sleep + resting heart rate (Garmin only)
+      if (inLimits('sleep', sleep[date])) row.sleep_min = sleep[date];
+      if (inLimits('rhr', rhr[date])) row.resting_hr = rhr[date];
       // Active identical to resting means a Shortcut block is reading the wrong
       // data (e.g. the Apple Watch active block wired to Garmin's resting).
       if (row.active_kcal != null && row.active_kcal === row.resting_kcal) {

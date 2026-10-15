@@ -474,6 +474,43 @@
   .meal-section.drop-target { background: rgba(55,138,221,0.08); border-radius: 14px; box-shadow: 0 0 0 2px rgba(55,138,221,0.45); }
   .meal-section { transition: background 0.15s, box-shadow 0.15s; }
   body.dragging-food, body.dragging-food * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .pt-lib { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--blue); padding: 4px 0; }
+  /* ── Quality score ── */
+  .qbadge { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 13px; background: var(--qc); color: #fff; font: 600 12px 'DM Mono', monospace; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .qbadge.outline { background: transparent; color: var(--qc); box-shadow: inset 0 0 0 1.5px var(--qc); }
+  .qbadge.sm { min-width: 26px; height: 20px; font-size: 11px; border-radius: 10px; margin-right: 4px; vertical-align: middle; }
+  .qbadge.big { min-width: 52px; height: 52px; border-radius: 26px; font-size: 20px; }
+  .food-row .qbadge { margin-left: 2px; }
+  .result-name.with-q { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .left-quality:not(:empty) { flex-basis: 100%; font-size: 12px; color: var(--text-2); margin-top: 10px; }
+  .left-card { flex-wrap: wrap; }
+  .q-overlay { position: fixed; inset: 0; z-index: 460; background: rgba(0,0,0,0.25); display: flex; align-items: flex-end; justify-content: center; padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); opacity: 0; transition: opacity 0.2s; }
+  .q-overlay.on { opacity: 1; }
+  .q-card { width: 100%; max-width: 520px; border-radius: 24px; padding: 18px; background: rgba(250,249,246,0.92); transform: translateY(20px); transition: transform 0.35s cubic-bezier(.32,.72,0,1); }
+  @media (prefers-color-scheme: dark) { .q-card { background: rgba(30,30,28,0.92); } }
+  .q-overlay.on .q-card { transform: none; }
+  .q-top { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .q-word { font-size: 18px; font-weight: 650; }
+  .q-name { font-size: 13px; color: var(--text-2); }
+  .q-sec { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-3); margin: 14px 0 4px; }
+  .q-line { font-size: 14px; padding: 3px 0; display: flex; align-items: center; gap: 8px; }
+  .q-line b { width: 14px; text-align: center; } .q-line b.pos { color: #1D9E75; } .q-line b.neg { color: #E24B4A; }
+  .q-dim { color: var(--text-3); }
+  .qd { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .q-foot { font-size: 11px; color: var(--text-3); line-height: 1.45; margin-top: 14px; }
+  .scan-tile { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 10px; border-radius: 18px; border: 0.5px solid var(--border-med); background: var(--surface); text-align: left; color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer; }
+  .scan-tile svg { width: 30px; height: 30px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+  .scan-tile .pt-title, .scan-tile .pt-sub { display: block; }
+  .scan-overlay { position: fixed; inset: 0; z-index: 470; background: #000; }
+  .scan-overlay video { width: 100%; height: 100%; object-fit: cover; }
+  .scan-frame { position: absolute; left: 10%; right: 10%; top: 32%; height: 22%; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); border: 2px solid rgba(255,255,255,0.85); }
+  .scan-frame span { position: absolute; left: 8%; right: 8%; top: 50%; height: 2px; background: #E24B4A; animation: scanline 1.6s ease-in-out infinite alternate; }
+  @keyframes scanline { from { transform: translateY(-30px); } to { transform: translateY(30px); } }
+  .scan-bottom { position: absolute; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); border-radius: 22px; padding: 14px; }
+  .scan-status { font-size: 14px; text-align: center; margin-bottom: 10px; color: var(--text); }
+  .scan-manual { display: flex; gap: 8px; }
+  .scan-manual input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 12px; border: 0.5px solid var(--border-med); background: var(--surface); font: 16px 'DM Mono', monospace; color: var(--text); }
+  .scan-cancel { width: 100%; margin-top: 10px; height: 40px; border: none; background: none; font: 600 15px 'DM Sans', system-ui, sans-serif; color: var(--text); }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -963,6 +1000,7 @@
         <div class="left-bar pro"><span id="leftProBar"></span></div>
       </div>
       <svg class="left-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      <div class="left-quality" id="leftQuality"></div>
     </button>
     <div class="nutrient-details" id="nutrientDetails">
     <div class="summary-grid">
@@ -1431,6 +1469,7 @@
             
           </div>
           <input type="file" id="foodImageInput" accept="image/*" style="display:none;" onchange="lookupFoodFromImage(this)"/>
+          <input type="file" id="foodCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="lookupFoodFromImage(this)"/>
         </div>
         <div style="min-height:16px;">
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
@@ -1445,14 +1484,20 @@
       <div class="sheet-panel" data-panel="photo">
         <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what should I look for? e.g. &quot;the chicken shawarma bowl, large&quot;"></textarea>
         <div class="photo-hint-sub">Helps with menus, receipts and shared plates. Leave blank to log everything in the photo.</div>
+        <button class="scan-tile" onclick="openScanner()">
+          <svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 8v8M11 8v8M14 8v8M16.5 8v8"/></svg>
+          <span><span class="pt-title">Scan barcode</span><span class="pt-sub">Exact product, ingredients and additives</span></span>
+        </button>
         <div class="photo-tiles">
-          <button class="photo-tile" onclick="pickFoodPhoto('food')">
+          <button class="photo-tile" onclick="pickFoodPhoto('food', true)">
             <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
             <span class="pt-title">Photo of food</span><span class="pt-sub">A plate, a menu, or an order receipt</span>
+            <span class="pt-lib" onclick="event.stopPropagation(); pickFoodPhoto('food', false)">From Photos</span>
           </button>
-          <button class="photo-tile" onclick="pickFoodPhoto('label')">
+          <button class="photo-tile" onclick="pickFoodPhoto('label', true)">
             <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 10.5h8M8 14h5M8 17.5h3"/></svg>
             <span class="pt-title">Nutrition label</span><span class="pt-sub">Reads the exact numbers off the package</span>
+            <span class="pt-lib" onclick="event.stopPropagation(); pickFoodPhoto('label', false)">From Photos</span>
           </button>
         </div>
       </div>
@@ -1987,7 +2032,7 @@ let _healthDaily = [];
 // Watch glitches happen (e.g. 8,779 active kcal in one day). Values outside
 // what a person can plausibly burn or walk are dropped everywhere — History,
 // the Garmin card, the calorie target, and what the Coach sees.
-const HEALTH_BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500] };
+const HEALTH_BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120] };
 function cleanHealthRows(rows) {
   return (rows || []).map(r => {
     const c = { ...r };
@@ -2027,7 +2072,8 @@ async function loadCustomFoodsFromServer() {
         satFat: f.satFat||0, sug: f.sug||0, sod: f.sod||0, fib: f.fib||0,
         isDrink: f.isDrink === true,
         servingLabel: f.servingLabel||'1 serving',
-        verified: f.verified === true, source: f.source || '', sourceUrl: f.sourceUrl || '' };
+        verified: f.verified === true, source: f.source || '', sourceUrl: f.sourceUrl || '',
+        quality: f.quality || null, barcode: f.barcode || null };
     });
     cacheSet('customFoods', _customFoods);
   } catch(e) {
@@ -2050,7 +2096,8 @@ async function saveCustomFood(food, silent = false) {
       cal: food.cal, pro: food.pro, carb: food.carb, fat: food.fat,
       satFat: food.satFat||0, sug: food.sug||0, sod: food.sod||0, fib: food.fib||0,
       servingLabel: food.servingLabel||'1 serving',
-      verified: food.verified === true, source: food.source || '', sourceUrl: food.sourceUrl || ''
+      verified: food.verified === true, source: food.source || '', sourceUrl: food.sourceUrl || '',
+      quality: food.quality || null, barcode: food.barcode || null
     }});
     await loadCustomFoodsFromServer();
     if (!silent) showToast(`"${food.name}" saved to My Foods`);
@@ -2198,6 +2245,8 @@ async function autoLearnCustomFood(food) {
   entry.verified = food.verified === true || !!(prev?.verified && same);
   entry.source = food.source || (same ? prev?.source : '') || '';
   entry.sourceUrl = food.sourceUrl || (same ? prev?.sourceUrl : '') || '';
+  entry.quality = food.quality || prev?.quality || null;   // keep ingredient data once known
+  entry.barcode = food.barcode || prev?.barcode || null;
   // Update local copy: replace existing entry with same name, or append.
   const existingIdx = _customFoods.findIndex(f => f.name.toLowerCase() === lc);
   if (existingIdx !== -1) {
@@ -2576,8 +2625,135 @@ function showView(name, direction) {
 }
 
 
+
+// ════════ Food quality score (Yuka-style, tuned for a high-protein cut) ════════
+// Score = points earned ÷ points possible, shown 0–100:
+//   Nutrition (60): from the macros every food has — protein density and fiber
+//     add; sugar (net of fiber), saturated fat and sodium subtract. Measured
+//     per 100 kcal so portion size doesn't matter. Healthy fats aren't penalized.
+//   Processing (25): NOVA group, when the ingredients are known.
+//   Additives (15): rated from the table below; a high-risk additive caps the score at 49.
+// With nutrients only, a perfect 60/60 still shows as 100 (outlined badge).
+const ADDITIVE_RISK = [
+  [/e171\b|titanium dioxide/, 'Titanium dioxide', 'high'], [/e924\b|potassium bromate/, 'Potassium bromate', 'high'],
+  [/e320\b|\bbha\b|butylated hydroxyanisole/, 'BHA', 'high'], [/e127\b|red ?(no\.? ?)?3\b|erythrosine/, 'Red 3', 'high'],
+  [/e250\b|sodium nitrite/, 'Sodium nitrite', 'high'], [/e251\b|e252\b|sodium nitrate|potassium nitrate/, 'Nitrates', 'high'],
+  [/e216\b|propyl ?paraben/, 'Propylparaben', 'high'], [/e951\b|aspartame/, 'Aspartame', 'high'],
+  [/e129\b|red ?(no\.? ?)?40|allura/, 'Red 40', 'moderate'], [/e102\b|yellow ?(no\.? ?)?5|tartrazine/, 'Yellow 5', 'moderate'],
+  [/e110\b|yellow ?(no\.? ?)?6|sunset yellow/, 'Yellow 6', 'moderate'], [/e133\b|blue ?(no\.? ?)?1\b|brilliant blue/, 'Blue 1', 'moderate'],
+  [/e150c|e150d|caramel colou?r/, 'Caramel color', 'moderate'], [/e955\b|sucralose/, 'Sucralose', 'moderate'],
+  [/e950\b|acesulfame/, 'Acesulfame K', 'moderate'], [/e954\b|saccharin/, 'Saccharin', 'moderate'],
+  [/e968\b|erythritol/, 'Erythritol', 'moderate'], [/e407\b|carrageenan/, 'Carrageenan', 'moderate'],
+  [/e433\b|polysorbate ?80/, 'Polysorbate 80', 'moderate'], [/e466\b|carboxymethyl ?cellulose|cellulose gum/, 'Cellulose gum', 'moderate'],
+  [/e471\b|mono-? ?(and|&) ?diglycerides/, 'Mono- and diglycerides', 'moderate'], [/e211\b|sodium benzoate/, 'Sodium benzoate', 'moderate'],
+  [/e319\b|tbhq/, 'TBHQ', 'moderate'], [/e321\b|\bbht\b|butylated hydroxytoluene/, 'BHT', 'moderate'],
+  [/e338\b|phosphoric acid/, 'Phosphoric acid', 'moderate'], [/e339|e340|e341|e450|e451|e452|phosphates?\b/, 'Phosphates', 'moderate'],
+  [/e621\b|monosodium glutamate|\bmsg\b/, 'MSG', 'low'], [/e202\b|potassium sorbate/, 'Potassium sorbate', 'low'],
+  [/e415\b|xanthan/, 'Xanthan gum', 'low'], [/e412\b|guar/, 'Guar gum', 'low'], [/e418\b|gellan/, 'Gellan gum', 'low'],
+  [/e420\b|sorbitol/, 'Sorbitol', 'low'], [/e960|stevia|steviol/, 'Stevia', 'low'], [/allulose/, 'Allulose', 'low'],
+  [/e322\b|lecithin/, 'Lecithin', 'low'], [/e330\b|citric acid/, 'Citric acid', 'low'],
+  [/e300\b|e301\b|e306|e307|ascorbic acid|tocopherol/, 'Vitamin C / E', 'low'], [/e440\b|pectin/, 'Pectin', 'low'],
+  [/e410\b|locust bean/, 'Locust bean gum', 'low'], [/e500\b|sodium bicarbonate|baking soda/, 'Baking soda', 'low'],
+];
+function classifyAdditives(list) {
+  const seen = new Set(), out = [];
+  (list || []).forEach(raw => {
+    const t = String(raw).toLowerCase();
+    const hit = ADDITIVE_RISK.find(([re]) => re.test(t));
+    const label = hit ? hit[1] : String(raw).replace(/^e\d+[a-z]?\s*/i, '').replace(/\b\w/g, c => c.toUpperCase()) || String(raw).toUpperCase();
+    if (seen.has(label)) return; seen.add(label);
+    out.push({ label, risk: hit ? hit[2] : 'low' });
+  });
+  return out.sort((a, b) => ({ high: 0, moderate: 1, low: 2 })[a.risk] - ({ high: 0, moderate: 1, low: 2 })[b.risk]);
+}
+// Quality data comes from the food itself (fresh lookups) or its library entry
+function qualityDataFor(food) {
+  if (food.quality) return food.quality;
+  const lc = (food.name || '').toLowerCase().trim();
+  return (_customFoods || []).find(f => f.name.toLowerCase().trim() === lc)?.quality || null;
+}
+function foodScore(food) {
+  const cal = food.cal || 0, notes = [];
+  let nut;
+  if (cal < 20) { nut = 45; notes.push(['·', 'Very low calorie']); }
+  else {
+    const per = v => (v || 0) / cal * 100;
+    const pro = per(food.pro), fib = per(food.fib), sug = per(food.sug), sat = per(food.satFat), sod = per(food.sod);
+    const pP = Math.min(20, pro * 2), fP = Math.min(10, fib * 3.33);
+    const sP = Math.min(15, Math.max(0, sug - 2 * fib) * 1.25), satP = Math.min(15, sat * 3), sodP = Math.min(10, sod / 40);
+    nut = Math.max(0, Math.min(60, 30 + pP + fP - sP - satP - sodP));
+    // Very low-calorie foods (almond milk, broth) blow up "per 100 kcal" numbers;
+    // blend them toward neutral until ~80 kcal, where the math is meaningful.
+    if (cal < 80) { const w = (cal - 20) / 60; nut = 45 * (1 - w) + nut * w; }
+    if (pP >= 12) notes.push(['+', `High protein (${pro.toFixed(1)}g per 100 kcal)`]); else if (pP < 4) notes.push(['−', 'Low protein']);
+    if (fP >= 5) notes.push(['+', 'Good fiber']);
+    if (sP >= 6) notes.push(['−', `Sugar (${sug.toFixed(1)}g per 100 kcal)`]);
+    if (satP >= 6) notes.push(['−', 'Saturated fat']);
+    if (sodP >= 4) notes.push(['−', `Sodium (${Math.round(sod)}mg per 100 kcal)`]);
+  }
+  const q = qualityDataFor(food);
+  let earned = nut, possible = 60, cap = 100, additives = null;
+  if (q && [1, 2, 3, 4].includes(q.nova)) { possible += 25; earned += { 1: 25, 2: 20, 3: 12, 4: 0 }[q.nova]; }
+  if (q && Array.isArray(q.additives)) {
+    additives = classifyAdditives(q.additives);
+    possible += 15;
+    const worst = additives[0]?.risk;
+    earned += !additives.length ? 15 : worst === 'high' ? 0 : worst === 'moderate' ? 6 : 13;
+    if (worst === 'high') cap = 49;
+  }
+  const score = Math.min(cap, Math.round(earned / possible * 100));
+  return { score, nutOnly: possible === 60, partial: possible > 60 && possible < 100, nova: q?.nova || null, additives, notes, organic: q?.organic, source: q?.source || '' };
+}
+function scoreColor(sc) { return sc >= 75 ? '#1D9E75' : sc >= 50 ? '#7CB342' : sc >= 25 ? '#EF9F27' : '#E24B4A'; }
+function scoreWord(sc) { return sc >= 75 ? 'Excellent' : sc >= 50 ? 'Good' : sc >= 25 ? 'Poor' : 'Bad'; }
+function qualityBadge(food, clickArg) {
+  const q = foodScore(food);
+  return `<span class="qbadge${q.nutOnly ? ' outline' : ''}" style="--qc:${scoreColor(q.score)}"${clickArg != null ? ` onclick="event.stopPropagation();showQuality(${clickArg})"` : ''} title="${scoreWord(q.score)}${q.nutOnly ? ' · nutrients only' : ''}">${q.score}</span>`;
+}
+const NOVA_TEXT = { 1: 'Unprocessed or minimally processed', 2: 'Culinary ingredient', 3: 'Processed', 4: 'Ultra-processed' };
+function showQuality(arg) {
+  const food = typeof arg === 'object' ? arg : arg === 'pending' ? pendingFood : getActiveFoods().find(f => f.id === arg);
+  if (!food) return;
+  const q = foodScore(food), col = scoreColor(q.score);
+  const riskDot = r => `<span class="qd" style="background:${r === 'high' ? '#E24B4A' : r === 'moderate' ? '#EF9F27' : '#1D9E75'}"></span>`;
+  document.getElementById('qualitySheet')?.remove();
+  const el = document.createElement('div');
+  el.id = 'qualitySheet'; el.className = 'q-overlay';
+  el.innerHTML = `<div class="q-card glass" onclick="event.stopPropagation()">
+    <div class="q-top"><span class="qbadge big${q.nutOnly ? ' outline' : ''}" style="--qc:${col}">${q.score}</span>
+      <div><div class="q-word" style="color:${col}">${scoreWord(q.score)}</div><div class="q-name">${escapeHtml(food.name)}</div></div></div>
+    <div class="q-sec">Nutrition</div>
+    ${q.notes.length ? q.notes.map(([s, t]) => `<div class="q-line"><b class="${s === '+' ? 'pos' : s === '−' ? 'neg' : ''}">${s}</b>${escapeHtml(t)}</div>`).join('') : '<div class="q-line">Balanced, nothing stands out</div>'}
+    <div class="q-sec">Processing</div>
+    <div class="q-line">${q.nova ? `NOVA ${q.nova} · ${NOVA_TEXT[q.nova]}` : '<span class="q-dim">Unknown, no ingredient data</span>'}</div>
+    <div class="q-sec">Additives</div>
+    ${q.additives ? (q.additives.length ? q.additives.map(a => `<div class="q-line">${riskDot(a.risk)}${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">None</div>') : '<div class="q-line"><span class="q-dim">Unknown</span></div>'}
+    ${q.organic ? '<div class="q-line q-dim">Organic (not part of the score)</div>' : ''}
+    <div class="q-foot">${q.nutOnly ? 'Based on nutrients only. Scan the barcode or photograph the ingredients list to include processing and additives.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
+    <button class="pill-btn" style="width:100%;margin-top:12px" onclick="document.getElementById('qualitySheet').remove()">Done</button>
+  </div>`;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+}
+// Calorie-weighted quality for a set of foods + share of calories from NOVA 4
+function dayQuality(foods) {
+  let w = 0, sum = 0, upf = 0, known = 0;
+  foods.forEach(f => {
+    const c = f.cal || 0; if (c <= 0) return;
+    const q = foodScore(f); w += c; sum += q.score * c;
+    if (q.nova) { known += c; if (q.nova === 4) upf += c; }
+  });
+  return w ? { score: Math.round(sum / w), upfPct: known ? Math.round(upf / known * 100) : null, coverage: known / w } : null;
+}
+
 // ════════ Log tab: Left today, swipe rows, add-food sheet ════════
 function renderLeftCard(t) {
+  const lq = document.getElementById('leftQuality');
+  if (lq) {
+    const dq = dayQuality(getActiveFoods());
+    lq.innerHTML = dq ? `<span class="qbadge sm" style="--qc:${scoreColor(dq.score)}">${dq.score}</span> Food quality${dq.upfPct != null ? ` · ${dq.upfPct}% of calories ultra-processed${dq.coverage < 0.6 ? ' (of foods with ingredient data)' : ''}` : ''}` : '';
+  }
   const calLeft = Math.round((GOALS.cal || 0) - t.cal), proLeft = Math.round((GOALS.pro || 0) - t.pro);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('leftCal', Math.abs(calLeft).toLocaleString());
@@ -2830,6 +3006,7 @@ function renderSheetRecent() {
       <div class="rec-row" onclick="toggleRec(${i})">
         <div class="rec-main"><div class="rec-name">${escapeHtml(f.name)}</div>
           <div class="rec-sub">${times}${sf.cal} kcal · ${sf.pro}g P${f.servingLabel && f.servingLabel !== '1 serving' ? ' · ' + escapeHtml(f.servingLabel) : ''}</div></div>
+        ${qualityBadge(sf)}
         <button class="rec-plus" id="recadd-${i}" onclick="event.stopPropagation();addRecent(${i})" aria-label="Add ${escapeHtml(f.name)}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <div class="rec-serv">${chips}<div class="serv-macro">${sf.cal} kcal<br>${sf.pro}g P · ${sf.carb}g C</div></div>
@@ -2852,9 +3029,97 @@ async function addRecent(i) {
     setTimeout(renderSheetRecent, 600); // let the ✓ register before the list re-ranks
   } catch (e) { showToast('Could not add — try again'); }
 }
-function pickFoodPhoto(mode) {
+// Tapping a tile opens the camera directly (no Photo Library / Take Photo /
+// Choose File menu). "From Photos" opens the standard picker for screenshots
+// and saved photos; Safari always includes a Files option there.
+function pickFoodPhoto(mode, camera) {
   window._photoMode = mode;
-  document.getElementById('foodImageInput').click();
+  document.getElementById(camera ? 'foodCameraInput' : 'foodImageInput').click();
+}
+
+// ── Barcode scanner ──
+// Uses the phone's built-in detector when the browser has one, otherwise the
+// ZXing library (loaded on first use). Your library is checked first, then
+// Open Food Facts. You can also type the number under the bars.
+let _scan = null;
+function loadZxing() {
+  if (window.ZXing) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+    sc.onload = ok; sc.onerror = () => fail(new Error('Scanner failed to load'));
+    document.head.appendChild(sc);
+  });
+}
+async function openScanner() {
+  closeScanner();
+  const ov = document.createElement('div');
+  ov.id = 'scanOverlay'; ov.className = 'scan-overlay';
+  ov.innerHTML = `<video id="scanVideo" playsinline muted autoplay></video>
+    <div class="scan-frame"><span></span></div>
+    <div class="scan-bottom glass">
+      <div class="scan-status" id="scanStatus">Point the camera at a barcode</div>
+      <div class="scan-manual"><input id="scanManual" inputmode="numeric" placeholder="or type the numbers" maxlength="14"/><button class="pill-btn" onclick="handleBarcode(document.getElementById('scanManual').value)">Look up</button></div>
+      <button class="scan-cancel" onclick="closeScanner()">Cancel</button>
+    </div>`;
+  document.body.appendChild(ov);
+  const video = document.getElementById('scanVideo'), status = document.getElementById('scanStatus');
+  _scan = { stopped: false };
+  try {
+    if ('BarcodeDetector' in window) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      _scan.stream = stream; video.srcObject = stream; await video.play();
+      const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+      const tick = async () => {
+        if (!_scan || _scan.stopped) return;
+        try { const codes = await det.detect(video); if (codes.length) return handleBarcode(codes[0].rawValue); } catch (_) {}
+        requestAnimationFrame(tick);
+      };
+      tick();
+    } else {
+      await loadZxing();
+      const hints = new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
+      const reader = new ZXing.BrowserMultiFormatReader(hints);
+      _scan.reader = reader;
+      await reader.decodeFromConstraints({ video: { facingMode: 'environment' } }, video, res => { if (res && _scan && !_scan.stopped) handleBarcode(res.getText()); });
+    }
+  } catch (e) {
+    status.textContent = /denied|NotAllowed/i.test(String(e)) ? 'Camera access is off. Allow it in Settings, or type the numbers below.' : 'Camera unavailable. Type the numbers below.';
+  }
+}
+function closeScanner() {
+  if (_scan) { _scan.stopped = true; try { _scan.reader?.reset(); } catch (_) {} _scan.stream?.getTracks().forEach(t => t.stop()); }
+  document.getElementById('scanVideo')?.srcObject?.getTracks?.().forEach(t => t.stop());
+  document.getElementById('scanOverlay')?.remove();
+  _scan = null;
+}
+async function handleBarcode(raw) {
+  const code = String(raw || '').replace(/\D/g, '');
+  if (code.length < 6) { showToast('Enter the full barcode number'); return; }
+  closeScanner();
+  setSheetTab('describe', true);
+  const resultArea = document.getElementById('resultArea');
+  // 1. Your library (scanned before)
+  const lib = (_customFoods || []).find(f => f.barcode === code);
+  if (lib) {
+    showLookupResult({ name: lib.name, serving_size: lib.servingLabel, calories: lib.cal, protein_g: lib.pro, carbs_g: lib.carb, fat_g: lib.fat,
+      sat_fat_g: lib.satFat, sugar_g: lib.sug, sodium_mg: lib.sod, fiber_g: lib.fib, source: 'Your library (barcode)', source_url: lib.sourceUrl || 'https://world.openfoodfacts.org/product/' + code,
+      confidence: 'high', quality: lib.quality, barcode: code, alternatives: [] }, lib.name);
+    return;
+  }
+  // 2. Open Food Facts
+  resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Looking up barcode ' + code + '…</div>';
+  try {
+    const res = await fetch('/api/barcode?code=' + code);
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || 'Lookup failed');
+    if (!d.found || d.incomplete) {
+      resultArea.innerHTML = `<div class="err-msg">${d.found ? escapeHtml(d.name) + ' is in Open Food Facts but has no nutrition data.' : 'This barcode isn\'t in Open Food Facts yet.'} Try the <b>Nutrition label</b> photo instead. Include the ingredients list to get the full quality score.</div>`;
+      setSheetTab('photo', true);
+      return;
+    }
+    showLookupResult({ ...d, barcode: code, alternatives: [], note: 'Scanned barcode', sources_checked: ['Open Food Facts'] }, d.name);
+  } catch (e) { resultArea.innerHTML = '<div class="err-msg">Barcode lookup failed: ' + escapeHtml(e.message) + '</div>'; }
 }
 
 // ── Drag the sheet down to close ──
@@ -3186,6 +3451,7 @@ function showLookupResult(data, query) {
     cal: Math.round(o.calories || 0), pro: Math.round(o.protein_g || 0), carb: Math.round(o.carbs_g || 0), fat: Math.round(o.fat_g || 0),
     satFat: Math.round(o.sat_fat_g || 0), sug: Math.round(o.sugar_g || 0), sod: Math.round(o.sodium_mg || 0), fib: Math.round(o.fiber_g || 0),
     servingLabel: o.serving_size || '1 serving',
+    quality: o.quality || (o === data ? data.quality : null) || null, barcode: data.barcode || null,
     // Verified = backed by a page/label we can point to
     verified: !!o.source_url && (data.confidence !== 'low' || o !== data), source: o.source || '', sourceUrl: o.source_url || '' });
   pendingFood = pick(data);
@@ -3193,6 +3459,7 @@ function showLookupResult(data, query) {
   window._lastSource = data.source || data.note || 'Estimate';
   window._lookupData = data; window._lookupQuery = query;
   renderFoodResult(pendingFood, data.serving_size || '1 serving', data.source || 'Estimate', false);
+  addResultBadge();
   // Source line: name, link, confidence, what was checked
   const badge = document.querySelector('#resultArea .result-source-badge');
   if (badge) {
@@ -3226,6 +3493,13 @@ function showLookupResult(data, query) {
   }
   renderSimilarCheck(pendingFood, similar.slice(0, 3));
 }
+function addResultBadge() {
+  const nm = document.querySelector('#resultArea .result-name');
+  if (!nm || !pendingFood) return;
+  nm.classList.add('with-q');
+  nm.insertAdjacentHTML('beforeend', `<span id="resultQ">${qualityBadge(pendingFood, "'pending'")}</span>`);
+}
+
 // Swap an alternative into the main slot (the previous main becomes an alternative)
 function useAlternative(i) {
   const d = window._lookupData; if (!d?.alternatives?.[i]) return;
@@ -3438,6 +3712,7 @@ async function lookupFoodFromImage(input) {
         sod: Math.round(item.sodium_mg||0), fib: Math.round(item.fiber_g||0)
       };
       if (window._photoMode === 'label') Object.assign(pendingFood, { verified: true, source: 'Nutrition label photo', servingLabel: item.serving_size || '1 serving' });
+      if (item.nova != null || Array.isArray(item.additives)) pendingFood.quality = { nova: item.nova ?? null, additives: Array.isArray(item.additives) ? item.additives : null, source: window._photoMode === 'label' ? 'Label photo' : 'Photo' };
       window._baseMacros = { ...pendingFood };
       window._lastSource = item.note || 'Image scan';
       window._internalMatch = null;
@@ -4273,6 +4548,7 @@ async function refreshCoachAnalysis(opts = {}) {
       today: todayStr(), // local date — the server runs in UTC
       goals: { cal: GOALS.cal, pro: GOALS.pro, carb: GOALS.carb, fat: GOALS.fat },
       target: _targetMeta,
+      quality: (() => { const f = []; for (let i = 1; i <= 7; i++) f.push(...(_allFoods[addDaysStr(todayStr(), -i)] || [])); const dq = dayQuality(f); return dq ? { ...dq, days: [1,2,3,4,5,6,7].filter(i => (_allFoods[addDaysStr(todayStr(), -i)] || []).length).length } : null; })(),
       notes: document.getElementById('coachNotes')?.value || '',
     }});
     if (res?.message) {
@@ -4640,6 +4916,7 @@ function renderToday() {
               <div class="food-row-sub">${f.servingMult && f.servingMult !== 1 ? `${f.servingMult}× ${escapeHtml(f.servingLabel || 'serving')} · ` : ''}${f.carb}g C · ${f.fat}g F</div>
             </div>
             <div class="food-row-nums"><b>${f.cal}</b> kcal<br>${f.pro}g P</div>
+            ${qualityBadge(f, f.id)}
           </div>
         </div>
         <div id="food-edit-${f.id}"style="display:none;">
@@ -4734,6 +5011,8 @@ const ACTIVITY_METRICS = {
   active:   { label: 'Active calories', unit: ' kcal' },
   burn:     { label: 'Total burned',   unit: ' kcal' },
   workouts: { label: 'Workouts',       unit: ' min' },
+  sleep:    { label: 'Sleep',          unit: ' h', goal: 7, goalWord: 'Goal', dec: 1 },
+  rhr:      { label: 'Resting HR',     unit: ' bpm' },
 };
 // Outdoor walks/hikes count toward steps, not workouts (treadmill walks count)
 function isWorkoutEntry(e) {
@@ -5051,17 +5330,20 @@ function renderHistChart(w) {
       if (key === 'steps') return h?.steps || null;
       if (key === 'active') return h?.active_kcal || null;
       if (key === 'burn') return h && h.active_kcal && h.resting_kcal ? h.active_kcal + h.resting_kcal : null;
+      if (key === 'sleep') return h?.sleep_min ? h.sleep_min / 60 : null;
+      if (key === 'rhr') return h?.resting_hr || null;
       // workouts: minutes per day, counting rest days as 0 once Garmin data exists for that day
       const mins = (_exercise[d] || []).filter(isWorkoutEntry).reduce((a, e) => a + Math.round((e.moving_time || 0) / 60), 0);
       return mins || (h ? 0 : null);
     };
     // Today is still syncing, so it's left out of averages
     const perBucket = w.buckets.map(b => b.days.filter(d => d < today).map(val).filter(v => v != null));
-    const data = perBucket.map(vs => vs.length ? Math.round(avg(vs)) : null);
+    const rnd = v => m.dec ? Math.round(v * 10) / 10 : Math.round(v);
+    const data = perBucket.map(vs => vs.length ? rnd(avg(vs)) : null);
     const all = perBucket.flat();
     if (!all.length) { headEl.textContent = '—'; return histEmpty('No Garmin data in this range. Tap Sync now on the Coach tab.'); }
-    const overall = Math.round(avg(all));
-    headEl.textContent = `${overall.toLocaleString()}${m.unit}`;
+    const overall = rnd(avg(all));
+    headEl.textContent = key === 'sleep' ? `${Math.floor(overall)}h ${String(Math.round((overall % 1) * 60)).padStart(2, '0')}m` : `${overall.toLocaleString()}${m.unit}`;
     if (key === 'workouts') {
       const days = w.days.filter(d => d < today && (_exercise[d] || []).some(isWorkoutEntry)).length;
       // Only count weeks that have Garmin or workout data, so ranges reaching back
@@ -5071,13 +5353,17 @@ function renderHistChart(w) {
     } else if (key === 'steps') {
       const hit = all.filter(v => v >= m.goal).length;
       subEl.textContent = `Daily average · hit 15k on ${hit} of ${all.length} days`;
+    } else if (key === 'sleep') {
+      subEl.textContent = `Per night · 7h+ on ${all.filter(v => v >= 7).length} of ${all.length} nights`;
+    } else if (key === 'rhr') {
+      subEl.textContent = `Daily average · lower usually means better recovery`;
     } else subEl.textContent = `Daily average · ${all.length} days of Garmin data`;
-    const color = key === 'steps' ? '55,138,221' : key === 'workouts' ? '58,125,68' : '216,90,48';
+    const color = key === 'steps' ? '55,138,221' : key === 'workouts' ? '58,125,68' : key === 'sleep' ? '127,119,221' : key === 'rhr' ? '212,83,126' : '216,90,48';
     const datasets = [{ data, backgroundColor: data.map(v => v == null ? 'transparent' : (m.goal && v < m.goal ? `rgba(${color},0.4)` : `rgba(${color},0.85)`)), borderRadius: 4, minBarLength: 2 }];
-    if (m.goal) datasets.push(goalLine(m.goal, `${m.goalWord}: ${m.goal.toLocaleString()}`));
+    if (m.goal) datasets.push(goalLine(m.goal, `${m.goalWord}: ${m.goal.toLocaleString()}${key === 'sleep' ? ' h' : ''}`));
     cfg = {
       type: 'bar', data: { labels, datasets },
-      options: { ...chartDefaults, scales: baseScales({ beginAtZero: true }),
+      options: { ...chartDefaults, scales: baseScales(key === 'rhr' ? { beginAtZero: false, min: Math.max(30, Math.floor(Math.min(...all) - 4)), max: Math.ceil(Math.max(...all) + 3) } : { beginAtZero: true }),
         plugins: { ...chartDefaults.plugins, tooltip: tooltip(ctx => ctx.datasetIndex === 1 ? ` ${ctx.dataset.label}` : (ctx.parsed.y == null ? '' : ` ${ctx.parsed.y.toLocaleString()}${m.unit}${per}`), {
           footer: items => {
             if (w.unit !== 'day' || key === 'workouts') return '';

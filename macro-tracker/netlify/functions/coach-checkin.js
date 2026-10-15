@@ -89,6 +89,7 @@ exports.handler = async (event) => {
   const g = input.goals || {};
   const goals = { cal: parseInt(g.cal) || null, pro: parseInt(g.pro) || null, carb: parseInt(g.carb) || null, fat: parseInt(g.fat) || null };
   const target = input.target || {}; // { source: 'garmin'|'estimate', tdee, days }
+  const fq = input.quality && typeof input.quality === 'object' ? input.quality : null; // { score, upfPct, coverage, days }
 
   try {
     const pid = encodeURIComponent(profile_id);
@@ -148,7 +149,7 @@ exports.handler = async (event) => {
 
     // ── Garmin daily totals (via Apple Health), completed days only ──
     // Drop watch glitches (same bounds as the app) before averaging
-    const BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500] };
+    const BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120] };
     const health = (healthRows || []).filter(h => h.date < today).map(h => {
       const c = { ...h };
       for (const [k, [lo, hi]] of Object.entries(BOUNDS)) if (c[k] != null && (c[k] < lo || c[k] > hi)) c[k] = null;
@@ -168,6 +169,17 @@ exports.handler = async (event) => {
       `- Last 7 days (avg/day): ${garmin.last7.active?.v ?? '?'} active + ${garmin.last7.resting?.v ?? '?'} resting = ${total7 ?? '?'} kcal burned; ${garmin.last7.steps?.v?.toLocaleString() ?? '?'} steps (plan: 15,000)`,
       `- Previous 4 weeks (avg/day): ${garmin.prior28.active?.v ?? '?'} active, ${garmin.prior28.steps?.v?.toLocaleString() ?? '?'} steps → last 7 days vs that: active ${pct(garmin.last7.active, garmin.prior28.active)}, steps ${pct(garmin.last7.steps, garmin.prior28.steps)}`,
       `- 90-day baseline (avg/day): ${garmin.d90.active?.v ?? '?'} active, ${garmin.d90.resting?.v ?? '?'} resting, ${garmin.d90.steps?.v?.toLocaleString() ?? '?'} steps (${garmin.d90.active?.n ?? 0} days of data)`,
+    ];
+
+    // ── Sleep + resting heart rate (recovery) ──
+    const sl7 = hAvg(addDays(today, -7), yest, 'sleep_min'), sl28 = hAvg(addDays(today, -28), yest, 'sleep_min');
+    const short14 = health.filter(h => h.date >= addDays(today, -14) && h.sleep_min && h.sleep_min < 420).length;
+    const n14 = health.filter(h => h.date >= addDays(today, -14) && h.sleep_min).length;
+    const hr7 = hAvg(addDays(today, -7), yest, 'resting_hr'), hr28 = hAvg(addDays(today, -35), addDays(today, -8), 'resting_hr');
+    const hm = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+    const recoveryLines = [
+      sl7 ? `- Sleep: ${hm(sl7.v)} per night last 7 nights vs ${sl28 ? hm(sl28.v) : 'n/a'} over 28 nights; under 7h on ${short14} of the last ${n14} nights` : '- Sleep: no data synced',
+      hr7 ? `- Resting heart rate: ${hr7.v} bpm last 7 days vs ${hr28 ? hr28.v + ' bpm the 4 weeks before' : 'no baseline yet'}${hr28 ? ` (${signed(hr7.v - hr28.v)} bpm)` : ''}` : '- Resting heart rate: no data synced',
     ];
 
     // ── Habits ──
@@ -229,6 +241,15 @@ TARGET ADJUSTMENTS (how a good coach does it):
 - If there aren't enough weigh-ins, ask for more consistent weigh-ins before any change.
 - Use the 90-day Garmin baseline to judge whether recent activity is normal for them, and say so plainly when it has dropped.
 
+RECOVERY:
+- Short sleep (under 7h on most nights) raises hunger and cravings and makes the scale noisier. If it lines up with overeating in their notes or a stalled cut, name it as a lever, ahead of cutting calories further.
+- A resting heart rate up 5+ bpm over their baseline signals fatigue or under-recovery: suggest easing the deficit or training load rather than pushing harder.
+- Don't mention recovery when both look normal.
+
+FOOD QUALITY:
+- The score rewards protein and fiber and penalizes sugar, saturated fat, sodium, ultra-processing and risky additives (75+ excellent, 50-74 good, 25-49 poor, under 25 bad).
+- Mention it only when it adds something: a low score or a high ultra-processed share alongside cravings, overeating, or a stalled cut. One concrete swap beats a lecture.
+
 TONE:
 - Honest and proportional. Name what is working and what is not. No lecturing or moralizing, no hype.
 - Never suggest cutting training volume.
@@ -255,6 +276,12 @@ ${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 
 
 GARMIN DAILY BURN & STEPS (completed days only)
 ${garminLines.join('\n')}
+
+RECOVERY (Garmin)
+${recoveryLines.join('\n')}
+
+FOOD QUALITY (Lōg score 0-100, calorie-weighted; from logged foods over the last 7 days)
+${fq && fq.days ? `- Average ${Math.round(fq.score)}/100 over ${fq.days} logged day${fq.days === 1 ? '' : 's'}${fq.upfPct != null ? `; ${fq.upfPct}% of calories from ultra-processed foods${fq.coverage < 0.6 ? ' (among foods with ingredient data)' : ''}` : ''}` : '- Not enough logged food to judge'}
 
 HABITS
 ${habitLines.length ? habitLines.join('\n') : '- No habits set up'}

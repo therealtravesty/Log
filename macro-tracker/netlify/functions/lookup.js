@@ -72,7 +72,7 @@ async function usdaSearch(q) {
 async function offSearch(q) {
   if (!q) return [];
   try {
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=5&fields=code,product_name,brands,serving_size,nutriments`;
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=5&fields=code,product_name,brands,serving_size,nutriments,nova_group,additives_tags,ingredients_text_en`;
     const res = await fetchWithTimeout(url, { headers: { 'User-Agent': 'Log-nutrition-app/1.0 (personal use)' } }, 4000);
     if (!res.ok) return [];
     const data = await res.json();
@@ -87,6 +87,8 @@ async function offSearch(q) {
         serving: hasServing ? (p.serving_size || '1 serving') : '100 g',
         calories: r0(v('energy-kcal')), protein_g: r1(v('proteins')), carbs_g: r1(v('carbohydrates')), fat_g: r1(v('fat')),
         sat_fat_g: r1(v('saturated-fat')), sugar_g: r1(v('sugars')), sodium_mg: v('sodium') != null ? r0(v('sodium') * 1000) : null, fiber_g: r1(v('fiber')),
+        nova: p.nova_group || null, additives: (p.additives_tags || []).map(a => String(a).replace(/^en:/, '')).slice(0, 20),
+        ingredients: String(p.ingredients_text_en || '').slice(0, 300),
       };
     }).filter(c => c.calories != null && c.name);
   } catch (_) { return []; }
@@ -140,7 +142,7 @@ exports.handler = async (event) => {
     const prompt = `You are a careful nutrition researcher. The user logged: "${q}"
 
 DATABASE CANDIDATES (per the serving listed; may or may not be the right product):
-${candidates.length ? candidates.map((c, i) => `${i + 1}. [${c.source}] ${c.name} — ${c.serving}: ${c.calories} kcal, ${c.protein_g}g protein, ${c.carbs_g}g carbs, ${c.fat_g}g fat, ${c.sugar_g ?? '?'}g sugar, ${c.sodium_mg ?? '?'}mg sodium, ${c.fiber_g ?? '?'}g fiber. URL: ${c.url}`).join('\n') : '(none found)'}
+${candidates.length ? candidates.map((c, i) => `${i + 1}. [${c.source}] ${c.name} — ${c.serving}: ${c.calories} kcal, ${c.protein_g}g protein, ${c.carbs_g}g carbs, ${c.fat_g}g fat, ${c.sugar_g ?? '?'}g sugar, ${c.sodium_mg ?? '?'}mg sodium, ${c.fiber_g ?? '?'}g fiber.${c.nova ? ` NOVA ${c.nova}.` : ''}${c.additives?.length ? ` Additives: ${c.additives.join(', ')}.` : ''}${c.ingredients ? ` Ingredients: ${c.ingredients}` : ''} URL: ${c.url}`).join('\n') : '(none found)'}
 ${refs.length ? `
 VERIFIED FOODS THIS USER HAS LOGGED BEFORE (per serving):
 ${refs.map(r => `- ${String(r.name).slice(0, 80)} (${String(r.serving || '1 serving').slice(0, 40)}): ${Math.round(r.cal)} kcal, ${Math.round(r.pro)}g protein`).join('\n')}
@@ -153,9 +155,10 @@ HOW TO ANSWER:
 - If the product comes in several versions with different nutrition (product lines, sizes, recipes), put the most likely one first and list the others in "alternatives".
 - Return values for the QUANTITY the user described (e.g. "2 bars" = two bars), with serving_size describing that quantity.
 - source_url must be a page you actually read or a candidate URL. If you could not verify, leave it empty and set confidence "low".
+- QUALITY (for a food-quality score): if you know the ingredient list (from the brand page, the label, or a candidate), set "nova" to its NOVA processing group (1 unprocessed/minimally processed, 2 culinary ingredient, 3 processed, 4 ultra-processed) and list its additives in "additives" as short names with E-numbers where they exist (e.g. "e955 sucralose", "e471 mono- and diglycerides", "red 40"). Whole foods with no ingredient list (a banana, eggs, plain chicken) are NOVA 1 with no additives. If you don't know the ingredients, set "nova": null and "additives": null — never guess.
 
 Return ONLY this JSON (no markdown, no text after it):
-{"name":"product name","serving_size":"e.g. 1 bar (62g)","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0,"source":"short source name","source_url":"https://…","confidence":"high|medium|low","note":"one short sentence, e.g. which version this is or why sources differ","alternatives":[{"name":"","serving_size":"","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0,"source":"","source_url":""}]}`;
+{"name":"product name","serving_size":"e.g. 1 bar (62g)","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0,"source":"short source name","source_url":"https://…","confidence":"high|medium|low","note":"one short sentence, e.g. which version this is or why sources differ","nova":null,"additives":null,"alternatives":[{"name":"","serving_size":"","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0,"source":"","source_url":""}]}`;
 
     // 2. Claude with web search (falls back to no-web if the org hasn't enabled it)
     let out = await askClaude(prompt, true), usedWeb = true;
@@ -175,8 +178,14 @@ Return ONLY this JSON (no markdown, no text after it):
       source: String(o.source || '').slice(0, 80), source_url: /^https?:\/\//.test(o.source_url || '') ? String(o.source_url).slice(0, 500) : '',
     });
     const main = clean(parsed);
+    const quality = (parsed.nova != null || Array.isArray(parsed.additives)) ? {
+      nova: [1, 2, 3, 4].includes(Number(parsed.nova)) ? Number(parsed.nova) : null,
+      additives: Array.isArray(parsed.additives) ? parsed.additives.map(a => String(a).toLowerCase().slice(0, 60)).slice(0, 30) : null,
+      source: main.source || 'lookup',
+    } : null;
     const result = {
       ...main,
+      quality,
       confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : (main.source_url ? 'medium' : 'low'),
       note: String(parsed.note || main.source || '').slice(0, 160),
       alternatives: (Array.isArray(parsed.alternatives) ? parsed.alternatives : []).filter(a => a && a.calories != null && a.name).slice(0, 3).map(clean),

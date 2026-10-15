@@ -128,6 +128,16 @@ exports.handler = async (event) => {
             verified: body.verified === true,
             source: String(body.source || '').slice(0, 120),
             sourceUrl: /^https?:\/\//.test(body.sourceUrl || '') ? String(body.sourceUrl).slice(0, 500) : '',
+            // Food-quality data (processing level, additives…) and barcode, when known
+            quality: body.quality && typeof body.quality === 'object' ? {
+              nova: [1, 2, 3, 4].includes(Number(body.quality.nova)) ? Number(body.quality.nova) : null,
+              additives: Array.isArray(body.quality.additives) ? body.quality.additives.map(a => String(a).slice(0, 60)).slice(0, 40) : null,
+              nutriscore: /^[a-e]$/.test(body.quality.nutriscore || '') ? body.quality.nutriscore : null,
+              organic: body.quality.organic === true,
+              ingredients: String(body.quality.ingredients || '').slice(0, 600),
+              source: String(body.quality.source || '').slice(0, 80),
+            } : null,
+            barcode: /^\d{6,14}$/.test(String(body.barcode || '')) ? String(body.barcode) : null,
           }],
         };
       }
