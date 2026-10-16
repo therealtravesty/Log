@@ -83,7 +83,7 @@ self.addEventListener('fetch', event => {
   // 4. External CDN assets (fonts, Chart.js) — cache first
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(res => {
-      if (res.ok && (url.hostname.includes('cdnjs') || url.hostname.includes('fonts.g'))) {
+      if (res.ok && (url.hostname.includes('cdnjs') || url.hostname.includes('fonts.g') || url.hostname.includes('jsdelivr'))) {
         const copy = res.clone();
         caches.open(STATIC_CACHE).then(c => c.put(req, copy));
       }

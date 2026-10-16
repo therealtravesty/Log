@@ -511,6 +511,11 @@
   .scan-manual { display: flex; gap: 8px; }
   .scan-manual input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 12px; border: 0.5px solid var(--border-med); background: var(--surface); font: 16px 'DM Mono', monospace; color: var(--text); }
   .scan-cancel { width: 100%; margin-top: 10px; height: 40px; border: none; background: none; font: 600 15px 'DM Sans', system-ui, sans-serif; color: var(--text); }
+  .scan-links { display: flex; gap: 14px; }
+  .scan-type { gap: 8px; margin: -2px 0 10px; }
+  .scan-type input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 12px; border: 0.5px solid var(--border-med); background: var(--surface); font: 16px 'DM Mono', monospace; color: var(--text); }
+  .enrich-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .enrich-btns .pill-btn, .enrich-btns .sim-use { width: 100%; height: 42px; border-radius: 21px; font-size: 14px; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1470,6 +1475,8 @@
           </div>
           <input type="file" id="foodImageInput" accept="image/*" style="display:none;" onchange="lookupFoodFromImage(this)"/>
           <input type="file" id="foodCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="lookupFoodFromImage(this)"/>
+          <input type="file" id="barcodeCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="barcodeFromFile(this)"/>
+          <input type="file" id="barcodeLibraryInput" accept="image/*" style="display:none;" onchange="barcodeFromFile(this)"/>
         </div>
         <div style="min-height:16px;">
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
@@ -1484,10 +1491,13 @@
       <div class="sheet-panel" data-panel="photo">
         <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what should I look for? e.g. &quot;the chicken shawarma bowl, large&quot;"></textarea>
         <div class="photo-hint-sub">Helps with menus, receipts and shared plates. Leave blank to log everything in the photo.</div>
-        <button class="scan-tile" onclick="openScanner()">
+        <button class="scan-tile" onclick="document.getElementById('barcodeCameraInput').click()">
           <svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 8v8M11 8v8M14 8v8M16.5 8v8"/></svg>
-          <span><span class="pt-title">Scan barcode</span><span class="pt-sub">Exact product, ingredients and additives</span></span>
+          <span style="flex:1"><span class="pt-title">Scan barcode</span><span class="pt-sub">Exact product, ingredients and additives</span>
+            <span class="scan-links"><span class="pt-lib" onclick="event.stopPropagation(); document.getElementById('barcodeLibraryInput').click()">From Photos</span>
+            <span class="pt-lib" onclick="event.stopPropagation(); toggleBarcodeType()">Type number</span></span></span>
         </button>
+        <div class="scan-type" id="scanType" style="display:none;"><input id="scanManual" inputmode="numeric" placeholder="Numbers under the bars" maxlength="14"/><button class="pill-btn" onclick="handleBarcode(document.getElementById('scanManual').value)">Look up</button></div>
         <div class="photo-tiles">
           <button class="photo-tile" onclick="pickFoodPhoto('food', true)">
             <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -2752,7 +2762,12 @@ function renderLeftCard(t) {
   const lq = document.getElementById('leftQuality');
   if (lq) {
     const dq = dayQuality(getActiveFoods());
-    lq.innerHTML = dq ? `<span class="qbadge sm" style="--qc:${scoreColor(dq.score)}">${dq.score}</span> Food quality${dq.upfPct != null ? ` · ${dq.upfPct}% of calories ultra-processed${dq.coverage < 0.6 ? ' (of foods with ingredient data)' : ''}` : ''}` : '';
+    const foodsToday = getActiveFoods().filter(f => (f.cal || 0) > 0);
+    const withData = foodsToday.filter(f => foodScore(f).nova).length;
+    const tail = !dq ? '' : (dq.upfPct != null && dq.coverage >= 0.5)
+      ? ` · ${dq.upfPct}% of calories ultra-processed`
+      : withData ? ` · ingredient data for ${withData} of ${foodsToday.length} foods` : '';
+    lq.innerHTML = dq ? `<span class="qbadge sm" style="--qc:${scoreColor(dq.score)}">${dq.score}</span> Food quality${tail}` : '';
   }
   const calLeft = Math.round((GOALS.cal || 0) - t.cal), proLeft = Math.round((GOALS.pro || 0) - t.pro);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -3037,6 +3052,130 @@ function pickFoodPhoto(mode, camera) {
   document.getElementById(camera ? 'foodCameraInput' : 'foodImageInput').click();
 }
 
+// ── Add details to an already-logged food ──
+// Barcode, label and ingredients photos attach to the food's LIBRARY entry
+// (matched by name), so its score and every future log of it improve. Nothing
+// new is logged. You choose whether the label's nutrition replaces yours.
+function startEnrich(foodId, kind) {
+  const food = getActiveFoods().find(f => f.id === foodId); if (!food) return;
+  window._enrich = { name: food.name, food };
+  if (kind === 'barcode') return document.getElementById('barcodeCameraInput').click();
+  window._photoMode = kind; // 'label' | 'ingredients'
+  document.getElementById('foodCameraInput').click();
+}
+async function enrichFromBarcode(code) {
+  try {
+    const res = await fetch('/api/barcode?code=' + code);
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || 'Lookup failed');
+    if (!d.found) { showEnrichCard({ barcode: code, notFound: true }); return; }
+    showEnrichCard({ barcode: code, name: d.name, quality: d.quality, nutrition: d.incomplete ? null : d, source: 'Open Food Facts', sourceUrl: d.source_url });
+  } catch (e) { showToast('Barcode lookup failed: ' + e.message); window._enrich = null; }
+}
+function showEnrichCard(found) {
+  const en = window._enrich; if (!en) return;
+  const lib = (_customFoods || []).find(f => f.name.toLowerCase().trim() === en.name.toLowerCase().trim());
+  const mine = lib || en.food;
+  const n = found.nutrition;
+  const k = n && en.food.servingMult ? 1 : 1;
+  const nutDiff = n && (Math.abs(Math.round(n.calories) - Math.round(mine.baseCal ?? mine.cal)) > 5 || Math.abs(Math.round(n.protein_g) - Math.round(mine.basePro ?? mine.pro)) >= 2);
+  const q = found.quality, adds = q?.additives ? classifyAdditives(q.additives) : null;
+  window._enrichFound = found;
+  document.getElementById('qualitySheet')?.remove();
+  const el = document.createElement('div');
+  el.id = 'qualitySheet'; el.className = 'q-overlay';
+  el.innerHTML = `<div class="q-card glass" onclick="event.stopPropagation()">
+    <div class="q-word">Add details</div><div class="q-name">${escapeHtml(en.name)}</div>
+    ${found.notFound ? `<div class="q-line" style="margin-top:12px">Barcode ${found.barcode} isn't in Open Food Facts yet. It'll still be saved, so scanning it next time finds this food. For nutrition and ingredients, add a label or ingredients photo.</div>` : ''}
+    ${found.barcode ? `<div class="q-sec">Barcode</div><div class="q-line">${found.barcode}${found.name && !found.notFound ? ` <span class="q-dim">· ${escapeHtml(found.name)}</span>` : ''}</div>` : ''}
+    ${q && (q.nova || adds) ? `<div class="q-sec">Ingredients</div>
+      ${q.nova ? `<div class="q-line">NOVA ${q.nova} · ${NOVA_TEXT[q.nova]}</div>` : ''}
+      ${adds ? (adds.length ? adds.map(a => `<div class="q-line"><span class="qd" style="background:${a.risk === 'high' ? '#E24B4A' : a.risk === 'moderate' ? '#EF9F27' : '#1D9E75'}"></span>${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">No additives</div>') : ''}` : ''}
+    ${n ? `<div class="q-sec">Nutrition from ${escapeHtml(found.source || 'label')}</div>
+      <div class="q-line">${Math.round(n.calories)} kcal · ${Math.round(n.protein_g)}g P · ${Math.round(n.carbs_g)}g C · ${Math.round(n.fat_g)}g F <span class="q-dim">· ${escapeHtml(n.serving_size || '')}</span></div>
+      <div class="q-line q-dim">Yours: ${Math.round(mine.baseCal ?? mine.cal)} kcal · ${Math.round(mine.basePro ?? mine.pro)}g P per serving</div>` : ''}
+    <div class="enrich-btns">
+      ${n && nutDiff ? `<button class="pill-btn" onclick="saveEnrich(true)">Save details + use this nutrition</button><button class="sim-use" onclick="saveEnrich(false)">Save details, keep my nutrition</button>`
+        : `<button class="pill-btn" onclick="saveEnrich(false)">Save to library</button>`}
+      <button class="sim-use" onclick="window._enrich=null;document.getElementById('qualitySheet').remove()">Cancel</button>
+    </div>
+  </div>`;
+  el.onclick = () => { window._enrich = null; el.remove(); };
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+}
+async function saveEnrich(useNutrition) {
+  const en = window._enrich, found = window._enrichFound; if (!en || !found) return;
+  const lib = (_customFoods || []).find(f => f.name.toLowerCase().trim() === en.name.toLowerCase().trim());
+  const base = lib || { name: en.food.name, cal: en.food.baseCal ?? en.food.cal, pro: en.food.basePro ?? en.food.pro, carb: en.food.baseCarb ?? en.food.carb, fat: en.food.baseFat ?? en.food.fat,
+    satFat: en.food.baseSatFat ?? en.food.satFat, sug: en.food.baseSug ?? en.food.sug, sod: en.food.baseSod ?? en.food.sod, fib: en.food.baseFib ?? en.food.fib, servingLabel: en.food.servingLabel };
+  const oldQ = base.quality || {}, newQ = found.quality || {};
+  const quality = (newQ.nova || newQ.additives || oldQ.nova || oldQ.additives) ? {
+    nova: newQ.nova ?? oldQ.nova ?? null, additives: newQ.additives ?? oldQ.additives ?? null, nutriscore: newQ.nutriscore ?? oldQ.nutriscore ?? null,
+    organic: newQ.organic ?? oldQ.organic ?? false, ingredients: newQ.ingredients || oldQ.ingredients || '', source: newQ.source || oldQ.source || found.source || '' } : null;
+  const n = useNutrition ? found.nutrition : null;
+  const entry = {
+    name: base.name,
+    cal: n ? Math.round(n.calories) : base.cal, pro: n ? Math.round(n.protein_g) : base.pro, carb: n ? Math.round(n.carbs_g) : base.carb, fat: n ? Math.round(n.fat_g) : base.fat,
+    satFat: n ? Math.round(n.sat_fat_g || 0) : (base.satFat || 0), sug: n ? Math.round(n.sugar_g || 0) : (base.sug || 0), sod: n ? Math.round(n.sodium_mg || 0) : (base.sod || 0), fib: n ? Math.round(n.fiber_g || 0) : (base.fib || 0),
+    servingLabel: n?.serving_size || base.servingLabel || '1 serving',
+    verified: n ? true : (base.verified || false), source: n ? (found.source || 'Label') : (base.source || ''), sourceUrl: n ? (found.sourceUrl || '') : (base.sourceUrl || ''),
+    quality, barcode: found.barcode || base.barcode || null,
+  };
+  try {
+    await saveCustomFood(entry, true);
+    document.getElementById('qualitySheet')?.remove();
+    window._enrich = null;
+    renderToday();
+    showToast(`${entry.name} updated in your library`);
+  } catch (e) { showToast('Could not save — try again'); }
+}
+
+// ── Barcode from a photo ──
+// Uses the iPhone's own camera (via the photo picker), so there's no web
+// camera-permission prompt every launch. Reads the bars on the phone (built-in
+// detector or ZXing); if that fails, Claude reads the digits printed under them.
+function toggleBarcodeType() { const el = document.getElementById('scanType'); el.style.display = el.style.display === 'none' ? 'flex' : 'none'; if (el.style.display === 'flex') document.getElementById('scanManual').focus(); }
+async function barcodeFromFile(input) {
+  const file = input.files?.[0]; input.value = '';
+  if (!file) return;
+  const resultArea = document.getElementById('resultArea');
+  if (!window._enrich) { setSheetTab('photo', true); resultArea.innerHTML = '<div class="status-msg"><div class="spinner"></div>Reading barcode…</div>'; }
+  else showToast('Reading barcode…');
+  try {
+    // Downscale big camera photos — faster and decodes more reliably
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    let code = null;
+    if ('BarcodeDetector' in window) {
+      try { const r = await new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }).detect(cv); code = r[0]?.rawValue || null; } catch (_) {}
+    }
+    if (!code) {
+      try {
+        await loadZxing();
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        const res = await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(cv.toDataURL('image/jpeg', 0.92));
+        code = res?.getText() || null;
+      } catch (_) {}
+    }
+    if (!code) {
+      // Fallback: Claude reads the printed digits
+      const res = await fetch('/api/lookup-image', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: cv.toDataURL('image/jpeg', 0.85).split(',')[1], mediaType: 'image/jpeg', mode: 'barcode' }) });
+      const d = await res.json();
+      code = Array.isArray(d) ? (d[0]?.barcode || '').replace(/\D/g, '') : '';
+    }
+    if (!code) throw new Error("Couldn't read that barcode. Try a closer, straight-on photo, or type the numbers");
+    handleBarcode(code);
+  } catch (e) {
+    if (window._enrich) showToast(e.message); else resultArea.innerHTML = '<div class="err-msg">' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ── Barcode scanner ──
 // Uses the phone's built-in detector when the browser has one, otherwise the
 // ZXing library (loaded on first use). Your library is checked first, then
@@ -3097,6 +3236,7 @@ async function handleBarcode(raw) {
   const code = String(raw || '').replace(/\D/g, '');
   if (code.length < 6) { showToast('Enter the full barcode number'); return; }
   closeScanner();
+  if (window._enrich) return enrichFromBarcode(code);
   setSheetTab('describe', true);
   const resultArea = document.getElementById('resultArea');
   // 1. Your library (scanned before)
@@ -3664,6 +3804,7 @@ async function lookupFood(excludeSource = null) {
 let _scannedItems = []; // items from image scan, pending review
 
 async function lookupFoodFromImage(input) {
+  if (window._enrich && input.files?.[0]) showToast(window._photoMode === 'label' ? 'Reading the label…' : 'Reading the ingredients…');
   const file = input.files?.[0];
   if (!file) return;
   input.value = '';
@@ -3706,13 +3847,19 @@ async function lookupFoodFromImage(input) {
       document.getElementById('searchInput').value = item.name || '';
       pendingFood = {
         id: Date.now(), name: item.name,
-        cal: Math.round(item.calories), pro: Math.round(item.protein_g),
+        cal: Math.round(item.calories || 0), pro: Math.round(item.protein_g || 0),
         carb: Math.round(item.carbs_g), fat: Math.round(item.fat_g),
         satFat: Math.round(item.sat_fat_g||0), sug: Math.round(item.sugar_g||0),
         sod: Math.round(item.sodium_mg||0), fib: Math.round(item.fiber_g||0)
       };
       if (window._photoMode === 'label') Object.assign(pendingFood, { verified: true, source: 'Nutrition label photo', servingLabel: item.serving_size || '1 serving' });
-      if (item.nova != null || Array.isArray(item.additives)) pendingFood.quality = { nova: item.nova ?? null, additives: Array.isArray(item.additives) ? item.additives : null, source: window._photoMode === 'label' ? 'Label photo' : 'Photo' };
+      if (item.nova != null || Array.isArray(item.additives)) pendingFood.quality = { nova: item.nova ?? null, additives: Array.isArray(item.additives) ? item.additives : null, source: window._photoMode === 'label' ? 'Label photo' : window._photoMode === 'ingredients' ? 'Ingredients photo' : 'Photo' };
+      if (window._enrich) {
+        const hasNut = item.calories != null && item.calories > 0;
+        showEnrichCard({ quality: pendingFood.quality, nutrition: hasNut ? item : null, source: window._photoMode === 'label' ? 'Label photo' : 'Ingredients photo' });
+        pendingFood = null; document.getElementById('resultArea').innerHTML = '';
+        return;
+      }
       window._baseMacros = { ...pendingFood };
       window._lastSource = item.note || 'Image scan';
       window._internalMatch = null;
@@ -4954,6 +5101,11 @@ function renderToday() {
               <button class="food-edit-save"onclick="saveEditedFood(${f.id})">Save changes</button>
               <button class="food-edit-cancel"onclick="toggleFoodEdit(${f.id})">Cancel</button>
               <button class="food-edit-cancel" style="color:#E24B4A;margin-left:auto;" onclick="delFood(${f.id})">Delete</button>
+            </div>
+            <div class="move-row"><span>Add details</span>
+              <button class="move-chip" onclick="startEnrich(${f.id}, 'barcode')">Barcode</button>
+              <button class="move-chip" onclick="startEnrich(${f.id}, 'label')">Nutrition label</button>
+              <button class="move-chip" onclick="startEnrich(${f.id}, 'ingredients')">Ingredients</button>
             </div>
             <div class="move-row"><span>Move to</span>${MEALS.filter(m => m !== (f.meal || 'uncategorized')).map(m => `<button class="move-chip" onclick="moveFood(${f.id}, '${m}')">${MEAL_LABELS[m]}</button>`).join('')}
             </div>

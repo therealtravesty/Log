@@ -22,7 +22,11 @@ exports.handler = async (event) => {
     return { statusCode: 413, body: JSON.stringify({ error: 'Image too large — try a smaller screenshot' }) };
   }
 
-  const prompt = `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
+  // Barcode mode: just read the digits printed under the bars (fallback when the
+  // phone couldn't decode the bars themselves)
+  const prompt = mode === 'barcode' ? `This photo shows a product barcode (UPC/EAN). Read the digits printed beneath the bars, exactly, with no spaces.
+Return ONLY a raw JSON array, no markdown: [{"barcode":"012345678905","name":"product name if visible, else empty"}]
+If you cannot read every digit with confidence, return [{"barcode":""}].` : `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
 
 The image may contain: a nutrition label, a restaurant order receipt/confirmation, a menu screenshot, a plate of food, or packaged products.
 
@@ -41,6 +45,12 @@ ${userHint ? `THE USER SAYS: "${userHint.replace(/[`$]/g, '')}"
 - Return ONLY the item(s) they describe. Ignore everything else in the image (other menu items, other people's food, other receipt lines).
 - If this is a menu or receipt, find the matching line and use its size/options; if the menu prints calories, use them.
 - If what they describe isn't visible, return your best match and say so in "note".
+
+` : ''}${mode === 'ingredients' ? `THIS IMAGE SHOWS A PACKAGE'S INGREDIENTS LIST (the user chose "Ingredients").
+- Return exactly ONE item: the product.
+- "nova" and "additives" are REQUIRED here: classify processing from the ingredients and list every additive (E-numbers where they exist).
+- If a Nutrition Facts panel is also visible, copy its per-serving numbers; otherwise set the nutrition numbers to null.
+- note = "Ingredients photo".
 
 ` : ''}${mode === 'label' ? `THIS IMAGE IS A NUTRITION FACTS LABEL (the user chose "Nutrition label").
 - Return exactly ONE item: the packaged product, per ONE serving as printed on the label.
