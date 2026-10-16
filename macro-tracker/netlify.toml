@@ -19,6 +19,10 @@
 [functions."exercise-lookup"]
   timeout = 26
 
+# Barcode may fall back to a web lookup for the official product page
+[functions."barcode"]
+  timeout = 26
+
 # Coach uses a larger model; give it room beyond the 10s default
 [functions."coach-checkin"]
   timeout = 26

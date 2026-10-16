@@ -2704,8 +2704,11 @@ function foodScore(food) {
   const q = qualityDataFor(food);
   let earned = nut, possible = 60, cap = 100, additives = null;
   if (q && [1, 2, 3, 4].includes(q.nova)) { possible += 25; earned += { 1: 25, 2: 20, 3: 12, 4: 0 }[q.nova]; }
-  if (q && Array.isArray(q.additives)) {
-    additives = classifyAdditives(q.additives);
+  // No additive list but an ingredient list (e.g. USDA)? Spot the known additives in it
+  const addList = q && (Array.isArray(q.additives) ? q.additives
+    : q.ingredients ? ADDITIVE_RISK.filter(([re]) => re.test(q.ingredients.toLowerCase())).map(([, label]) => label) : null);
+  if (q && addList) {
+    additives = classifyAdditives(addList);
     possible += 15;
     const worst = additives[0]?.risk;
     earned += !additives.length ? 15 : worst === 'high' ? 0 : worst === 'moderate' ? 6 : 13;
@@ -2739,7 +2742,10 @@ function showQuality(arg) {
     <div class="q-sec">Additives</div>
     ${q.additives ? (q.additives.length ? q.additives.map(a => `<div class="q-line">${riskDot(a.risk)}${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">None</div>') : '<div class="q-line"><span class="q-dim">Unknown</span></div>'}
     ${q.organic ? '<div class="q-line q-dim">Organic (not part of the score)</div>' : ''}
-    <div class="q-foot">${q.nutOnly ? 'Based on nutrients only. Scan the barcode or photograph the ingredients list to include processing and additives.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
+    <div class="q-foot">${q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
+    ${typeof arg === 'number' && !(q.nova && q.additives) ? `<div class="enrich-btns" style="flex-direction:row;margin-top:12px">
+      <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'barcode')">Scan barcode</button>
+      <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'ingredients')">Photo of ingredients</button></div>` : ''}
     <button class="pill-btn" style="width:100%;margin-top:12px" onclick="document.getElementById('qualitySheet').remove()">Done</button>
   </div>`;
   el.onclick = () => el.remove();
