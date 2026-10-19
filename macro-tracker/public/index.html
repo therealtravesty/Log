@@ -489,6 +489,7 @@
   .q-card { width: 100%; max-width: 520px; border-radius: 24px; padding: 18px; background: rgba(250,249,246,0.92); transform: translateY(20px); transition: transform 0.35s cubic-bezier(.32,.72,0,1); }
   @media (prefers-color-scheme: dark) { .q-card { background: rgba(30,30,28,0.92); } }
   .q-overlay.on .q-card { transform: none; }
+  .q-handle { width: 38px; height: 5px; border-radius: 3px; background: rgba(128,128,128,0.35); margin: -6px auto 12px; }
   .q-top { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
   .q-word { font-size: 18px; font-weight: 650; }
   .q-name { font-size: 13px; color: var(--text-2); }
@@ -516,6 +517,7 @@
   .scan-type input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 12px; border: 0.5px solid var(--border-med); background: var(--surface); font: 16px 'DM Mono', monospace; color: var(--text); }
   .enrich-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
   .enrich-btns .pill-btn, .enrich-btns .sim-use { width: 100%; height: 42px; border-radius: 21px; font-size: 14px; }
+  .chart-wrap canvas { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -2676,32 +2678,53 @@ function classifyAdditives(list) {
   });
   return out.sort((a, b) => ({ high: 0, moderate: 1, low: 2 })[a.risk] - ({ high: 0, moderate: 1, low: 2 })[b.risk]);
 }
-// Quality data comes from the food itself (fresh lookups) or its library entry
+// Plain whole foods, recognized by name, count as unprocessed (NOVA 1) with no
+// additives. Strict on purpose: EVERY word must be a whole food or a plain
+// description ("2 large eggs", "grilled chicken breast", "1 cup blueberries"),
+// so dishes, brands and products ("Pollo Asado Bowl", "Kashi GO") never match.
+const WHOLE_FOODS = new Set(('apple apples banana bananas orange oranges blueberries blueberry strawberries strawberry raspberries raspberry blackberries berries grapes grape pear pears peach peaches plum plums mango mangos pineapple kiwi watermelon cantaloupe melon honeydew cherries grapefruit avocado avocados tangerine clementine clementines nectarine lemon lime ' +
+  'broccoli spinach kale carrot carrots cucumber cucumbers tomato tomatoes pepper peppers onion onions lettuce zucchini asparagus green beans sweet potato potatoes potato cauliflower brussels sprouts mushrooms mushroom celery cabbage squash edamame peas ' +
+  'egg eggs egg whites chicken breast breasts thigh thighs turkey salmon cod tilapia shrimp tuna steak sirloin halibut trout scallops ' +
+  'oats oatmeal rice brown white quinoa black pinto kidney chickpeas lentils almonds walnuts pecans cashews pistachios milk water').split(' '));
+const WHOLE_DESCRIPTORS = new Set(('fillet fillets filet raw fresh frozen medium large small whole sliced chopped diced cup cups oz ounce ounces g grams lb piece pieces slice slices half of a an the and ' +
+  'grilled baked boiled hard soft steamed roasted poached plain skinless boneless air fry fryer fried-free unsweetened cooked skim fat free nonfat lean').split(' '));
+function isWholeFood(name) {
+  const lc = String(name || '').toLowerCase();
+  if (/[,+(]|\bwith\b|\bbowl\b|juice|smoothie|shake|bar\b|chips|bread|sauce|dressing|fried\b|breaded|dried/.test(lc)) return false;
+  const words = lc.replace(/[^a-z\s-]/g, ' ').split(/[\s-]+/).filter(Boolean);
+  return words.length > 0 && words.some(w => WHOLE_FOODS.has(w)) && words.every(w => WHOLE_FOODS.has(w) || WHOLE_DESCRIPTORS.has(w));
+}
+// Quality data comes from the food itself (fresh lookups), its library entry,
+// or whole-food recognition
 function qualityDataFor(food) {
   if (food.quality) return food.quality;
   const lc = (food.name || '').toLowerCase().trim();
-  return (_customFoods || []).find(f => f.name.toLowerCase().trim() === lc)?.quality || null;
+  const lib = (_customFoods || []).find(f => f.name.toLowerCase().trim() === lc)?.quality;
+  if (lib) return lib;
+  return isWholeFood(food.name) ? { nova: 1, additives: [], source: 'whole food (recognized by name)', inferred: true } : null;
 }
 function foodScore(food) {
   const cal = food.cal || 0, notes = [];
+  const q = qualityDataFor(food);
+  const whole = q?.nova === 1; // sugar inside whole fruit, milk etc. isn't "free sugar"
   let nut;
   if (cal < 20) { nut = 45; notes.push(['·', 'Very low calorie']); }
   else {
     const per = v => (v || 0) / cal * 100;
     const pro = per(food.pro), fib = per(food.fib), sug = per(food.sug), sat = per(food.satFat), sod = per(food.sod);
     const pP = Math.min(20, pro * 2), fP = Math.min(10, fib * 3.33);
-    const sP = Math.min(15, Math.max(0, sug - 2 * fib) * 1.25), satP = Math.min(15, sat * 3), sodP = Math.min(10, sod / 40);
+    // Light foods (almond milk, broth) make sodium "per 100 kcal" look huge, so
+    // soften only the sodium penalty below ~80 kcal. Sugar is never softened.
+    const light = cal < 80 ? Math.max(0, (cal - 20) / 60) : 1;
+    const sP = whole ? 0 : Math.min(15, Math.max(0, sug - 2 * fib) * 1.25), satP = Math.min(15, sat * 3), sodP = Math.min(10, sod / 40) * light;
     nut = Math.max(0, Math.min(60, 30 + pP + fP - sP - satP - sodP));
-    // Very low-calorie foods (almond milk, broth) blow up "per 100 kcal" numbers;
-    // blend them toward neutral until ~80 kcal, where the math is meaningful.
-    if (cal < 80) { const w = (cal - 20) / 60; nut = 45 * (1 - w) + nut * w; }
-    if (pP >= 12) notes.push(['+', `High protein (${pro.toFixed(1)}g per 100 kcal)`]); else if (pP < 4) notes.push(['−', 'Low protein']);
+    if (pP >= 12) notes.push(['+', `High protein (${pro.toFixed(1)}g per 100 kcal)`]); else if (pP < 4) notes.push(['·', 'Low protein']);
+    if (whole && sug >= 5) notes.push(['·', 'Natural sugar (not penalized in whole foods)']);
     if (fP >= 5) notes.push(['+', 'Good fiber']);
     if (sP >= 6) notes.push(['−', `Sugar (${sug.toFixed(1)}g per 100 kcal)`]);
     if (satP >= 6) notes.push(['−', 'Saturated fat']);
-    if (sodP >= 4) notes.push(['−', `Sodium (${Math.round(sod)}mg per 100 kcal)`]);
+    if (sodP >= 4 && light === 1) notes.push(['−', `Sodium (${Math.round(sod)}mg per 100 kcal)`]);
   }
-  const q = qualityDataFor(food);
   let earned = nut, possible = 60, cap = 100, additives = null;
   if (q && [1, 2, 3, 4].includes(q.nova)) { possible += 25; earned += { 1: 25, 2: 20, 3: 12, 4: 0 }[q.nova]; }
   // No additive list but an ingredient list (e.g. USDA)? Spot the known additives in it
@@ -2724,8 +2747,34 @@ function qualityBadge(food, clickArg) {
   return `<span class="qbadge${q.nutOnly ? ' outline' : ''}" style="--qc:${scoreColor(q.score)}"${clickArg != null ? ` onclick="event.stopPropagation();showQuality(${clickArg})"` : ''} title="${scoreWord(q.score)}${q.nutOnly ? ' · nutrients only' : ''}">${q.score}</span>`;
 }
 const NOVA_TEXT = { 1: 'Unprocessed or minimally processed', 2: 'Culinary ingredient', 3: 'Processed', 4: 'Ultra-processed' };
+// Drag a bottom card down to close it (follows your finger; closes past ~90px
+// or on a quick flick, otherwise springs back)
+function attachSwipeDismiss(overlay, onClose) {
+  overlay.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  const card = overlay.querySelector('.q-card'); if (!card) return;
+  card.insertAdjacentHTML('afterbegin', '<div class="q-handle"></div>');
+  let y0 = null, t0 = 0, dy = 0;
+  card.addEventListener('touchstart', e => { if (card.scrollTop > 0) return; y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; card.style.transition = 'none'; }, { passive: true });
+  card.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    if (dy > 0) { card.style.transform = `translateY(${dy}px)`; overlay.style.background = `rgba(0,0,0,${0.25 * Math.max(0, 1 - dy / 300)})`; }
+  }, { passive: true });
+  card.addEventListener('touchend', () => {
+    if (y0 == null) return;
+    const fast = dy > 30 && dy / Math.max(1, Date.now() - t0) > 0.5;
+    card.style.transition = '';
+    if (dy > 90 || fast) { card.style.transform = 'translateY(110%)'; overlay.style.opacity = '0'; setTimeout(() => { overlay.remove(); onClose && onClose(); }, 250); }
+    else { card.style.transform = ''; overlay.style.background = ''; }
+    y0 = null;
+  });
+}
+
 function showQuality(arg) {
-  const food = typeof arg === 'object' ? arg : arg === 'pending' ? pendingFood : getActiveFoods().find(f => f.id === arg);
+  const v = id => parseFloat(document.getElementById('re_' + id)?.value) || 0;
+  const food = typeof arg === 'object' ? arg
+    : arg === 'pending' ? (pendingFood && document.getElementById('re_cal') ? { ...pendingFood, cal: v('cal'), pro: v('pro'), carb: v('carb'), fat: v('fat'), satFat: v('satFat'), sug: v('sug'), sod: v('sod'), fib: v('fib') } : pendingFood)
+    : getActiveFoods().find(f => f.id === arg);
   if (!food) return;
   const q = foodScore(food), col = scoreColor(q.score);
   const riskDot = r => `<span class="qd" style="background:${r === 'high' ? '#E24B4A' : r === 'moderate' ? '#EF9F27' : '#1D9E75'}"></span>`;
@@ -2742,7 +2791,7 @@ function showQuality(arg) {
     <div class="q-sec">Additives</div>
     ${q.additives ? (q.additives.length ? q.additives.map(a => `<div class="q-line">${riskDot(a.risk)}${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">None</div>') : '<div class="q-line"><span class="q-dim">Unknown</span></div>'}
     ${q.organic ? '<div class="q-line q-dim">Organic (not part of the score)</div>' : ''}
-    <div class="q-foot">${q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
+    <div class="q-foot">${q.source.startsWith('whole food') ? 'Recognized as a plain whole food: unprocessed, no additives, and its natural sugar isn\'t penalized.' : q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
     ${typeof arg === 'number' && !(q.nova && q.additives) ? `<div class="enrich-btns" style="flex-direction:row;margin-top:12px">
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'barcode')">Scan barcode</button>
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'ingredients')">Photo of ingredients</button></div>` : ''}
@@ -2750,6 +2799,7 @@ function showQuality(arg) {
   </div>`;
   el.onclick = () => el.remove();
   document.body.appendChild(el);
+  attachSwipeDismiss(el);
   requestAnimationFrame(() => el.classList.add('on'));
 }
 // Calorie-weighted quality for a set of foods + share of calories from NOVA 4
@@ -2933,6 +2983,22 @@ function onFoodRowTap(id) {
 // ── Sheet ──
 let _sheetTab = 'recent', _openRec = null, _servMult = {};
 const SHEET_TABS = ['recent', 'saved', 'describe', 'photo'];
+// Freeze the page behind a sheet. iPhone Safari ignores overflow:hidden on the
+// body, so the page is pinned with position:fixed at its current offset and
+// put back exactly where it was on close.
+let _lockY = 0, _locked = false;
+function lockPageScroll() {
+  if (_locked) return;
+  _locked = true; _lockY = window.scrollY;
+  Object.assign(document.body.style, { position: 'fixed', top: `-${_lockY}px`, left: '0', right: '0', width: '100%' });
+}
+function unlockPageScroll() {
+  if (!_locked) return;
+  _locked = false;
+  Object.assign(document.body.style, { position: '', top: '', left: '', right: '', width: '' });
+  window.scrollTo(0, _lockY);
+}
+
 function openLogSheet(meal, tab) {
   closeOpenRow();
   const m = meal || mealForNow();
@@ -2941,10 +3007,12 @@ function openLogSheet(meal, tab) {
   setSheetTab(tab || _sheetTab || 'recent', true);
   renderSheetRecent(); renderSavedMeals();
   document.body.classList.add('sheet-open', 'modal-open');
+  lockPageScroll();
   fitSheetToViewport();
 }
 function closeLogSheet() {
   document.body.classList.remove('sheet-open', 'modal-open');
+  unlockPageScroll();
   document.activeElement?.blur?.();
   const sh = document.getElementById('logSheet'); sh.style.transform = '';
 }
@@ -3108,6 +3176,7 @@ function showEnrichCard(found) {
   </div>`;
   el.onclick = () => { window._enrich = null; el.remove(); };
   document.body.appendChild(el);
+  attachSwipeDismiss(el, () => { window._enrich = null; });
   requestAnimationFrame(() => el.classList.add('on'));
 }
 async function saveEnrich(useNutrition) {
@@ -3417,7 +3486,7 @@ document.addEventListener('touchstart', e => {
   // Don't intercept if modal is open or touch is inside modal
   _swipeLock = null;
   if (document.body.classList.contains('modal-open')) return;
-  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen, .gnav, .day-strip, .hist-chips, .hist-heatmap, .food-row, .log-sheet, .sheet-backdrop')) return;
+  if (e.target.closest('.habit-modal, .welcome-overlay, .profile-screen, .gnav, .day-strip, .hist-chips, .hist-heatmap, .food-row, .log-sheet, .sheet-backdrop, .chart-wrap')) return;
   _swipeStartX = e.touches[0].clientX;
   _swipeStartY = e.touches[0].clientY;
   _swipeActive = true;
@@ -3644,6 +3713,17 @@ function addResultBadge() {
   if (!nm || !pendingFood) return;
   nm.classList.add('with-q');
   nm.insertAdjacentHTML('beforeend', `<span id="resultQ">${qualityBadge(pendingFood, "'pending'")}</span>`);
+  // Re-score as you edit the numbers on the card (the score uses YOUR numbers)
+  const area = document.getElementById('resultArea');
+  if (area && !area._qListen) {
+    area._qListen = true;
+    area.addEventListener('input', () => {
+      const slot = document.getElementById('resultQ'); if (!slot || !pendingFood) return;
+      const v = id => parseFloat(document.getElementById('re_' + id)?.value) || 0;
+      const live = { ...pendingFood, cal: v('cal'), pro: v('pro'), carb: v('carb'), fat: v('fat'), satFat: v('satFat'), sug: v('sug'), sod: v('sod'), fib: v('fib') };
+      slot.innerHTML = qualityBadge(live, "'pending'");
+    });
+  }
 }
 
 // Swap an alternative into the main slot (the previous main becomes an alternative)
@@ -5136,8 +5216,39 @@ const tickColor = darkMode ? '#5a5956': '#a8a8a3';
 const gridColor = darkMode ? 'rgba(255,255,255,0.05)': 'rgba(0,0,0,0.05)';
 const tooltipBg = darkMode ? '#2a2a28': '#1a1a18';
 
+// ── Scrubbing: drag a finger anywhere across a chart ──
+// The label follows the data point nearest your finger along the time axis
+// (skipping gaps and goal lines), with a guide line at that point.
+if (window.Chart && !Chart.Interaction.modes.scrub) registerScrub();
+function registerScrub() {
+  Chart.Interaction.modes.scrub = (chart, e) => {
+    let best = null;
+    chart.getSortedVisibleDatasetMetas().forEach(meta => {
+      if (chart.data.datasets[meta.index]?._goal) return;
+      meta.data.forEach((el, i) => {
+        const v = chart.data.datasets[meta.index].data[i];
+        if (v == null || el.skip || isNaN(el.x)) return;
+        const d = Math.abs(el.x - e.x);
+        if (!best || d < best.d) best = { d, element: el, datasetIndex: meta.index, index: i };
+      });
+    });
+    return best ? [{ element: best.element, datasetIndex: best.datasetIndex, index: best.index }] : [];
+  };
+  Chart.register({
+    id: 'scrubLine',
+    afterDatasetsDraw(chart) {
+      const act = chart.tooltip?.getActiveElements?.() || [];
+      if (!act.length) return;
+      const x = act[0].element.x, { top, bottom } = chart.chartArea, ctx = chart.ctx;
+      ctx.save(); ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom);
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(128,128,128,0.45)'; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.restore();
+    },
+  });
+}
+
 const chartDefaults = {
   responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'scrub', intersect: false },
   plugins: { legend: { display: false }, tooltip: { backgroundColor: tooltipBg, titleFont: { family: 'DM Sans'}, bodyFont: { family: 'DM Mono'}, padding: 10, cornerRadius: 8 } },
   scales: {
     x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 }, color: tickColor, maxTicksLimit: 8 } },
@@ -5304,7 +5415,7 @@ function withChartJs(fn) {
   _chartWaiters = [fn];
   const sc = document.createElement('script');
   sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-  sc.onload = () => { const w = _chartWaiters; _chartWaiters = null; w.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); };
+  sc.onload = () => { if (!Chart.Interaction.modes.scrub) registerScrub(); const w = _chartWaiters; _chartWaiters = null; w.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); };
   sc.onerror = () => { _chartWaiters = null; };
   document.head.appendChild(sc);
 }
@@ -5434,7 +5545,7 @@ function renderHistChart(w) {
     y: { grid: { color: gridColor }, border: { display: false }, ticks: { font: { family: 'DM Mono', size: 10 }, color: tickColor, maxTicksLimit: 5 }, ...yExtra },
   });
   const tooltip = (labelFn, extra = {}) => ({ ...chartDefaults.plugins.tooltip, callbacks: { title: items => w.buckets[items[0].dataIndex].title, label: labelFn, ...extra } });
-  const goalLine = (val, label) => ({ type: 'line', label, data: labels.map(() => val), borderColor: 'rgba(128,128,128,0.45)', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, pointHitRadius: 0, fill: false });
+  const goalLine = (val, label) => ({ _goal: true, type: 'line', label, data: labels.map(() => val), borderColor: 'rgba(128,128,128,0.45)', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, pointHitRadius: 0, fill: false });
 
   // ── Habits: completion % per bucket ──
   if (_histGroup === 'habits') {
