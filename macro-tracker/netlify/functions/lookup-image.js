@@ -95,7 +95,7 @@ Rules:
       },
       body: JSON.stringify({
         model,
-        max_tokens: 1500,
+        max_tokens: 3000,
         messages: [{
           role: 'user',
           content: [
@@ -116,6 +116,20 @@ Rules:
   const data = await res.json();
   const raw = (data.content || []).map(b => b.text || '').join('').trim();
 
+  // Pull every COMPLETE {...} object out of text, even if the answer was cut off
+  // before its closing bracket (strings and nested objects handled)
+  function completeObjects(text) {
+    const out = []; let depth = 0, start = -1, inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === '{') { if (depth === 0) start = i; depth++; }
+      else if (c === '}' && depth > 0) { depth--; if (depth === 0 && start >= 0) { try { out.push(JSON.parse(text.slice(start, i + 1))); } catch (_) {} start = -1; } }
+    }
+    return out;
+  }
+
   // Try array first, fall back to single object wrapped in array
   let parsed;
   const arrStart = raw.indexOf('[');
@@ -134,8 +148,14 @@ Rules:
       return { statusCode: 500, body: JSON.stringify({ error: 'No JSON in response' }) };
     }
   } catch(e) {
-    const msg = e.name === 'AbortError' ? 'Request timed out — try again' : `JSON parse error: ${e.message}`;
-    return { statusCode: 500, body: JSON.stringify({ error: msg }) };
+    // Cut off mid-answer (or stray text)? Keep every item that finished
+    const salvaged = completeObjects(raw).filter(o => o && (o.name || o.barcode || o.calories != null || o.label));
+    if (salvaged.length) parsed = salvaged;
+    else {
+      const msg = e.name === 'AbortError' ? 'Request timed out — try again'
+        : data.stop_reason === 'max_tokens' ? 'Too many items in one photo — try a closer shot, or describe what to look for' : `Couldn't read the result — try again`;
+      return { statusCode: 500, body: JSON.stringify({ error: msg }) };
+    }
   }
 
   // Ensure result is always an array
