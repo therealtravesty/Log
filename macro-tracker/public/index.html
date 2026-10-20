@@ -518,6 +518,14 @@
   .enrich-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
   .enrich-btns .pill-btn, .enrich-btns .sim-use { width: 100%; height: 42px; border-radius: 21px; font-size: 14px; }
   .chart-wrap canvas { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .pkg-tray { margin: -2px 0 12px; padding: 12px; border-radius: 18px; background: var(--surface); border: 0.5px solid var(--border-med); }
+  .pkg-thumbs { display: flex; gap: 8px; }
+  .pkg-thumb { position: relative; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; }
+  .pkg-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .pkg-thumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 11px; border: none; background: rgba(0,0,0,0.55); color: #fff; font-size: 15px; line-height: 22px; padding: 0; }
+  .pkg-hint { font-size: 12px; color: var(--text-3); margin: 8px 0 10px; line-height: 1.4; }
+  .pkg-actions { display: flex; gap: 8px; }
+  .pkg-actions .pill-btn, .pkg-actions .sim-use { flex: 1; height: 40px; border-radius: 20px; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1479,6 +1487,8 @@
           <input type="file" id="foodCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="lookupFoodFromImage(this)"/>
           <input type="file" id="barcodeCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="barcodeFromFile(this)"/>
           <input type="file" id="barcodeLibraryInput" accept="image/*" style="display:none;" onchange="barcodeFromFile(this)"/>
+          <input type="file" id="pkgCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="addPkgPhotos(this)"/>
+          <input type="file" id="pkgLibraryInput" accept="image/*" multiple style="display:none;" onchange="addPkgPhotos(this)"/>
         </div>
         <div style="min-height:16px;">
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
@@ -1493,12 +1503,20 @@
       <div class="sheet-panel" data-panel="photo">
         <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what should I look for? e.g. &quot;the chicken shawarma bowl, large&quot;"></textarea>
         <div class="photo-hint-sub">Helps with menus, receipts and shared plates. Leave blank to log everything in the photo.</div>
-        <button class="scan-tile" onclick="document.getElementById('barcodeCameraInput').click()">
+        <button class="scan-tile" onclick="document.getElementById('pkgCameraInput').click()">
           <svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 8v8M11 8v8M14 8v8M16.5 8v8"/></svg>
-          <span style="flex:1"><span class="pt-title">Scan barcode</span><span class="pt-sub">Exact product, ingredients and additives</span>
-            <span class="scan-links"><span class="pt-lib" onclick="event.stopPropagation(); document.getElementById('barcodeLibraryInput').click()">From Photos</span>
-            <span class="pt-lib" onclick="event.stopPropagation(); toggleBarcodeType()">Type number</span></span></span>
+          <span style="flex:1"><span class="pt-title">Scan package</span><span class="pt-sub">Barcode, nutrition label, ingredients · 1 to 3 photos</span>
+            <span class="scan-links"><span class="pt-lib" onclick="event.stopPropagation(); document.getElementById('pkgLibraryInput').click()">From Photos</span>
+            <span class="pt-lib" onclick="event.stopPropagation(); toggleBarcodeType()">Type barcode</span></span></span>
         </button>
+        <div class="pkg-tray" id="pkgTray" style="display:none;">
+          <div class="pkg-thumbs" id="pkgThumbs"></div>
+          <div class="pkg-hint" id="pkgHint"></div>
+          <div class="pkg-actions">
+            <button class="sim-use" id="pkgAddBtn" onclick="document.getElementById('pkgCameraInput').click()">+ Add photo</button>
+            <button class="pill-btn" onclick="runPackageScan()">Look up</button>
+          </div>
+        </div>
         <div class="scan-type" id="scanType" style="display:none;"><input id="scanManual" inputmode="numeric" placeholder="Numbers under the bars" maxlength="14"/><button class="pill-btn" onclick="handleBarcode(document.getElementById('scanManual').value)">Look up</button></div>
         <div class="photo-tiles">
           <button class="photo-tile" onclick="pickFoodPhoto('food', true)">
@@ -2646,20 +2664,39 @@ function showView(name, direction) {
 //   Processing (25): NOVA group, when the ingredients are known.
 //   Additives (15): rated from the table below; a high-risk additive caps the score at 49.
 // With nutrients only, a perfect 60/60 still shows as 100 (outlined badge).
+// Evidence-based tiers (not precautionary lists like Yuka's or CSPI's):
+//   high     — banned or restricted by a major regulator (FDA, EU/EFSA, Health
+//              Canada), or strong human evidence of harm
+//   moderate — a real but mixed or emerging signal (animal data, unconfirmed
+//              human associations)
+//   low      — well studied, no meaningful concern at normal intake
+// Anything not listed is treated as low.
 const ADDITIVE_RISK = [
-  [/e171\b|titanium dioxide/, 'Titanium dioxide', 'high'], [/e924\b|potassium bromate/, 'Potassium bromate', 'high'],
-  [/e320\b|\bbha\b|butylated hydroxyanisole/, 'BHA', 'high'], [/e127\b|red ?(no\.? ?)?3\b|erythrosine/, 'Red 3', 'high'],
-  [/e250\b|sodium nitrite/, 'Sodium nitrite', 'high'], [/e251\b|e252\b|sodium nitrate|potassium nitrate/, 'Nitrates', 'high'],
-  [/e216\b|propyl ?paraben/, 'Propylparaben', 'high'], [/e951\b|aspartame/, 'Aspartame', 'high'],
-  [/e129\b|red ?(no\.? ?)?40|allura/, 'Red 40', 'moderate'], [/e102\b|yellow ?(no\.? ?)?5|tartrazine/, 'Yellow 5', 'moderate'],
-  [/e110\b|yellow ?(no\.? ?)?6|sunset yellow/, 'Yellow 6', 'moderate'], [/e133\b|blue ?(no\.? ?)?1\b|brilliant blue/, 'Blue 1', 'moderate'],
-  [/e150c|e150d|caramel colou?r/, 'Caramel color', 'moderate'], [/e955\b|sucralose/, 'Sucralose', 'moderate'],
-  [/e950\b|acesulfame/, 'Acesulfame K', 'moderate'], [/e954\b|saccharin/, 'Saccharin', 'moderate'],
-  [/e968\b|erythritol/, 'Erythritol', 'moderate'], [/e407\b|carrageenan/, 'Carrageenan', 'moderate'],
-  [/e433\b|polysorbate ?80/, 'Polysorbate 80', 'moderate'], [/e466\b|carboxymethyl ?cellulose|cellulose gum/, 'Cellulose gum', 'moderate'],
-  [/e471\b|mono-? ?(and|&) ?diglycerides/, 'Mono- and diglycerides', 'moderate'], [/e211\b|sodium benzoate/, 'Sodium benzoate', 'moderate'],
+  // high
+  [/e171\b|titanium dioxide/, 'Titanium dioxide', 'high'],                       // EU ban 2022 (genotoxicity can't be ruled out)
+  [/e924\b|potassium bromate/, 'Potassium bromate', 'high'],                     // banned EU, UK, Canada
+  [/e127\b|red ?(no\.? ?)?3\b|erythrosine/, 'Red 3', 'high'],                    // FDA revoked for food, 2025
+  [/e250\b|sodium nitrite/, 'Sodium nitrite', 'high'],                           // processed meat: proven carcinogen
+  [/e251\b|e252\b|sodium nitrate|potassium nitrate/, 'Nitrates', 'high'],
+  [/e320\b|\bbha\b|butylated hydroxyanisole/, 'BHA', 'high'],                    // probable carcinogen in animals; restricted in EU
+  [/e216\b|propyl ?paraben/, 'Propylparaben', 'high'],                           // banned in EU food (hormone effects)
+  // moderate
+  [/e951\b|aspartame/, 'Aspartame', 'moderate'],                                 // "possible" carcinogen, but WHO kept the safe intake level (2023)
+  [/e955\b|sucralose/, 'Sucralose', 'moderate'],                                 // gut and in-vitro DNA signals, unconfirmed in people
+  [/e950\b|acesulfame/, 'Acesulfame K', 'moderate'],
+  [/e968\b|erythritol/, 'Erythritol', 'moderate'],                               // 2023 clotting / heart-event association
+  [/e407\b|carrageenan/, 'Carrageenan', 'moderate'],
+  [/e433\b|polysorbate ?80/, 'Polysorbate 80', 'moderate'],                      // gut-lining effects in studies
+  [/e466\b|carboxymethyl ?cellulose|cellulose gum/, 'Cellulose gum', 'moderate'],
+  [/e129\b|red ?(no\.? ?)?40|allura/, 'Red 40', 'moderate'],                     // behavior effects in sensitive children (EU warning label)
+  [/e102\b|yellow ?(no\.? ?)?5|tartrazine/, 'Yellow 5', 'moderate'],
+  [/e110\b|yellow ?(no\.? ?)?6|sunset yellow/, 'Yellow 6', 'moderate'],
   [/e319\b|tbhq/, 'TBHQ', 'moderate'], [/e321\b|\bbht\b|butylated hydroxytoluene/, 'BHT', 'moderate'],
-  [/e338\b|phosphoric acid/, 'Phosphoric acid', 'moderate'], [/e339|e340|e341|e450|e451|e452|phosphates?\b/, 'Phosphates', 'moderate'],
+  // low
+  [/e954\b|saccharin/, 'Saccharin', 'low'], [/e471\b|mono-? ?(and|&) ?diglycerides/, 'Mono- and diglycerides', 'low'],
+  [/e211\b|sodium benzoate/, 'Sodium benzoate', 'low'], [/e338\b|phosphoric acid/, 'Phosphoric acid', 'low'],
+  [/e339|e340|e341|e450|e451|e452|phosphates?\b/, 'Phosphates', 'low'], [/e150c|e150d|caramel colou?r/, 'Caramel color', 'low'],
+  [/e133\b|blue ?(no\.? ?)?1\b|brilliant blue/, 'Blue 1', 'low'],
   [/e621\b|monosodium glutamate|\bmsg\b/, 'MSG', 'low'], [/e202\b|potassium sorbate/, 'Potassium sorbate', 'low'],
   [/e415\b|xanthan/, 'Xanthan gum', 'low'], [/e412\b|guar/, 'Guar gum', 'low'], [/e418\b|gellan/, 'Gellan gum', 'low'],
   [/e420\b|sorbitol/, 'Sorbitol', 'low'], [/e960|stevia|steviol/, 'Stevia', 'low'], [/allulose/, 'Allulose', 'low'],
@@ -2668,12 +2705,20 @@ const ADDITIVE_RISK = [
   [/e410\b|locust bean/, 'Locust bean gum', 'low'], [/e500\b|sodium bicarbonate|baking soda/, 'Baking soda', 'low'],
 ];
 function classifyAdditives(list) {
+  // Open Food Facts lists sub-variants ("e322i" lecithin, "e500ii" baking soda,
+  // "e450iii"): match them by their base E-number, and never show a bare
+  // letter or suffix as an additive.
+  const title = x => x.replace(/\b\w/g, c => c.toUpperCase());
   const seen = new Set(), out = [];
   (list || []).forEach(raw => {
-    const t = String(raw).toLowerCase();
-    const hit = ADDITIVE_RISK.find(([re]) => re.test(t));
-    const label = hit ? hit[1] : String(raw).replace(/^e\d+[a-z]?\s*/i, '').replace(/\b\w/g, c => c.toUpperCase()) || String(raw).toUpperCase();
-    if (seen.has(label)) return; seen.add(label);
+    const t = String(raw).toLowerCase().replace(/^en:/, '').trim();
+    if (!t) return;
+    const m = t.match(/^e(\d{3,4})[a-z]*\s*(.*)$/);
+    const norm = m ? `e${m[1]} ${m[2] || ''}` : t;
+    const hit = ADDITIVE_RISK.find(([re]) => re.test(norm));
+    const label = hit ? hit[1] : m ? (m[2] && m[2].length > 2 ? title(m[2]) : `E${m[1]}`) : title(t);
+    if (!label || label.length < 2 || seen.has(label)) return;
+    seen.add(label);
     out.push({ label, risk: hit ? hit[2] : 'low' });
   });
   return out.sort((a, b) => ({ high: 0, moderate: 1, low: 2 })[a.risk] - ({ high: 0, moderate: 1, low: 2 })[b.risk]);
@@ -2708,7 +2753,8 @@ function foodScore(food) {
   const q = qualityDataFor(food);
   const whole = q?.nova === 1; // sugar inside whole fruit, milk etc. isn't "free sugar"
   let nut;
-  if (cal < 20) { nut = 45; notes.push(['·', 'Very low calorie']); }
+  // Near-zero calories (diet soda, black coffee): no nutrition to credit or penalize, so the middle
+  if (cal < 20) { nut = 30; notes.push(['·', 'No meaningful calories or nutrients']); }
   else {
     const per = v => (v || 0) / cal * 100;
     const pro = per(food.pro), fib = per(food.fib), sug = per(food.sug), sat = per(food.satFat), sod = per(food.sod);
@@ -2734,7 +2780,8 @@ function foodScore(food) {
     additives = classifyAdditives(addList);
     possible += 15;
     const worst = additives[0]?.risk;
-    earned += !additives.length ? 15 : worst === 'high' ? 0 : worst === 'moderate' ? 6 : 13;
+    const nMod = additives.filter(a => a.risk === 'moderate').length;
+    earned += !additives.length ? 15 : worst === 'high' ? 0 : nMod ? [9, 6, 3][Math.min(nMod, 3) - 1] : 13;
     if (worst === 'high') cap = 49;
   }
   const score = Math.min(cap, Math.round(earned / possible * 100));
@@ -2791,7 +2838,7 @@ function showQuality(arg) {
     <div class="q-sec">Additives</div>
     ${q.additives ? (q.additives.length ? q.additives.map(a => `<div class="q-line">${riskDot(a.risk)}${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">None</div>') : '<div class="q-line"><span class="q-dim">Unknown</span></div>'}
     ${q.organic ? '<div class="q-line q-dim">Organic (not part of the score)</div>' : ''}
-    <div class="q-foot">${q.source.startsWith('whole food') ? 'Recognized as a plain whole food: unprocessed, no additives, and its natural sugar isn\'t penalized.' : q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings follow public safety reviews (EFSA, CSPI) and are a guide, not a verdict.`}</div>
+    <div class="q-foot">${q.source.startsWith('whole food') ? 'Recognized as a plain whole food: unprocessed, no additives, and its natural sugar isn\'t penalized.' : q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings weigh regulator reviews (FDA, EFSA, WHO) and the strength of human evidence; a guide, not a verdict.`}</div>
     ${typeof arg === 'number' && !(q.nova && q.additives) ? `<div class="enrich-btns" style="flex-direction:row;margin-top:12px">
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'barcode')">Scan barcode</button>
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'ingredients')">Photo of ingredients</button></div>` : ''}
@@ -3204,6 +3251,103 @@ async function saveEnrich(useNutrition) {
     renderToday();
     showToast(`${entry.name} updated in your library`);
   } catch (e) { showToast('Could not save — try again'); }
+}
+
+// ── Scan package: 1–3 photos (barcode, nutrition label, ingredients) ──
+// One read pulls everything visible; the barcode (read on the phone, or from
+// the photo) also fetches USDA / web / Open Food Facts. Nutrition comes from
+// YOUR photo's label when it's visible (it's the actual package), otherwise the
+// database; ingredients the same way. Disagreements are shown.
+let _pkgFiles = [];
+function addPkgPhotos(input) {
+  const files = [...(input.files || [])]; input.value = '';
+  _pkgFiles = [..._pkgFiles, ...files].slice(0, 3);
+  renderPkgTray();
+}
+function removePkgPhoto(i) { _pkgFiles.splice(i, 1); renderPkgTray(); }
+function renderPkgTray() {
+  const tray = document.getElementById('pkgTray'); if (!tray) return;
+  tray.style.display = _pkgFiles.length ? 'block' : 'none';
+  document.getElementById('pkgThumbs').innerHTML = _pkgFiles.map((f, i) =>
+    `<div class="pkg-thumb"><img src="${URL.createObjectURL(f)}" alt=""><button onclick="removePkgPhoto(${i})" aria-label="Remove">×</button></div>`).join('');
+  document.getElementById('pkgHint').textContent = _pkgFiles.length >= 3 ? 'Ready to look up.'
+    : _pkgFiles.length === 1 ? 'Add the nutrition label or ingredients for the most complete result, or look up now.' : 'Add one more side, or look up now.';
+  document.getElementById('pkgAddBtn').style.display = _pkgFiles.length >= 3 ? 'none' : '';
+}
+async function photoToCanvas(file, max = 1600) {
+  const img = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(img.width, img.height));
+  const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  return cv;
+}
+async function decodeBarcodeOnPhone(cv) {
+  if ('BarcodeDetector' in window) {
+    try { const r = await new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }).detect(cv); if (r[0]?.rawValue) return r[0].rawValue; } catch (_) {}
+  }
+  try {
+    await loadZxing();
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    const res = await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(cv.toDataURL('image/jpeg', 0.92));
+    return res?.getText() || null;
+  } catch (_) { return null; }
+}
+async function runPackageScan() {
+  if (!_pkgFiles.length) return;
+  const resultArea = document.getElementById('resultArea');
+  const status = t => { resultArea.innerHTML = `<div class="status-msg"><div class="spinner"></div>${t}</div>`; };
+  status('Reading your photos…');
+  try {
+    const canvases = await Promise.all(_pkgFiles.map(f => photoToCanvas(f)));
+    // 1. Barcode on the phone (free, instant) + one read of everything visible
+    const [phoneCode, ph] = await Promise.all([
+      (async () => { for (const cv of canvases) { const c = await decodeBarcodeOnPhone(cv); if (c) return c; } return null; })(),
+      fetch('/api/lookup-image', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'package', images: canvases.map(cv => ({ data: cv.toDataURL('image/jpeg', 0.8).split(',')[1], mediaType: 'image/jpeg' })) }) })
+        .then(r => r.json()).then(d => Array.isArray(d) ? d[0] || {} : (d.error ? Promise.reject(new Error(d.error)) : d)),
+    ]);
+    const code = String(phoneCode || ph.barcode || '').replace(/\D/g, '');
+    // 2. Databases by barcode
+    let db = null;
+    if (code.length >= 6) {
+      status('Looking up barcode ' + code + '…');
+      try { const r = await fetch('/api/barcode?code=' + code); db = await r.json(); } catch (_) {}
+    }
+    const dbOk = db && db.found && !db.incomplete && db.calories != null;
+    const L = ph.label && ph.label.calories != null ? ph.label : null;
+    if (!L && !dbOk) throw new Error(code ? "Found barcode " + code + " but no nutrition for it. Add a photo of the Nutrition Facts panel." : "Couldn't find a barcode or a Nutrition Facts panel in these photos. Try a closer, straight-on shot.");
+    // 3. Reconcile
+    const photoQ = Array.isArray(ph.additives) || ph.nova ? { nova: ph.nova ?? null, additives: Array.isArray(ph.additives) ? ph.additives : null, ingredients: ph.ingredients || '', source: 'Package photo' } : null;
+    const officialName = dbOk && db.source !== 'Open Food Facts' ? db.name : null;
+    const main = L ? {
+      name: officialName || ph.name || (dbOk ? db.name : '') || 'Scanned product',
+      serving_size: ph.serving_size || (dbOk ? db.serving_size : '') || '1 serving',
+      calories: L.calories, protein_g: L.protein_g, carbs_g: L.carbs_g, fat_g: L.fat_g, sat_fat_g: L.sat_fat_g, sugar_g: L.sugar_g, sodium_mg: L.sodium_mg, fiber_g: L.fiber_g,
+      source: 'Your package photo', source_url: dbOk ? db.source_url : '', confidence: 'high',
+    } : { ...db };
+    main.quality = photoQ || (dbOk ? db.quality : null) || null;
+    main.barcode = code || null;
+    main.sources_checked = ['Package photo', ...((dbOk && db.sources_checked) || (code ? ['USDA', 'Open Food Facts'] : []))];
+    main.alternatives = [];
+    const notes = [];
+    if (L && dbOk) {
+      const off = Math.abs(L.calories - db.calories) > Math.max(10, db.calories * 0.1) || Math.abs((L.protein_g || 0) - (db.protein_g || 0)) >= 3;
+      if (off) {
+        notes.push(`Your label: ${Math.round(L.calories)} kcal / ${Math.round(L.protein_g)}g P · ${db.source}: ${Math.round(db.calories)} kcal / ${Math.round(db.protein_g)}g P. Using your label.`);
+        main.alternatives = [{ ...db, name: `${db.name} (${db.source})` }];
+      } else notes.push(`Matches ${db.source}`);
+    } else if (L) notes.push(code ? 'Barcode not in USDA or Open Food Facts; using your label' : 'From your label');
+    else notes.push('No label in the photos; nutrition from ' + db.source);
+    if (photoQ) notes.push('ingredients from your photo');
+    main.note = notes.join(' · ');
+    showLookupResult(main, main.name);
+    if (L && pendingFood) Object.assign(pendingFood, { verified: true, source: 'Package photo' });
+    _pkgFiles = []; renderPkgTray();
+  } catch (e) {
+    resultArea.innerHTML = '<div class="err-msg">' + escapeHtml(e.message) + '</div>';
+  }
 }
 
 // ── Barcode from a photo ──
@@ -4779,7 +4923,11 @@ async function refreshCoachAnalysis(opts = {}) {
     const res = await api('coach-checkin', { method: 'POST', noQueue: true, body: {
       profile_id: activeProfileId,
       today: todayStr(), // local date — the server runs in UTC
-      goals: { cal: GOALS.cal, pro: GOALS.pro, carb: GOALS.carb, fat: GOALS.fat },
+      goals: { cal: GOALS.cal, pro: GOALS.pro, carb: GOALS.carb, fat: GOALS.fat, sug: GOALS.sug, sod: GOALS.sod, fib: GOALS.fib, satFat: GOALS.satFat },
+      // Quality score for each food logged in the last 30 days (the server has the foods, not the scores)
+      foods_quality: (() => { const seen = new Map(); for (let i = 0; i <= 30; i++) (_allFoods[addDaysStr(todayStr(), -i)] || []).forEach(f => {
+        const k = (f.name || '').toLowerCase().trim(); if (k && !seen.has(k)) { const q = foodScore(f); seen.set(k, { name: f.name, score: q.score, nova: q.nova }); } });
+        return [...seen.values()].slice(0, 60); })(),
       target: _targetMeta,
       quality: (() => { const f = []; for (let i = 1; i <= 7; i++) f.push(...(_allFoods[addDaysStr(todayStr(), -i)] || [])); const dq = dayQuality(f); return dq ? { ...dq, days: [1,2,3,4,5,6,7].filter(i => (_allFoods[addDaysStr(todayStr(), -i)] || []).length).length } : null; })(),
       notes: document.getElementById('coachNotes')?.value || '',

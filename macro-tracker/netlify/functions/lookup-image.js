@@ -12,19 +12,30 @@ async function fetchWithTimeout(url, options, ms = 20000) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
-  const { imageData, mediaType, mode, hint } = JSON.parse(event.body || '{}');
+  const body = JSON.parse(event.body || '{}');
+  const { mode, hint } = body;
+  // One image (imageData) or several photos of the same package (images: [{ data, mediaType }])
+  const images = Array.isArray(body.images) && body.images.length
+    ? body.images.slice(0, 3).filter(im => im && im.data).map(im => ({ data: im.data, mediaType: im.mediaType || 'image/jpeg' }))
+    : body.imageData ? [{ data: body.imageData, mediaType: body.mediaType || 'image/jpeg' }] : [];
   const userHint = String(hint || '').trim().slice(0, 200);
-  if (!imageData) return { statusCode: 400, body: JSON.stringify({ error: 'Missing image data' }) };
+  if (!images.length) return { statusCode: 400, body: JSON.stringify({ error: 'Missing image data' }) };
 
-  // Guard: base64 PNG screenshots can be large — reject if over 5MB encoded
-  const approxBytes = imageData.length * 0.75;
+  // Guard: base64 PNG screenshots can be large — reject if over 5MB encoded (all photos together)
+  const approxBytes = images.reduce((a, im) => a + im.data.length, 0) * 0.75;
   if (approxBytes > 5 * 1024 * 1024) {
     return { statusCode: 413, body: JSON.stringify({ error: 'Image too large — try a smaller screenshot' }) };
   }
 
   // Barcode mode: just read the digits printed under the bars (fallback when the
   // phone couldn't decode the bars themselves)
-  const prompt = mode === 'barcode' ? `This photo shows a product barcode (UPC/EAN). Read the digits printed beneath the bars, exactly, with no spaces.
+  const prompt = mode === 'package' ? `These ${images.length} photo${images.length === 1 ? '' : 's'} all show ONE packaged food product (different sides: front, barcode, Nutrition Facts, ingredients).
+Read everything that is visible and return ONLY a raw JSON array with exactly one object, no markdown:
+[{"name":"brand + product name as printed on the package, or empty","barcode":"digits under the barcode if fully readable, else empty","serving_size":"as printed, e.g. 1 bar (60g), or empty","label":null,"ingredients":null,"nova":null,"additives":null}]
+- "label": ONLY if a Nutrition Facts panel is visible, an object with the PER-SERVING values copied exactly: {"calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}. Otherwise null. Never estimate.
+- "ingredients": ONLY if the ingredients list is visible, the text as printed. Otherwise null.
+- "nova" and "additives": ONLY if the ingredients are visible. nova = NOVA group 1-4. additives = every additive as a short name with its E-number where one exists (e.g. "e955 sucralose", "e466 cellulose gum"). Otherwise null.
+- Use only what you can read. Leave anything unreadable empty or null.` : mode === 'barcode' ? `This photo shows a product barcode (UPC/EAN). Read the digits printed beneath the bars, exactly, with no spaces.
 Return ONLY a raw JSON array, no markdown: [{"barcode":"012345678905","name":"product name if visible, else empty"}]
 If you cannot read every digit with confidence, return [{"barcode":""}].` : `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
 
@@ -88,7 +99,7 @@ Rules:
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageData } },
+            ...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.mediaType, data: im.data } })),
             { type: 'text', text: prompt }
           ]
         }]

@@ -57,7 +57,8 @@ function sumMacros(rows) {
   return rows.reduce((a, r) => ({
     cal: a.cal + (r.cal || 0), pro: a.pro + (r.pro || 0), carb: a.carb + (r.carb || 0),
     fat: a.fat + (r.fat || 0), sug: a.sug + (r.sug || 0),
-  }), { cal: 0, pro: 0, carb: 0, fat: 0, sug: 0 });
+    sod: a.sod + (r.sod || 0), fib: a.fib + (r.fib || 0), sat: a.sat + (r.sat_fat || 0),
+  }), { cal: 0, pro: 0, carb: 0, fat: 0, sug: 0, sod: 0, fib: 0, sat: 0 });
 }
 
 // Least-squares slope of weight over time → lbs per week
@@ -143,8 +144,10 @@ exports.handler = async (event) => {
       const workoutDays = new Set(rows.filter(isWorkout).map(e => e.date)).size;
       const workoutMins = Math.round(rows.filter(isWorkout).reduce((a, e) => a + (e.moving_time || 0), 0) / 60);
       const walks = rows.filter(e => !isWorkout(e)).length;
+      const isStrength = e => /strength|weight|lift|functional|crossfit|core|hiit|resistance/i.test(`${e.sport_type || ''} ${e.name || ''}`);
+      const strengthDays = new Set(rows.filter(e => isWorkout(e) && isStrength(e)).map(e => e.date)).size;
       const elapsed = i === 0 ? daysBetween(from, today) + 1 : 7;
-      return { label: i === 0 ? `This week (${elapsed} of 7 days so far)` : `${i} week${i > 1 ? 's' : ''} ago`, workoutDays, workoutMins, walks, elapsed };
+      return { label: i === 0 ? `This week (${elapsed} of 7 days so far)` : `${i} week${i > 1 ? 's' : ''} ago`, workoutDays, workoutMins, walks, strengthDays, elapsed };
     });
 
     // ── Garmin daily totals (via Apple Health), completed days only ──
@@ -177,10 +180,15 @@ exports.handler = async (event) => {
     const n14 = health.filter(h => h.date >= addDays(today, -14) && h.sleep_min).length;
     const hr7 = hAvg(addDays(today, -7), yest, 'resting_hr'), hr28 = hAvg(addDays(today, -35), addDays(today, -8), 'resting_hr');
     const hm = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+    const last7Sleep = health.filter(h => h.date >= addDays(today, -7) && h.date <= yest && h.sleep_min).map(h => h.sleep_min);
+    const sleepRange = last7Sleep.length >= 3 ? Math.max(...last7Sleep) - Math.min(...last7Sleep) : null;
+    const drinks7 = (foodRows || []).filter(r => r.is_drink && r.date >= addDays(today, -6) && r.date <= today).length;
     const recoveryLines = [
+      last7Sleep.length >= 3 ? `- Sleep consistency (last 7 nights): shortest ${hm(Math.min(...last7Sleep))}, longest ${hm(Math.max(...last7Sleep))} (a ${hm(sleepRange)} swing); 7h+ on ${last7Sleep.filter(m => m >= 420).length} of ${last7Sleep.length}` : null,
+      `- Alcoholic drinks logged: ${drinks7} in the last 7 days`,
       sl7 ? `- Sleep: ${hm(sl7.v)} per night last 7 nights vs ${sl28 ? hm(sl28.v) : 'n/a'} over 28 nights; under 7h on ${short14} of the last ${n14} nights` : '- Sleep: no data synced',
       hr7 ? `- Resting heart rate: ${hr7.v} bpm last 7 days vs ${hr28 ? hr28.v + ' bpm the 4 weeks before' : 'no baseline yet'}${hr28 ? ` (${signed(hr7.v - hr28.v)} bpm)` : ''}` : '- Resting heart rate: no data synced',
-    ];
+    ].filter(Boolean);
 
     // ── Habits ──
     const logs = {};
@@ -211,55 +219,101 @@ exports.handler = async (event) => {
       return { days: ds.length, cal: Math.round(t.cal / ds.length), pro: Math.round(t.pro / ds.length), carb: Math.round(t.carb / ds.length), fat: Math.round(t.fat / ds.length), sug: Math.round(t.sug / ds.length), drinks: ds.flatMap(d => byDate[d]).filter(r => r.is_drink).length };
     };
     const f7 = foodWindow(7), f30 = foodWindow(30);
-    const sparse = f30.days < 10;
     const vsGoal = (v, goal, unit) => goal ? `${v}${unit}/day (target ${goal}${unit}, ${signed(v - goal)})` : `${v}${unit}/day`;
 
-    // ── Prompt ──
-    const systemPrompt = `You are a direct, practical fitness coach reviewing one person's tracked data. Your job is to tell them where they are relative to their plan, what is driving it, and the single most useful thing to do this week.
+    // ── What the logged days actually show (last 14 days; 30 if fewer than 3) ──
+    // A day with under half the calorie target logged is treated as PARTIAL:
+    // still useful for meals and food choices, but not for daily adherence.
+    const qMap = {}; (Array.isArray(input.foods_quality) ? input.foods_quality : []).slice(0, 60)
+      .forEach(q => { if (q && q.name) qMap[String(q.name).toLowerCase().trim()] = q; });
+    let detailDays = Object.keys(byDate).filter(d => d >= addDays(today, -13)).sort();
+    let detailSpan = 14;
+    if (detailDays.length < 3) { detailDays = Object.keys(byDate).filter(d => d >= addDays(today, -29)).sort(); detailSpan = 30; }
+    const dayTotals = detailDays.map(d => ({ d, ...sumMacros(byDate[d]), meals: new Set(byDate[d].map(r => r.meal || 'other')).size }));
+    const full = dayTotals.filter(t => goals.cal ? t.cal >= goals.cal * 0.5 : t.meals >= 2);
+    const foodLines = [];
+    if (detailDays.length) {
+      foodLines.push(`- Logged ${detailDays.length} day${detailDays.length === 1 ? '' : 's'} in the last ${detailSpan} (${full.length} full day${full.length === 1 ? '' : 's'}, ${detailDays.length - full.length} partial). Unlogged days are UNKNOWN, not zero.`);
+      if (full.length) {
+        const proHit = goals.pro ? full.filter(t => t.pro >= goals.pro * 0.9).length : null;
+        const calIn = goals.cal ? full.filter(t => Math.abs(t.cal - goals.cal) <= goals.cal * 0.1).length : null;
+        const calOver = goals.cal ? full.filter(t => t.cal > goals.cal * 1.1).length : null;
+        const avg = k => Math.round(full.reduce((a, t) => a + (t[k] || 0), 0) / full.length);
+        foodLines.push(`- Full days: calories ${vsGoal(avg('cal'), goals.cal, '')}; within ±10% of target on ${calIn}/${full.length}, over on ${calOver}/${full.length}`);
+        foodLines.push(`- Full days: protein ${vsGoal(avg('pro'), goals.pro, 'g')}; hit 90%+ of target on ${proHit}/${full.length}`);
+        const lim = [goals.sug ? `sugar ${avg('sug')}g (limit ${goals.sug}g)` : null, goals.sod ? `sodium ${avg('sod').toLocaleString()}mg (limit ${goals.sod.toLocaleString()}mg)` : null,
+          goals.fib ? `fiber ${avg('fib')}g (goal ${goals.fib}g)` : null, goals.satFat ? `saturated fat ${avg('sat')}g (limit ${goals.satFat}g)` : null].filter(Boolean);
+        if (lim.length) foodLines.push(`- Full days: ${lim.join(', ')}`);
+      }
+      // Meals: average per logged day that had that meal
+      const mealStats = {};
+      detailDays.forEach(d => byDate[d].forEach(r => { const m = r.meal || 'other'; (mealStats[m] = mealStats[m] || { days: new Set(), cal: 0, pro: 0 }); mealStats[m].days.add(d); mealStats[m].cal += r.cal || 0; mealStats[m].pro += r.pro || 0; }));
+      const order = ['breakfast', 'lunch', 'dinner', 'snacks', 'uncategorized', 'other'];
+      foodLines.push('- By meal (avg when logged): ' + Object.entries(mealStats).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+        .map(([m, v]) => `${m} ${Math.round(v.cal / v.days.size)} kcal / ${Math.round(v.pro / v.days.size)}g protein (${v.days.size} day${v.days.size === 1 ? '' : 's'})`).join('; '));
+      // Foods
+      const agg = {};
+      detailDays.forEach(d => byDate[d].forEach(r => { const k = String(r.name || '').toLowerCase().trim(); if (!k) return;
+        (agg[k] = agg[k] || { name: r.name, n: 0, cal: 0, pro: 0, sug: 0, sod: 0 }); agg[k].n++; agg[k].cal += r.cal || 0; agg[k].pro += r.pro || 0; agg[k].sug += r.sug || 0; agg[k].sod += r.sod || 0; }));
+      const all = Object.values(agg), totCal = all.reduce((a, f) => a + f.cal, 0) || 1, totPro = all.reduce((a, f) => a + f.pro, 0) || 1;
+      const sc = f => { const q = qMap[f.name.toLowerCase().trim()]; return q && q.score != null ? ` [quality ${q.score}${q.nova === 4 ? ', ultra-processed' : q.nova === 1 ? ', whole food' : ''}]` : ''; };
+      const fmt = f => `${f.name} (${f.n}x, ~${Math.round(f.cal / f.n)} kcal / ${Math.round(f.pro / f.n)}g protein each)${sc(f)}`;
+      foodLines.push('- Most frequent: ' + [...all].sort((a, b) => b.n - a.n || b.cal - a.cal).slice(0, 6).map(fmt).join('; '));
+      foodLines.push('- Biggest calorie sources: ' + [...all].sort((a, b) => b.cal - a.cal).slice(0, 3).map(f => `${f.name} ${Math.round(f.cal / totCal * 100)}% of logged calories${sc(f)}`).join('; '));
+      foodLines.push('- Biggest protein sources: ' + [...all].sort((a, b) => b.pro - a.pro).slice(0, 3).map(f => `${f.name} ${Math.round(f.pro / totPro * 100)}% of logged protein`).join('; '));
+      const scored = all.filter(f => qMap[f.name.toLowerCase().trim()]?.score != null).sort((a, b) => qMap[a.name.toLowerCase().trim()].score - qMap[b.name.toLowerCase().trim()].score);
+      if (scored.length >= 2) foodLines.push(`- Lowest quality: ${scored.slice(0, 2).map(f => `${f.name} (${qMap[f.name.toLowerCase().trim()].score})`).join(', ')}; highest: ${scored.slice(-2).reverse().map(f => `${f.name} (${qMap[f.name.toLowerCase().trim()].score})`).join(', ')}`);
+    } else foodLines.push('- No food logged in the last 30 days');
 
-FORMAT (plain text, rendered as-is):
-- No markdown at all: no #, **, *, _, -, or numbered lists. No headers.
-- 3 or 4 short paragraphs separated by blank lines, 200-260 words total.
+    // ── Prompt ──
+    const systemPrompt = `You are this person's coach for nutrition, training and recovery together, writing their weekly check-in. Write like a good coach texting a client: specific, encouraging where it's earned, direct about what to change, never preachy.
+
+THINK IN FOUR PILLARS, AND HOW THEY CONNECT:
+- BODY: the weight trend against the plan.
+- TRAINING: sessions against plan (especially strength training), minutes, steps against the 15k goal.
+- NUTRITION: calories and protein on logged days, how meals are built, food quality.
+- RECOVERY: sleep amount and consistency, resting heart rate trend, alcohol.
+The scale is one signal, not the verdict. Look for the connections a good coach would:
+- Short or erratic sleep drives hunger and cravings, weaker sessions and a noisier scale. When it lines up with overeating or a stall, sleep is the lever, ahead of cutting calories.
+- Resting heart rate up 5+ bpm while training hard in a deficit means under-recovery: ease the deficit or the load, don't push harder.
+- Strength training on plan + protein at or near target + the scale moving slower than planned: muscle may be partly offsetting fat loss. Say "possibly" and suggest a weekly waist measurement (or photos) to confirm. Never use this to excuse a stall when logged intake is over target or training is off plan.
+- Alcohol worsens sleep and appetite the following day.
+- Steps are a large, easy share of their daily burn; a drop shows up on the scale.
+
+STRUCTURE (plain text, rendered as-is; no markdown, no #, **, *, -, or numbered lists):
+Paragraph 1, WINS: one or two specific things that went well, from any pillar, with numbers. If little went well, find the most genuine positive; don't invent one.
+Paragraph 2, BIG PICTURE: an honest read of the week across the four pillars in plain language: where the body trend is against the plan, a one-line recovery read (always include it), training consistency, and how they connect. Name the ONE pillar that is the biggest lever right now.
+Paragraph 3, FOOD: what their logged food shows: which meals carry protein and which are light, which foods drive calories, one concrete swap or addition using foods they already eat.
+Paragraph 4, THIS WEEK: one or two specific, measurable actions from whichever pillar is the biggest lever (sleep, training, food or steps). Then stop.
+260-340 words. Finish every sentence. Write numbers over 999 with commas (2,298 kcal).
 
 HOW TO READ THE DATA:
 - Every number below is pre-computed. Quote them; never do your own arithmetic or invent numbers.
-- Weight is the ground truth for whether the plan is working. Lead with the weight pace vs plan.
-- Weigh-ins fluctuate day to day; trust the weekly rate and 7-day averages over single readings.
-- If food logging is marked SPARSE, do not judge intake from the food numbers. Rely on the weight trend and the user's own notes for what they are eating.
-- The user's notes describe how things have actually been going. Take them seriously and respond to them specifically, without repeating them back verbatim.
-- An outdoor walk is not a workout here; walks support the daily step goal.
+- Work with what they DID log. Unlogged days are unknown, not zero. Partial days count for meals and food choices, not daily totals.
+- Never open with logging gaps or missing notes, and don't scold. Mention logging at most once, as the final sentence, and only when a target change depends on it, framed forward ("A full week of logs would let me fine-tune your target").
+- If they wrote notes, respond to them specifically without repeating them back.
+- Trust weekly rates and 7-day averages over single weigh-ins.
+- An outdoor walk is not a workout; walks support the step goal.
 
 CALORIES (critical):
-- The daily calorie target ALREADY includes their activity. When its source is "Garmin", it is their measured 7-day average burn (resting + active) minus the planned deficit. Never add exercise or workout calories on top of it, never compute a separate "true deficit", never suggest eating back exercise calories.
-- Garmin burn numbers are estimates; the weight trend is the ground truth. Don't claim to know their intake when food logging is sparse.
+- The daily target ALREADY includes their activity (Garmin: measured average burn minus the planned deficit). Never add exercise calories on top, never compute a "true deficit", never suggest eating back exercise calories. Garmin numbers are estimates.
 
-TARGET ADJUSTMENTS (how a good coach does it):
-- The app holds the calorie target steady (4-week Garmin average, refreshed weekly). You decide whether it should change, based on the weight trend.
-- Only consider a change when the 28-day pace misses the plan by more than 0.25 lb/week (see "Pace gap").
-- Check adherence FIRST. If food logs are sparse, use the user's notes. If they describe eating over target, the fix is adherence, not a lower number: say that plainly and don't lower the target.
-- If adherence looks good and loss is too slow, recommend lowering the target by 100-150 kcal. If loss is faster than planned, recommend raising it by 100-150. Give the exact new number.
-- If there aren't enough weigh-ins, ask for more consistent weigh-ins before any change.
-- Use the 90-day Garmin baseline to judge whether recent activity is normal for them, and say so plainly when it has dropped.
+TARGET ADJUSTMENTS:
+- Only consider a change when the 28-day pace misses the plan by more than 0.25 lb/week (see "Pace gap"), AND there are at least 5 full logged days in the window.
+- Fix recovery first: if sleep is short or resting heart rate is up, don't lower the target that week.
+- If full logged days are mostly OVER target, the fix is adherence, not a lower number.
+- If full logged days are well UNDER target but the scale isn't moving, the likely explanation is food that isn't making it into the log (oils, sauces, snacks, drinks, weekends). Say so once, kindly, as a hypothesis, and don't lower the target.
+- If adherence, training and recovery look good and loss is too slow, recommend lowering by 100-150 kcal; if faster than planned, raising by 100-150. Give the exact new number. Otherwise hold the target and don't dwell on it.
 
-RECOVERY:
-- Short sleep (under 7h on most nights) raises hunger and cravings and makes the scale noisier. If it lines up with overeating in their notes or a stalled cut, name it as a lever, ahead of cutting calories further.
-- A resting heart rate up 5+ bpm over their baseline signals fatigue or under-recovery: suggest easing the deficit or training load rather than pushing harder.
-- Don't mention recovery when both look normal.
+FOOD QUALITY: Use the per-food quality scores to pick swaps (75+ excellent, 50-74 good, 25-49 poor, under 25 bad). Never call ultra-processed food "fine"; if processing is unknown, don't draw conclusions about it.
 
-FOOD QUALITY:
-- The score rewards protein and fiber and penalizes sugar, saturated fat, sodium, ultra-processing and risky additives (75+ excellent, 50-74 good, 25-49 poor, under 25 bad).
-- Mention it only when it adds something: a low score or a high ultra-processed share alongside cravings, overeating, or a stalled cut. One concrete swap beats a lecture.
-
-TONE:
-- Honest and proportional. Name what is working and what is not. No lecturing or moralizing, no hype.
-- Never suggest cutting training volume.
-- End with ONE specific, realistic action for the next 7 days, tied to the biggest gap in the data.`;
+Never suggest cutting training volume as a way to lose weight.`;
 
     const dataBlock = `TODAY: ${today}
 
 PROFILE & PLAN
 - ${settings.sex || 'male'}, ${settings.age || '?'}, ${settings.heightFt || '?'}'${settings.heightIn || 0}"
-- Goal: ${goal}${goal !== 'maintain' ? ` at ${rate} lb/week` : ''}
+- Goal: ${goal === 'cut' ? `lose fat at ${rate} lb/week while keeping or building muscle (they strength train)` : goal === 'bulk' ? `gain muscle at ${rate} lb/week while limiting fat gain` : 'maintain weight while improving body composition and fitness'}
 - Daily targets: ${goals.cal || '?'} kcal, ${goals.pro || '?'}g protein, ${goals.carb || '?'}g carbs, ${goals.fat || '?'}g fat
 - Calorie target source: ${target.source === 'garmin' ? `Garmin — measured burn ${target.tdee} kcal/day (avg of ${target.days} recent days) minus deficit` : 'estimate from activity level (not enough Garmin data yet)'}
 - Training plan: ${plannedSessions} workouts per week plus 15k steps/day
@@ -272,7 +326,7 @@ WEIGHT
 - 90-day change: ${latest && w90 ? `${signed(round1(latest.lbs - w90.lbs))} lbs since ${w90.date}` : 'n/a'}
 
 ACTIVITY (workout days per week vs plan of ${plannedSessions}; outdoor walks counted separately)
-${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 1 ? '' : 's'}${w.workoutMins ? ` (${w.workoutMins} min)` : ''}, ${w.walks} outdoor walk${w.walks === 1 ? '' : 's'}`).join('\n')}
+${weeks.map(w => `- ${w.label}: ${w.workoutDays} workout day${w.workoutDays === 1 ? '' : 's'} (${w.strengthDays} with strength training)${w.workoutMins ? `, ${w.workoutMins} min total` : ''}, ${w.walks} outdoor walk${w.walks === 1 ? '' : 's'}`).join('\n')}
 
 GARMIN DAILY BURN & STEPS (completed days only)
 ${garminLines.join('\n')}
@@ -281,15 +335,14 @@ RECOVERY (Garmin)
 ${recoveryLines.join('\n')}
 
 FOOD QUALITY (Lōg score 0-100, calorie-weighted; from logged foods over the last 7 days)
-${fq && fq.days ? `- Average ${Math.round(fq.score)}/100 over ${fq.days} logged day${fq.days === 1 ? '' : 's'}${fq.upfPct != null ? `; ${fq.upfPct}% of calories from ultra-processed foods${fq.coverage < 0.6 ? ' (among foods with ingredient data)' : ''}` : ''}` : '- Not enough logged food to judge'}
+${fq && fq.days ? `- Average ${Math.round(fq.score)}/100 over ${fq.days} logged day${fq.days === 1 ? '' : 's'}${fq.upfPct != null && fq.coverage >= 0.5 ? `; ${fq.upfPct}% of calories from ultra-processed foods` : `; processing unknown (ingredient data for only ${Math.round((fq.coverage || 0) * 100)}% of calories, too little to judge)`}` : '- Not enough logged food to judge'}
 
 HABITS
 ${habitLines.length ? habitLines.join('\n') : '- No habits set up'}
 
-FOOD LOGGING${sparse ? ' — SPARSE' : ''}
-- Days logged: ${f7.days} of the last 7, ${f30.days} of the last 30${sparse ? ' (too few to judge intake)' : ''}
-${!sparse && f7.days ? `- Last 7 logged days: calories ${vsGoal(f7.cal, goals.cal, '')}, protein ${vsGoal(f7.pro, goals.pro, 'g')}, carbs ${f7.carb}g, fat ${f7.fat}g, sugar ${f7.sug}g` : ''}
-${!sparse && f30.days ? `- Last 30 (${f30.days} logged days): calories ${vsGoal(f30.cal, goals.cal, '')}, protein ${vsGoal(f30.pro, goals.pro, 'g')}; drinks logged: ${f30.drinks}` : ''}
+WHAT THEY ATE
+${foodLines.join('\n')}
+- Drinks logged (last 30 days): ${f30.drinks || 0}
 
 USER'S NOTES ON HOW THINGS ARE GOING
 ${notes ? notes : '(none provided)'}
@@ -302,14 +355,19 @@ Write the check-in now.`.replace(/\n{3,}/g, '\n\n');
       const aRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model, max_tokens: 900, system: systemPrompt, messages: [{ role: 'user', content: dataBlock }] }),
+        body: JSON.stringify({ model, max_tokens: 2000, system: systemPrompt, messages: [{ role: 'user', content: dataBlock }] }),
       });
       if (aRes.ok) { aData = await aRes.json(); aData._model = model; break; }
       lastErr = `${aRes.status}: ${(await aRes.text()).slice(0, 200)}`;
       if (![400, 404].includes(aRes.status)) break; // only fall back when the model itself is unavailable
     }
     if (!aData) return json(500, { error: `Claude API error ${lastErr}` });
-    const message = (aData.content || []).map(b => b.text || '').join('').trim();
+    let message = (aData.content || []).map(b => b.text || '').join('').trim();
+    // If it still ran out of room, end at the last complete sentence rather than mid-thought
+    if (aData.stop_reason === 'max_tokens') {
+      const cut = Math.max(message.lastIndexOf('. '), message.lastIndexOf('.\n'), message.lastIndexOf('! '), message.lastIndexOf('? '));
+      if (cut > message.length * 0.5) message = message.slice(0, cut + 1).trim();
+    }
 
     return json(200, {
       message,
