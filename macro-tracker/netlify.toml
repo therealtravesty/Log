@@ -26,3 +26,11 @@
 # Coach uses a larger model; give it room beyond the 10s default
 [functions."coach-checkin"]
   timeout = 26
+
+# Garmin Personal API: Sync now / backfill can take a while
+[functions."garmin-sync"]
+  timeout = 26
+
+# Pull from Garmin every 4 hours (no phone needed). Needs GARMIN_PROFILE_ID.
+[functions."garmin-sync-scheduled"]
+  schedule = "15 */4 * * *"

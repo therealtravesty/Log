@@ -526,6 +526,17 @@
   .pkg-hint { font-size: 12px; color: var(--text-3); margin: 8px 0 10px; line-height: 1.4; }
   .pkg-actions { display: flex; gap: 8px; }
   .pkg-actions .pill-btn, .pkg-actions .sim-use { flex: 1; height: 40px; border-radius: 20px; }
+  .garmin-report:not(:empty) { margin-top: 10px; font-size: 12px; color: var(--text-2); }
+  .g-rep-sum { margin-bottom: 6px; }
+  .g-rep-found { display: flex; flex-wrap: wrap; gap: 6px; }
+  .g-rep-found span { padding: 3px 8px; border-radius: 10px; font: 11px 'DM Mono', monospace; }
+  .g-rep-found .ok { background: rgba(29,158,117,0.12); color: #1D9E75; }
+  .g-rep-found .miss { background: rgba(239,159,39,0.15); color: #B7791F; }
+  .g-rep-details { margin-top: 8px; } .g-rep-details summary { cursor: pointer; color: var(--text-3); }
+  .g-rep-row { padding: 6px 0; border-top: 0.5px solid var(--border); } .g-rep-f { font: 10px 'DM Mono', monospace; color: var(--text-3); margin-top: 2px; word-break: break-word; }
+  .g-rep-err { color: #E24B4A; }
+  .garmin-more { margin-top: 10px; font-size: 12px; color: var(--text-3); }
+  .garmin-more button { background: none; border: none; padding: 0; font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--blue); cursor: pointer; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1068,7 +1079,7 @@
     <div class="card"style="margin-bottom:1rem;">
       <div class="section-title">Exercise</div>
       <div id="exerciseItems"><div class="empty-msg"style="padding:8px 0;">No exercise logged yet</div></div>
-      <button class="garmin-log-sync" onclick="runHealthSync()">Sync Garmin activity</button>
+      <button class="garmin-log-sync" onclick="runGarminSync()">Sync Garmin activity</button>
       <div style="margin-top:1rem;border-top:0.5px solid var(--border);padding-top:1rem;">
         <div class="section-title">Log exercise</div>
         <div class="exercise-add-row">
@@ -1410,9 +1421,11 @@
           <div class="garmin-title">Garmin activity</div>
           <div class="garmin-sub" id="garminSub">Not synced yet</div>
         </div>
-        <button class="garmin-sync-btn" onclick="runHealthSync()">Sync now</button>
+        <button class="garmin-sync-btn" onclick="runGarminSync()">Sync now</button>
       </div>
       <div class="garmin-stats" id="garminStats"></div>
+      <div class="garmin-report" id="garminReport"></div>
+      <div class="garmin-more"><button onclick="runGarminSync(120)">Backfill 120 days from Garmin</button> · <button onclick="runHealthSync()">Run the Shortcut instead</button></div>
       <details class="garmin-setup">
         <summary>Shortcut setup details</summary>
         <div class="garmin-setup-row"><span>Profile ID</span><code id="garminPid"></code><button onclick="copyText(activeProfileId, 'Profile ID copied')">Copy</button></div>
@@ -2062,7 +2075,7 @@ let _healthDaily = [];
 // Watch glitches happen (e.g. 8,779 active kcal in one day). Values outside
 // what a person can plausibly burn or walk are dropped everywhere — History,
 // the Garmin card, the calorie target, and what the Coach sees.
-const HEALTH_BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120] };
+const HEALTH_BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120], hrv_ms: [5, 300], stress_avg: [1, 100], bb_high: [1, 100] };
 function cleanHealthRows(rows) {
   return (rows || []).map(r => {
     const c = { ...r };
@@ -2746,12 +2759,23 @@ function qualityDataFor(food) {
   const lc = (food.name || '').toLowerCase().trim();
   const lib = (_customFoods || []).find(f => f.name.toLowerCase().trim() === lc)?.quality;
   if (lib) return lib;
-  return isWholeFood(food.name) ? { nova: 1, additives: [], source: 'whole food (recognized by name)', inferred: true } : null;
+  if (isWholeFood(food.name)) return { nova: 1, additives: [], source: 'whole food (recognized by name)', inferred: true };
+  if (isFreshJuice(food.name)) return { nova: 1, additives: [], source: 'fresh juice (recognized by name)', inferred: true };
+  return null;
 }
+// Fresh / cold-pressed / 100% juice: minimally processed with no additives, but its
+// sugar is "free sugar" (WHO), so it keeps the sugar penalty whole fruit doesn't get.
+function isFreshJuice(name) {
+  const lc = String(name || '').toLowerCase();
+  return /juice/.test(lc) && /fresh|cold[- ]?pressed|100\s?%|squeezed|pressed/.test(lc) && !/drink|cocktail|punch|\bade\b|soda|smoothie|concentrate|sweetened/.test(lc);
+}
+// Sugar that counts as free sugar even when the food is minimally processed
+const FREE_SUGAR_RE = /juice|smoothie|syrup|honey|nectar|agave|molasses|jam|jelly|soda|lemonade/;
 function foodScore(food) {
   const cal = food.cal || 0, notes = [];
   const q = qualityDataFor(food);
-  const whole = q?.nova === 1; // sugar inside whole fruit, milk etc. isn't "free sugar"
+  const freeSugar = FREE_SUGAR_RE.test(String(food.name || '').toLowerCase());
+  const whole = q?.nova === 1 && !freeSugar; // sugar inside whole fruit, milk etc. isn't "free sugar"
   let nut;
   // Near-zero calories (diet soda, black coffee): no nutrition to credit or penalize, so the middle
   if (cal < 20) { nut = 30; notes.push(['·', 'No meaningful calories or nutrients']); }
@@ -2766,6 +2790,7 @@ function foodScore(food) {
     nut = Math.max(0, Math.min(60, 30 + pP + fP - sP - satP - sodP));
     if (pP >= 12) notes.push(['+', `High protein (${pro.toFixed(1)}g per 100 kcal)`]); else if (pP < 4) notes.push(['·', 'Low protein']);
     if (whole && sug >= 5) notes.push(['·', 'Natural sugar (not penalized in whole foods)']);
+    if (freeSugar && q?.nova === 1 && sug >= 5) notes.push(['·', 'Juice and honey sugar counts as free sugar, unlike whole fruit']);
     if (fP >= 5) notes.push(['+', 'Good fiber']);
     if (sP >= 6) notes.push(['−', `Sugar (${sug.toFixed(1)}g per 100 kcal)`]);
     if (satP >= 6) notes.push(['−', 'Saturated fat']);
@@ -2838,7 +2863,7 @@ function showQuality(arg) {
     <div class="q-sec">Additives</div>
     ${q.additives ? (q.additives.length ? q.additives.map(a => `<div class="q-line">${riskDot(a.risk)}${escapeHtml(a.label)} <span class="q-dim">· ${a.risk} risk</span></div>`).join('') : '<div class="q-line">None</div>') : '<div class="q-line"><span class="q-dim">Unknown</span></div>'}
     ${q.organic ? '<div class="q-line q-dim">Organic (not part of the score)</div>' : ''}
-    <div class="q-foot">${q.source.startsWith('whole food') ? 'Recognized as a plain whole food: unprocessed, no additives, and its natural sugar isn\'t penalized.' : q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings weigh regulator reviews (FDA, EFSA, WHO) and the strength of human evidence; a guide, not a verdict.`}</div>
+    <div class="q-foot">${q.source.startsWith('fresh juice') ? 'Recognized as fresh juice: minimally processed with no additives. Juicing removes most of the fiber, so its sugar is scored like added sugar; the whole fruit would score higher.' : q.source.startsWith('whole food') ? 'Recognized as a plain whole food: unprocessed, no additives, and its natural sugar isn\'t penalized.' : q.nutOnly ? 'Based on nutrients only. Add the barcode or ingredients to include processing and additives. It updates this food in your library, so future logs get it too.' : `Includes ${q.partial ? 'some ' : ''}ingredient data${q.source ? ' from ' + escapeHtml(q.source) : ''}. Additive ratings weigh regulator reviews (FDA, EFSA, WHO) and the strength of human evidence; a guide, not a verdict.`}</div>
     ${typeof arg === 'number' && !(q.nova && q.additives) ? `<div class="enrich-btns" style="flex-direction:row;margin-top:12px">
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'barcode')">Scan barcode</button>
       <button class="sim-use" style="flex:1" onclick="document.getElementById('qualitySheet').remove();startEnrich(${arg}, 'ingredients')">Photo of ingredients</button></div>` : ''}
@@ -4790,7 +4815,7 @@ function renderGarminCard() {
   if (pidEl) pidEl.textContent = activeProfileId || '';
   if (!sub || !stats) return;
   const rows = (_healthDaily || []).filter(r => r.date < todayStr()).sort((x, y) => x.date < y.date ? -1 : 1);
-  if (!rows.length) { sub.textContent = 'Not synced yet — set up the Shortcut, then tap Sync now'; stats.innerHTML = ''; return; }
+  if (!rows.length) { sub.textContent = 'Not synced yet. Tap Sync now'; stats.innerHTML = ''; return; }
   const last = rows[rows.length - 1];
   const synced = (_healthDaily || []).map(r => r.updated_at).filter(Boolean).sort().pop();
   sub.textContent = `Through ${fmtDate(last.date, { month: 'short', day: 'numeric' })}` + (synced ? ` · synced ${timeAgo(synced)}` : '');
@@ -4821,8 +4846,42 @@ function copyText(text, msg) {
   navigator.clipboard?.writeText(text).then(() => showToast(msg || 'Copied'), () => showToast('Copy failed'));
 }
 
-// Runs the iOS Shortcut. Passing "open" tells it to open Garmin Connect first
-// so the watch syncs into Apple Health before it reads anything.
+// Sync now: Lōg's server pulls straight from Garmin (Personal API). No phone,
+// Shortcut or Connect app needed; your watch just has to have synced to Garmin.
+let _garminBusy = false;
+async function runGarminSync(days = 8) {
+  if (_garminBusy || !activeProfileId) return;
+  _garminBusy = true;
+  document.querySelectorAll('.garmin-sync-btn, .garmin-log-sync').forEach(b => { b.dataset.t = b.textContent; b.textContent = 'Syncing…'; b.disabled = true; });
+  try {
+    const res = await fetch('/api/garmin-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile_id: activeProfileId, days }) });
+    const d = await res.json().catch(() => ({ error: `Sync failed (${res.status})` }));
+    renderGarminReport(d);
+    if (!res.ok || d.error) throw new Error(d.error || 'Sync failed');
+    await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer(), typeof loadWeightsFromServer === 'function' ? loadWeightsFromServer() : null]);
+    if (_settings) applySettings(_settings);
+    renderGarminCard(); renderToday();
+    showToast(d.message || 'Garmin synced');
+    maybeAutoRefreshCoach();
+  } catch (e) { showToast(e.message); }
+  finally {
+    _garminBusy = false;
+    document.querySelectorAll('.garmin-sync-btn, .garmin-log-sync').forEach(b => { b.textContent = b.dataset.t || 'Sync now'; b.disabled = false; });
+  }
+}
+// What came back from Garmin, per data type: counts and field names (no values)
+function renderGarminReport(d) {
+  const el = document.getElementById('garminReport'); if (!el) return;
+  if (d.error && !d.report) { el.innerHTML = `<div class="g-rep-err">${escapeHtml(d.error)}</div>`; return; }
+  const f = d.found || {};
+  el.innerHTML = `<div class="g-rep-sum">${escapeHtml(d.message || '')} · ${(d.range || []).join(' → ')}</div>
+    <div class="g-rep-found">${Object.entries(f).map(([k, v]) => `<span class="${v ? 'ok' : 'miss'}">${k.replace('_', ' ')} ${v}</span>`).join('')}</div>
+    <details class="g-rep-details"><summary>Sync report</summary>${Object.entries(d.report || {}).map(([k, r]) =>
+      `<div class="g-rep-row"><b>${r.ok ? '✓' : '✗'} ${escapeHtml(k)}</b> · ${r.count || 0} item${r.count === 1 ? '' : 's'}${r.status && !r.ok ? ` · HTTP ${r.status}` : ''}${r.error ? ` · ${escapeHtml(r.error)}` : ''}<div class="g-rep-f">${escapeHtml((r.fields || []).join(', '))}</div></div>`).join('')}</details>`;
+}
+
+// Runs the iOS Shortcut (fallback while the Garmin API sync is being verified).
+// Passing "open" tells it to open Garmin Connect first.
 function runHealthSync() {
   try { sessionStorage.setItem('healthSyncPending', String(Date.now())); } catch (_) {}
   location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent('Log Health Sync') + '&input=text&text=open';
@@ -5430,6 +5489,7 @@ const ACTIVITY_METRICS = {
   workouts: { label: 'Workouts',       unit: ' min' },
   sleep:    { label: 'Sleep',          unit: ' h', goal: 7, goalWord: 'Goal', dec: 1 },
   rhr:      { label: 'Resting HR',     unit: ' bpm' },
+  hrv:      { label: 'HRV',            unit: ' ms' },
 };
 // Outdoor walks/hikes count toward steps, not workouts (treadmill walks count)
 function isWorkoutEntry(e) {
@@ -5749,6 +5809,7 @@ function renderHistChart(w) {
       if (key === 'burn') return h && h.active_kcal && h.resting_kcal ? h.active_kcal + h.resting_kcal : null;
       if (key === 'sleep') return h?.sleep_min ? h.sleep_min / 60 : null;
       if (key === 'rhr') return h?.resting_hr || null;
+      if (key === 'hrv') return h?.hrv_ms || null;
       // workouts: minutes per day, counting rest days as 0 once Garmin data exists for that day
       const mins = (_exercise[d] || []).filter(isWorkoutEntry).reduce((a, e) => a + Math.round((e.moving_time || 0) / 60), 0);
       return mins || (h ? 0 : null);
@@ -5774,13 +5835,16 @@ function renderHistChart(w) {
       subEl.textContent = `Per night · 7h+ on ${all.filter(v => v >= 7).length} of ${all.length} nights`;
     } else if (key === 'rhr') {
       subEl.textContent = `Daily average · lower usually means better recovery`;
+    } else if (key === 'hrv') {
+      const b = [...(_healthDaily || [])].reverse().find(r => r.hrv_low && r.hrv_high);
+      subEl.textContent = b ? `Overnight average · your normal range ${b.hrv_low}–${b.hrv_high} ms · higher is better` : 'Overnight average · higher usually means better recovery';
     } else subEl.textContent = `Daily average · ${all.length} days of Garmin data`;
-    const color = key === 'steps' ? '55,138,221' : key === 'workouts' ? '58,125,68' : key === 'sleep' ? '127,119,221' : key === 'rhr' ? '212,83,126' : '216,90,48';
+    const color = key === 'steps' ? '55,138,221' : key === 'workouts' ? '58,125,68' : key === 'sleep' ? '127,119,221' : key === 'rhr' ? '212,83,126' : key === 'hrv' ? '29,158,117' : '216,90,48';
     const datasets = [{ data, backgroundColor: data.map(v => v == null ? 'transparent' : (m.goal && v < m.goal ? `rgba(${color},0.4)` : `rgba(${color},0.85)`)), borderRadius: 4, minBarLength: 2 }];
     if (m.goal) datasets.push(goalLine(m.goal, `${m.goalWord}: ${m.goal.toLocaleString()}${key === 'sleep' ? ' h' : ''}`));
     cfg = {
       type: 'bar', data: { labels, datasets },
-      options: { ...chartDefaults, scales: baseScales(key === 'rhr' ? { beginAtZero: false, min: Math.max(30, Math.floor(Math.min(...all) - 4)), max: Math.ceil(Math.max(...all) + 3) } : { beginAtZero: true }),
+      options: { ...chartDefaults, scales: baseScales(key === 'rhr' || key === 'hrv' ? { beginAtZero: false, min: Math.max(30, Math.floor(Math.min(...all) - 4)), max: Math.ceil(Math.max(...all) + 3) } : { beginAtZero: true }),
         plugins: { ...chartDefaults.plugins, tooltip: tooltip(ctx => ctx.datasetIndex === 1 ? ` ${ctx.dataset.label}` : (ctx.parsed.y == null ? '' : ` ${ctx.parsed.y.toLocaleString()}${m.unit}${per}`), {
           footer: items => {
             if (w.unit !== 'day' || key === 'workouts') return '';

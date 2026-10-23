@@ -152,7 +152,7 @@ exports.handler = async (event) => {
 
     // ── Garmin daily totals (via Apple Health), completed days only ──
     // Drop watch glitches (same bounds as the app) before averaging
-    const BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120] };
+    const BOUNDS = { steps: [1, 100000], active_kcal: [1, 6000], resting_kcal: [800, 4500], sleep_min: [60, 960], resting_hr: [30, 120], hrv_ms: [5, 300], stress_avg: [1, 100], bb_high: [1, 100] };
     const health = (healthRows || []).filter(h => h.date < today).map(h => {
       const c = { ...h };
       for (const [k, [lo, hi]] of Object.entries(BOUNDS)) if (c[k] != null && (c[k] < lo || c[k] > hi)) c[k] = null;
@@ -187,6 +187,17 @@ exports.handler = async (event) => {
       last7Sleep.length >= 3 ? `- Sleep consistency (last 7 nights): shortest ${hm(Math.min(...last7Sleep))}, longest ${hm(Math.max(...last7Sleep))} (a ${hm(sleepRange)} swing); 7h+ on ${last7Sleep.filter(m => m >= 420).length} of ${last7Sleep.length}` : null,
       `- Alcoholic drinks logged: ${drinks7} in the last 7 days`,
       sl7 ? `- Sleep: ${hm(sl7.v)} per night last 7 nights vs ${sl28 ? hm(sl28.v) : 'n/a'} over 28 nights; under 7h on ${short14} of the last ${n14} nights` : '- Sleep: no data synced',
+      (() => { // HRV: Garmin's overnight average against their own normal range
+        const hv7 = hAvg(addDays(today, -7), yest, 'hrv_ms'), hv28 = hAvg(addDays(today, -35), addDays(today, -8), 'hrv_ms');
+        if (!hv7) return null;
+        const latest = k => health.filter(h => h[k] && h.date <= yest).sort((x, y) => (x.date < y.date ? 1 : -1))[0]; // newest, regardless of order
+        const base = latest('hrv_high');
+        const below = health.filter(h => h.date >= addDays(today, -7) && h.date <= yest && h.hrv_ms && base && h.hrv_ms < base.hrv_low).length;
+        const st = latest('hrv_status')?.hrv_status;
+        return `- HRV (overnight): ${hv7.v} ms last 7 nights vs ${hv28 ? hv28.v + ' ms the 4 weeks before' : 'no baseline yet'}${base ? `; their normal range ${base.hrv_low}-${base.hrv_high} ms, below it on ${below} of the last 7 nights` : ''}${st ? `; Garmin status: ${st}` : ''}`;
+      })(),
+      (() => { const s7 = hAvg(addDays(today, -7), yest, 'stress_avg'), s28 = hAvg(addDays(today, -35), addDays(today, -8), 'stress_avg'), b7 = hAvg(addDays(today, -7), yest, 'bb_high');
+        return s7 || b7 ? `- Garmin stress: ${s7 ? `${s7.v}/100 last 7 days${s28 ? ` vs ${s28.v} before` : ''}` : 'n/a'}; Body Battery morning high: ${b7 ? b7.v + '/100' : 'n/a'}` : null; })(),
       hr7 ? `- Resting heart rate: ${hr7.v} bpm last 7 days vs ${hr28 ? hr28.v + ' bpm the 4 weeks before' : 'no baseline yet'}${hr28 ? ` (${signed(hr7.v - hr28.v)} bpm)` : ''}` : '- Resting heart rate: no data synced',
     ].filter(Boolean);
 
@@ -272,10 +283,11 @@ THINK IN FOUR PILLARS, AND HOW THEY CONNECT:
 - BODY: the weight trend against the plan.
 - TRAINING: sessions against plan (especially strength training), minutes, steps against the 15k goal.
 - NUTRITION: calories and protein on logged days, how meals are built, food quality.
-- RECOVERY: sleep amount and consistency, resting heart rate trend, alcohol.
+- RECOVERY: sleep amount and consistency, HRV against their normal range, resting heart rate, stress and Body Battery, alcohol.
 The scale is one signal, not the verdict. Look for the connections a good coach would:
 - Short or erratic sleep drives hunger and cravings, weaker sessions and a noisier scale. When it lines up with overeating or a stall, sleep is the lever, ahead of cutting calories.
-- Resting heart rate up 5+ bpm while training hard in a deficit means under-recovery: ease the deficit or the load, don't push harder.
+- Resting heart rate up 5+ bpm, or HRV below their normal range on several nights (or a falling HRV trend), while training hard in a deficit means under-recovery: ease the deficit or the load, don't push harder. HRV is the more sensitive signal; one low night means little, a run of them matters.
+- High Garmin stress or a low Body Battery morning high alongside short sleep is the same story: recovery is the lever.
 - Strength training on plan + protein at or near target + the scale moving slower than planned: muscle may be partly offsetting fat loss. Say "possibly" and suggest a weekly waist measurement (or photos) to confirm. Never use this to excuse a stall when logged intake is over target or training is off plan.
 - Alcohol worsens sleep and appetite the following day.
 - Steps are a large, easy share of their daily burn; a drop shows up on the scale.
@@ -300,7 +312,7 @@ CALORIES (critical):
 
 TARGET ADJUSTMENTS:
 - Only consider a change when the 28-day pace misses the plan by more than 0.25 lb/week (see "Pace gap"), AND there are at least 5 full logged days in the window.
-- Fix recovery first: if sleep is short or resting heart rate is up, don't lower the target that week.
+- Fix recovery first: if sleep is short, HRV is below normal on most nights, or resting heart rate is up, don't lower the target that week.
 - If full logged days are mostly OVER target, the fix is adherence, not a lower number.
 - If full logged days are well UNDER target but the scale isn't moving, the likely explanation is food that isn't making it into the log (oils, sauces, snacks, drinks, weekends). Say so once, kindly, as a hypothesis, and don't lower the target.
 - If adherence, training and recovery look good and loss is too slow, recommend lowering by 100-150 kcal; if faster than planned, raising by 100-150. Give the exact new number. Otherwise hold the target and don't dwell on it.
