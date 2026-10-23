@@ -29,15 +29,17 @@ exports.handler = async (event) => {
 
   // Barcode mode: just read the digits printed under the bars (fallback when the
   // phone couldn't decode the bars themselves)
-  const prompt = mode === 'package' ? `These ${images.length} photo${images.length === 1 ? '' : 's'} all show ONE packaged food product (different sides: front, barcode, Nutrition Facts, ingredients).
+  const PKG = `These ${images.length} photo${images.length === 1 ? '' : 's'} all show ONE packaged food product (different sides: front, barcode, Nutrition Facts, ingredients).
 Read everything that is visible and return ONLY a raw JSON array with exactly one object, no markdown:
 [{"name":"brand + product name as printed on the package, or empty","barcode":"digits under the barcode if fully readable, else empty","serving_size":"as printed, e.g. 1 bar (60g), or empty","label":null,"ingredients":null,"nova":null,"additives":null}]
 - "label": ONLY if a Nutrition Facts panel is visible, an object with the PER-SERVING values copied exactly: {"calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"sat_fat_g":0,"sugar_g":0,"sodium_mg":0,"fiber_g":0}. Otherwise null. Never estimate.
 - "ingredients": ONLY if the ingredients list is visible, the text as printed. Otherwise null.
 - "nova" and "additives": ONLY if the ingredients are visible. nova = NOVA group 1-4. additives = every additive as a short name with its E-number where one exists (e.g. "e955 sucralose", "e466 cellulose gum"). Otherwise null.
-- Use only what you can read. Leave anything unreadable empty or null.` : mode === 'barcode' ? `This photo shows a product barcode (UPC/EAN). Read the digits printed beneath the bars, exactly, with no spaces.
+- Use only what you can read. Leave anything unreadable empty or null.`;
+  const BAR = `This photo shows a product barcode (UPC/EAN). Read the digits printed beneath the bars, exactly, with no spaces.
 Return ONLY a raw JSON array, no markdown: [{"barcode":"012345678905","name":"product name if visible, else empty"}]
-If you cannot read every digit with confidence, return [{"barcode":""}].` : `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
+If you cannot read every digit with confidence, return [{"barcode":""}].`;
+  const FOOD = `You are a precise nutrition database. Analyze this image and identify ALL food and drink items shown.
 
 The image may contain: a nutrition label, a restaurant order receipt/confirmation, a menu screenshot, a plate of food, or packaged products.
 
@@ -80,6 +82,22 @@ Rules:
 - For custom build-your-own items (bowls, burritos), estimate the full assembled item as one entry
 - Do not split toppings/dressings unless they appear as explicitly separate line items on a receipt
 - "nova" and "additives" (for a food-quality score): if an INGREDIENTS list is visible, set "nova" to its NOVA group (1 unprocessed, 2 culinary ingredient, 3 processed, 4 ultra-processed) and list its additives as short names with E-numbers where they exist (e.g. "e955 sucralose", "red 40"). A plainly whole food (fruit, eggs, plain grilled meat) is nova 1 with additives []. Otherwise leave both null — never guess.`;
+  // auto: one button for everything. Claude decides whether the photos show a
+  // packaged product (front / label / ingredients / barcode) or a meal (plate,
+  // restaurant food, menu, receipt), then follows the matching instructions.
+  const AUTO = `You'll see ${images.length} photo${images.length === 1 ? '' : 's'}. FIRST decide what they show:
+- "packaged": ONE packaged food product, in any mix of: front of the package, Nutrition Facts panel, ingredients list, barcode.
+- "meal": a plate or bowl of food, restaurant food, a menu, a receipt, or several different foods.
+
+IF PACKAGED: follow the PACKAGED instructions and add "kind":"packaged" to the object.
+IF MEAL: follow the MEAL instructions and add "kind":"meal" to every item.
+
+=== PACKAGED ===
+${PKG}
+
+=== MEAL ===
+${FOOD}`;
+  const prompt = mode === 'auto' ? AUTO : mode === 'package' ? PKG : mode === 'barcode' ? BAR : FOOD;
 
   // Models get retired over time (this is what broke photo lookups), so try the
   // newest first and fall back if one is no longer available (404).

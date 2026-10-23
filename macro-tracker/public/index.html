@@ -518,6 +518,8 @@
   .enrich-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
   .enrich-btns .pill-btn, .enrich-btns .sim-use { width: 100%; height: 42px; border-radius: 21px; font-size: 14px; }
   .chart-wrap canvas { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .photo-one { margin-bottom: 10px; }
+  .pkg-tray .photo-hint { margin: 0 0 10px; }
   .pkg-tray { margin: -2px 0 12px; padding: 12px; border-radius: 18px; background: var(--surface); border: 0.5px solid var(--border-med); }
   .pkg-thumbs { display: flex; gap: 8px; }
   .pkg-thumb { position: relative; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; }
@@ -1514,34 +1516,21 @@
       </div>
       </div>
       <div class="sheet-panel" data-panel="photo">
-        <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what should I look for? e.g. &quot;the chicken shawarma bowl, large&quot;"></textarea>
-        <div class="photo-hint-sub">Helps with menus, receipts and shared plates. Leave blank to log everything in the photo.</div>
-        <button class="scan-tile" onclick="document.getElementById('pkgCameraInput').click()">
-          <svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 8v8M11 8v8M14 8v8M16.5 8v8"/></svg>
-          <span style="flex:1"><span class="pt-title">Scan package</span><span class="pt-sub">Barcode, nutrition label, ingredients · 1 to 3 photos</span>
+        <button class="scan-tile photo-one" onclick="document.getElementById('pkgCameraInput').click()">
+          <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span style="flex:1"><span class="pt-title">Add photos</span><span class="pt-sub">The plate, the package front, the nutrition label, ingredients or barcode. Up to 4, any mix.</span>
             <span class="scan-links"><span class="pt-lib" onclick="event.stopPropagation(); document.getElementById('pkgLibraryInput').click()">From Photos</span>
             <span class="pt-lib" onclick="event.stopPropagation(); toggleBarcodeType()">Type barcode</span></span></span>
         </button>
+        <div class="scan-type" id="scanType" style="display:none;"><input id="scanManual" inputmode="numeric" placeholder="Numbers under the bars" maxlength="14"/><button class="pill-btn" onclick="handleBarcode(document.getElementById('scanManual').value)">Look up</button></div>
         <div class="pkg-tray" id="pkgTray" style="display:none;">
           <div class="pkg-thumbs" id="pkgThumbs"></div>
           <div class="pkg-hint" id="pkgHint"></div>
+          <textarea id="photoHint" class="photo-hint" rows="2" maxlength="200" placeholder="Optional: what to look for, e.g. &quot;the large chicken shawarma bowl&quot; or &quot;only my plate&quot;"></textarea>
           <div class="pkg-actions">
             <button class="sim-use" id="pkgAddBtn" onclick="document.getElementById('pkgCameraInput').click()">+ Add photo</button>
-            <button class="pill-btn" onclick="runPackageScan()">Look up</button>
+            <button class="pill-btn" onclick="runPhotoLookup()">Look up</button>
           </div>
-        </div>
-        <div class="scan-type" id="scanType" style="display:none;"><input id="scanManual" inputmode="numeric" placeholder="Numbers under the bars" maxlength="14"/><button class="pill-btn" onclick="handleBarcode(document.getElementById('scanManual').value)">Look up</button></div>
-        <div class="photo-tiles">
-          <button class="photo-tile" onclick="pickFoodPhoto('food', true)">
-            <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
-            <span class="pt-title">Photo of food</span><span class="pt-sub">A plate, a menu, or an order receipt</span>
-            <span class="pt-lib" onclick="event.stopPropagation(); pickFoodPhoto('food', false)">From Photos</span>
-          </button>
-          <button class="photo-tile" onclick="pickFoodPhoto('label', true)">
-            <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 10.5h8M8 14h5M8 17.5h3"/></svg>
-            <span class="pt-title">Nutrition label</span><span class="pt-sub">Reads the exact numbers off the package</span>
-            <span class="pt-lib" onclick="event.stopPropagation(); pickFoodPhoto('label', false)">From Photos</span>
-          </button>
         </div>
       </div>
       <div id="resultArea"></div>
@@ -3286,7 +3275,8 @@ async function saveEnrich(useNutrition) {
 let _pkgFiles = [];
 function addPkgPhotos(input) {
   const files = [...(input.files || [])]; input.value = '';
-  _pkgFiles = [..._pkgFiles, ...files].slice(0, 3);
+  _pkgFiles = [..._pkgFiles, ...files].slice(0, 4);
+  if (files.length && !window._enrich) { const ra = document.getElementById('resultArea'); if (ra) ra.innerHTML = ''; pendingFood = null; } // fresh start for a new lookup
   renderPkgTray();
 }
 function removePkgPhoto(i) { _pkgFiles.splice(i, 1); renderPkgTray(); }
@@ -3295,9 +3285,9 @@ function renderPkgTray() {
   tray.style.display = _pkgFiles.length ? 'block' : 'none';
   document.getElementById('pkgThumbs').innerHTML = _pkgFiles.map((f, i) =>
     `<div class="pkg-thumb"><img src="${URL.createObjectURL(f)}" alt=""><button onclick="removePkgPhoto(${i})" aria-label="Remove">×</button></div>`).join('');
-  document.getElementById('pkgHint').textContent = _pkgFiles.length >= 3 ? 'Ready to look up.'
-    : _pkgFiles.length === 1 ? 'Add the nutrition label or ingredients for the most complete result, or look up now.' : 'Add one more side, or look up now.';
-  document.getElementById('pkgAddBtn').style.display = _pkgFiles.length >= 3 ? 'none' : '';
+  document.getElementById('pkgHint').textContent = _pkgFiles.length >= 4 ? 'Ready. Add a note below if it helps, then Look up.'
+    : 'Packaged food? Add the label and ingredients for the most complete result. Nothing is looked up until you tap Look up.';
+  document.getElementById('pkgAddBtn').style.display = _pkgFiles.length >= 4 ? 'none' : '';
 }
 async function photoToCanvas(file, max = 1600) {
   const img = await createImageBitmap(file);
@@ -3319,6 +3309,97 @@ async function decodeBarcodeOnPhone(cv) {
     return res?.getText() || null;
   } catch (_) { return null; }
 }
+// One button for every kind of photo. Nothing is sent until you tap Look up.
+//  · One barcode photo, no note → the phone reads the barcode and goes straight
+//    to the free databases (no Claude call).
+//  · Otherwise one read: Claude decides "packaged" (front / label / ingredients /
+//    barcode → reconciled with USDA + Open Food Facts, your label wins) or
+//    "meal" (plate, menu, receipt → items, using your note).
+async function runPhotoLookup() {
+  if (!_pkgFiles.length) return;
+  const resultArea = document.getElementById('resultArea');
+  const status = t => { resultArea.innerHTML = `<div class="status-msg"><div class="spinner"></div>${t}</div>`; };
+  const hint = (document.getElementById('photoHint')?.value || '').trim().slice(0, 200);
+  status('Reading your photos…');
+  try {
+    const canvases = await Promise.all(_pkgFiles.map(f => photoToCanvas(f)));
+    let phoneCode = null;
+    for (const cv of canvases) { phoneCode = await decodeBarcodeOnPhone(cv); if (phoneCode) break; }
+    // Free path: a lone barcode photo
+    if (_pkgFiles.length === 1 && phoneCode && !hint) {
+      status('Looking up barcode ' + phoneCode + '…');
+      const db = await fetchBarcodeData(phoneCode);
+      if (db && db.found && !db.incomplete && db.calories != null) { showPackageResult({}, phoneCode, db); clearPhotoTray(); return; }
+    }
+    const res = await fetch('/api/lookup-image', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'auto', hint, images: canvases.map(cv => ({ data: cv.toDataURL('image/jpeg', 0.8).split(',')[1], mediaType: 'image/jpeg' })) }) });
+    const out = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+    if (!res.ok || out.error) throw new Error(out.error || 'Lookup failed');
+    const arr = Array.isArray(out) ? out : [out];
+    if (!arr.length) throw new Error('Nothing recognised in these photos. Try a closer shot, or add a note.');
+    const first = arr[0] || {};
+    if (first.kind === 'packaged' || (!first.kind && (first.label || first.barcode))) {
+      const code = String(phoneCode || first.barcode || '').replace(/\D/g, '');
+      if (code.length >= 6) status('Looking up barcode ' + code + '…');
+      const db = code.length >= 6 ? await fetchBarcodeData(code) : null;
+      showPackageResult(first, code, db);
+    } else showMealItems(arr);
+    clearPhotoTray();
+  } catch (e) {
+    resultArea.innerHTML = '<div class="err-msg">' + escapeHtml(e.message) + '</div>';
+  }
+}
+function clearPhotoTray() { _pkgFiles = []; const h = document.getElementById('photoHint'); if (h) h.value = ''; renderPkgTray(); }
+async function fetchBarcodeData(code) { try { const r = await fetch('/api/barcode?code=' + code); return await r.json(); } catch (_) { return null; } }
+// Meal photos: one item → result card; several → the pick-and-add list
+function showMealItems(items) {
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = '';
+  if (items.length === 1) {
+    const item = items[0];
+    pendingFood = { id: Date.now(), name: item.name,
+      cal: Math.round(item.calories || 0), pro: Math.round(item.protein_g || 0), carb: Math.round(item.carbs_g || 0), fat: Math.round(item.fat_g || 0),
+      satFat: Math.round(item.sat_fat_g || 0), sug: Math.round(item.sugar_g || 0), sod: Math.round(item.sodium_mg || 0), fib: Math.round(item.fiber_g || 0) };
+    if (item.nova != null || Array.isArray(item.additives)) pendingFood.quality = { nova: item.nova ?? null, additives: Array.isArray(item.additives) ? item.additives : null, source: 'Photo' };
+    window._baseMacros = { ...pendingFood }; window._lastSource = item.note || 'Photo'; window._internalMatch = null;
+    renderFoodResult(pendingFood, item.serving_size || '1 serving', item.note || 'Photo', false);
+    addResultBadge();
+  } else {
+    _scannedItems = items.map((item, i) => ({ ...item, _idx: i, _dismissed: false }));
+    openImageScanModal();
+  }
+}
+// Packaged result: nutrition from YOUR label when visible, else the database;
+// ingredients from your photo, else the database; the official name when known.
+function showPackageResult(ph, code, db) {
+  const dbOk = db && db.found && !db.incomplete && db.calories != null;
+  const L = ph.label && ph.label.calories != null ? ph.label : null;
+  if (!L && !dbOk) throw new Error(code ? 'Found barcode ' + code + ' but no nutrition for it. Add a photo of the Nutrition Facts panel.' : "Couldn't find a barcode or a Nutrition Facts panel. Try a closer, straight-on shot.");
+  const photoQ = Array.isArray(ph.additives) || ph.nova ? { nova: ph.nova ?? null, additives: Array.isArray(ph.additives) ? ph.additives : null, ingredients: ph.ingredients || '', source: 'Package photo' } : null;
+  const officialName = dbOk && db.source !== 'Open Food Facts' ? db.name : null;
+  const main = L ? {
+    name: officialName || ph.name || (dbOk ? db.name : '') || 'Scanned product',
+    serving_size: ph.serving_size || (dbOk ? db.serving_size : '') || '1 serving',
+    calories: L.calories, protein_g: L.protein_g, carbs_g: L.carbs_g, fat_g: L.fat_g, sat_fat_g: L.sat_fat_g, sugar_g: L.sugar_g, sodium_mg: L.sodium_mg, fiber_g: L.fiber_g,
+    source: 'Your package photo', source_url: dbOk ? db.source_url : '', confidence: 'high',
+  } : { ...db };
+  main.quality = photoQ || (dbOk ? db.quality : null) || null;
+  main.barcode = code || null;
+  main.sources_checked = [...(L || photoQ ? ['Package photo'] : []), ...((dbOk && db.sources_checked) || (code ? ['USDA', 'Open Food Facts'] : []))];
+  main.alternatives = [];
+  const notes = [];
+  if (L && dbOk) {
+    const off = Math.abs(L.calories - db.calories) > Math.max(10, db.calories * 0.1) || Math.abs((L.protein_g || 0) - (db.protein_g || 0)) >= 3;
+    if (off) { notes.push(`Your label: ${Math.round(L.calories)} kcal / ${Math.round(L.protein_g)}g P · ${db.source}: ${Math.round(db.calories)} kcal / ${Math.round(db.protein_g)}g P. Using your label.`); main.alternatives = [{ ...db, name: `${db.name} (${db.source})` }]; }
+    else notes.push(`Matches ${db.source}`);
+  } else if (L) notes.push(code ? 'Barcode not in USDA or Open Food Facts; using your label' : 'From your label');
+  else notes.push(ph.kind ? 'No label in the photos; nutrition from ' + db.source : 'Barcode read on your phone; nutrition from ' + db.source);
+  if (photoQ) notes.push('ingredients from your photo');
+  main.note = notes.join(' · ');
+  showLookupResult(main, main.name);
+  if (L && pendingFood) Object.assign(pendingFood, { verified: true, source: 'Package photo' });
+}
+
 async function runPackageScan() {
   if (!_pkgFiles.length) return;
   const resultArea = document.getElementById('resultArea');
@@ -4874,7 +4955,7 @@ function renderGarminReport(d) {
   const el = document.getElementById('garminReport'); if (!el) return;
   if (d.error && !d.report) { el.innerHTML = `<div class="g-rep-err">${escapeHtml(d.error)}</div>`; return; }
   const f = d.found || {};
-  el.innerHTML = `<div class="g-rep-sum">${escapeHtml(d.message || '')} · ${(d.range || []).join(' → ')}</div>
+  el.innerHTML = `${d.error ? `<div class="g-rep-err">${escapeHtml(d.error)}</div>` : ''}<div class="g-rep-sum">${escapeHtml(d.message || '')} · ${(d.range || []).join(' → ')}</div>
     <div class="g-rep-found">${Object.entries(f).map(([k, v]) => `<span class="${v ? 'ok' : 'miss'}">${k.replace('_', ' ')} ${v}</span>`).join('')}</div>
     <details class="g-rep-details"><summary>Sync report</summary>${Object.entries(d.report || {}).map(([k, r]) =>
       `<div class="g-rep-row"><b>${r.ok ? '✓' : '✗'} ${escapeHtml(k)}</b> · ${r.count || 0} item${r.count === 1 ? '' : 's'}${r.status && !r.ok ? ` · HTTP ${r.status}` : ''}${r.error ? ` · ${escapeHtml(r.error)}` : ''}<div class="g-rep-f">${escapeHtml((r.fields || []).join(', '))}</div></div>`).join('')}</details>`;

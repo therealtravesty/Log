@@ -74,9 +74,34 @@ function pick(item, names) {
     for (const n of names) { const v = n.split('.').reduce((a, k) => (a == null ? a : a[k]), o); if (v != null && v !== '') return v; } }
   return null;
 }
+// Find a number inside a section (e.g. item.movement) whose field name matches
+// one of the patterns, in priority order. A matching field that's itself an
+// object ({ count, value, total }) is opened up.
+function deepNum(obj, patterns, depth = 3) {
+  if (!obj || typeof obj !== 'object' || depth < 0) return null;
+  for (const re of patterns) {
+    const hit = (o, d) => {
+      if (!o || typeof o !== 'object' || Array.isArray(o) || d < 0) return null;
+      for (const [k, v] of Object.entries(o)) {
+        if (re.test(k)) {
+          if (typeof v === 'number') return v;
+          if (v && typeof v === 'object' && !Array.isArray(v)) {
+            for (const kk of ['value', 'count', 'total', 'amount', 'avg', 'average']) if (typeof v[kk] === 'number') return v[kk];
+          }
+        }
+      }
+      for (const v of Object.values(o)) { const r = hit(v, d - 1); if (r != null) return r; }
+      return null;
+    };
+    const r = hit(obj, depth); if (r != null) return r;
+  }
+  return null;
+}
 const dateOf = it => String(pick(it, ['calendarDate', 'summaryDate', 'date', 'startDate', 'startTimeLocal']) || '').slice(0, 10);
 const inLimits = (k, v) => v != null && !isNaN(v) && v >= LIMITS[k][0] && v <= LIMITS[k][1];
-const keysOf = it => (it && typeof it === 'object' ? Object.keys(it).slice(0, 30) : []);
+// Field names for the report; sections show their inner fields: movement{steps,distance}
+const keysOf = it => (it && typeof it === 'object' ? Object.entries(it).slice(0, 30).map(([k, v]) =>
+  v && typeof v === 'object' && !Array.isArray(v) ? `${k}{${Object.entries(v).slice(0, 14).map(([kk, vv]) => vv && typeof vv === 'object' && !Array.isArray(vv) ? `${kk}{${Object.keys(vv).slice(0, 8).join(',')}}` : kk).join(',')}}` : k) : []);
 
 async function sb(path, init = {}) {
   const r = await fetchT(`${SB_URL}/rest/v1/${path}`, { ...init, headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', ...(init.headers || {}) } }, 10000);
@@ -101,14 +126,15 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
     const ds = await gget('/usersummary-service/v2/dailysummaries', { startDate: s, endDate: e });
     const dl = listOf(ds.json, ['data', 'dailySummaries', 'summaries']);
     note('daily summaries', ds, dl);
+    // v2 groups values into sections: movement, calories, heartRate, stress, bodyBattery
     dl.forEach(it => { const d = dateOf(it);
-      set(d, 'steps', pick(it, ['totalSteps', 'steps']));
-      set(d, 'active_kcal', pick(it, ['activeKilocalories', 'activeCalories', 'activeKcal']));
-      set(d, 'resting_kcal', pick(it, ['bmrKilocalories', 'bmrCalories', 'restingKilocalories', 'restingCalories']));
-      set(d, 'resting_hr', pick(it, ['restingHeartRate', 'restingHeartRateValue', 'restingHr']));
-      set(d, 'stress_avg', pick(it, ['averageStressLevel', 'avgStressLevel', 'stressAvg', 'overallStressLevel']));
-      set(d, 'bb_high', pick(it, ['bodyBatteryHighestValue', 'bodyBatteryHigh', 'maxBodyBattery']));
-      set(d, 'bb_low', pick(it, ['bodyBatteryLowestValue', 'bodyBatteryLow', 'minBodyBattery']));
+      set(d, 'steps', pick(it, ['totalSteps', 'steps']) ?? deepNum(it.movement, [/^(total)?steps$/i, /stepcount/i, /^steps?/i]));
+      set(d, 'active_kcal', pick(it, ['activeKilocalories', 'activeCalories']) ?? deepNum(it.calories, [/^active(kilo)?cal(orie)?s?$/i, /^active$/i, /active/i]));
+      set(d, 'resting_kcal', pick(it, ['bmrKilocalories', 'bmrCalories']) ?? deepNum(it.calories, [/^bmr/i, /^resting/i, /bmr|resting/i]));
+      set(d, 'resting_hr', pick(it, ['restingHeartRate', 'restingHeartRateValue']) ?? deepNum(it.heartRate, [/^resting(heartrate|hr)?$/i, /^resting/i, /resting/i]));
+      set(d, 'stress_avg', pick(it, ['averageStressLevel', 'avgStressLevel']) ?? deepNum(it.stress, [/^(avg|average)(stress)?(level)?$/i, /^overall/i, /avg|average/i]));
+      set(d, 'bb_high', pick(it, ['bodyBatteryHighestValue']) ?? deepNum(it.bodyBattery, [/^(highest|max|high)(value)?$/i, /highest|max/i]));
+      set(d, 'bb_low', pick(it, ['bodyBatteryLowestValue']) ?? deepNum(it.bodyBattery, [/^(lowest|min|low)(value)?$/i, /lowest|min/i]));
     });
     // HRV: overnight average, weekly average, status, baseline range
     const hv = await gget(`/hrv-service/hrv/daily/${s}/${e}`);
@@ -152,7 +178,7 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
   } catch (e) { report.weight = { ...(report.weight || {}), error: e.message.slice(0, 160) }; }
 
   // Workouts: skip any the Shortcut already saved (same start time ±2 min)
-  let workoutsAdded = 0;
+  let workoutsAdded = 0, skippedShortcut = 0, refreshed = 0, dupesRemoved = 0; const dupes = [];
   try {
     const acts = [];
     for (let start = 0; start < 400; start += 100) {
@@ -162,6 +188,7 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       acts.push(...al); if (al.length < 100) break;
     }
     const existing = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=health_id,source`)) || [];
+    const haveGarmin = new Set(existing.map(r => String(r.health_id || '')).filter(h => h.startsWith('garmin:')));
     const taken = existing.filter(r => r.health_id && !String(r.health_id).startsWith('garmin:'))
       .map(r => { const m = String(r.health_id).match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/); return m ? new Date(`${m[1]}T${m[2]}:${m[3]}:00`).getTime() : null; }).filter(Boolean);
     const title = s => String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -170,14 +197,26 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       const m = startLocal.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/);
       if (!id || !m) return null;
       const t = new Date(`${m[1]}T${m[2]}:${m[3]}:00`).getTime();
-      if (taken.some(x => Math.abs(x - t) <= 120000)) return null; // already saved by the Shortcut
+      if (taken.some(x => Math.abs(x - t) <= 120000)) { // already saved by the Shortcut
+        skippedShortcut++;
+        if (haveGarmin.has(`garmin:${id}`)) dupes.push(`garmin:${id}`); // a copy slipped in earlier: remove it
+        return null;
+      }
+      if (haveGarmin.has(`garmin:${id}`)) refreshed++;
       const type = title(pick(a, ['activityType.typeKey', 'activityTypeDTO.typeKey', 'activityType']) || 'workout');
       const secs = Number(pick(a, ['movingDuration', 'duration', 'elapsedDuration']) || 0);
       return { profile_id: profileId, date: m[1], name: String(pick(a, ['activityName']) || type).slice(0, 80),
         calories_burned: Math.round(Number(pick(a, ['calories', 'activeKilocalories']) || 0)), source: 'garmin',
         health_id: `garmin:${id}`, sport_type: type, trainer: null, moving_time: secs ? Math.round(secs) : null };
     }).filter(Boolean);
-    if (rows.length) { await sb('exercise_logs?on_conflict=profile_id,health_id', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } }); workoutsAdded = rows.length; }
+    if (rows.length) await sb('exercise_logs?on_conflict=profile_id,health_id', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+    workoutsAdded = rows.length - refreshed;
+    for (let i = 0; i < dupes.length; i += 50) {
+      const ids = dupes.slice(i, i + 50).map(h => `"${h}"`).join(',');
+      await sb(`exercise_logs?profile_id=eq.${profileId}&health_id=in.(${encodeURIComponent(ids)})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+      dupesRemoved += Math.min(50, dupes.length - i);
+    }
+    report.workouts = { ok: true, count: acts.length, fields: [`${workoutsAdded} new`, `${skippedShortcut} already saved by the Shortcut`, `${refreshed} already synced from Garmin`, ...(dupesRemoved ? [`${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'} removed`] : [])] };
   } catch (e) { report.activities = { ...(report.activities || {}), error: e.message.slice(0, 160) }; }
 
   // Save daily rows (PostgREST bulk upserts need identical keys per batch)
@@ -187,15 +226,17 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
     const full = { profile_id: profileId, date, ...r, source: 'garmin_api', updated_at: now };
     const shape = Object.keys(full).sort().join(','); (groups[shape] = groups[shape] || []).push(full);
   });
-  for (const rows of Object.values(groups)) await sb('health_daily?on_conflict=profile_id,date', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+  let saveError = null;
+  try { for (const rows of Object.values(groups)) await sb('health_daily?on_conflict=profile_id,date', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } }); }
+  catch (e) { saveError = e.message.slice(0, 220); }
 
   const dayCount = Object.keys(byDate).length;
   const got = k => Object.values(byDate).filter(r => r[k] != null).length;
   return {
-    ok: true, range: [startDate, endDate], days: dayCount,
+    ok: !saveError, error: saveError ? `Saving failed: ${saveError}` : undefined, range: [startDate, endDate], days: dayCount,
     found: { steps: got('steps'), calories: got('active_kcal'), resting_hr: got('resting_hr'), sleep: got('sleep_min'), hrv: got('hrv_ms'), stress: got('stress_avg'), body_battery: got('bb_high') },
     workoutsAdded, weightsAdded, report,
-    message: `Garmin synced ${dayCount} day${dayCount === 1 ? '' : 's'}${workoutsAdded ? `, ${workoutsAdded} workout${workoutsAdded === 1 ? '' : 's'}` : ''}${weightsAdded ? `, ${weightsAdded} weigh-in${weightsAdded === 1 ? '' : 's'}` : ''}`,
+    message: `Garmin synced ${dayCount} day${dayCount === 1 ? '' : 's'}${workoutsAdded ? `, ${workoutsAdded} new workout${workoutsAdded === 1 ? '' : 's'}` : ''}${dupesRemoved ? `, removed ${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'}` : ''}${weightsAdded ? `, ${weightsAdded} weigh-in${weightsAdded === 1 ? '' : 's'}` : ''}`,
   };
 }
 
