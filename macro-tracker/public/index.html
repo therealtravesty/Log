@@ -539,6 +539,12 @@
   .g-rep-err { color: #E24B4A; }
   .garmin-more { margin-top: 10px; font-size: 12px; color: var(--text-3); }
   .garmin-more button { background: none; border: none; padding: 0; font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--blue); cursor: pointer; }
+  .auto-select { width: 100%; height: 42px; padding: 0 10px; border-radius: 12px; border: 0.5px solid var(--border-med); background: var(--surface); font: 15px 'DM Sans', system-ui, sans-serif; color: var(--text); }
+  .auto-steps { align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-2); }
+  .auto-steps input { width: 110px; height: 38px; padding: 0 10px; border-radius: 10px; border: 0.5px solid var(--border-med); background: var(--surface); font: 15px 'DM Mono', monospace; color: var(--text); }
+  .auto-hint { margin-top: 8px; font-size: 12px; color: var(--text-3); }
+  .auto-hint button { border: none; background: rgba(55,138,221,0.1); color: var(--blue); border-radius: 10px; padding: 3px 9px; font: 600 12px 'DM Sans', system-ui, sans-serif; cursor: pointer; }
+  .habit-auto-lbl { color: #1D9E75; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1256,6 +1262,27 @@
                 <span id="editHabitImportantTrack" style="position:absolute;inset:0;border-radius:13px;background:var(--border-med);transition:background 0.2s;cursor:pointer;" onclick="toggleHabitImportant()"></span>
                 <span id="editHabitImportantThumb" style="position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
               </label>
+            </div>
+          </div>
+          <div class="habit-modal-field">
+            <div style="font-size:13px;font-weight:500;color:var(--text);">Complete automatically from Garmin</div>
+            <div style="font-size:12px;color:var(--text-3);margin:2px 0 8px;">Checked off on each Garmin sync when the day qualifies. It never unchecks a day you completed yourself.</div>
+            <select id="editHabitAuto" class="auto-select" onchange="toggleAutoSteps(); autoSaveHabit()">
+              <option value="">Off</option>
+              <option value="garmin:gym">Gym workout (strength, HIIT or cardio machines, 15+ min)</option>
+              <option value="garmin:workout">Any workout (15+ min, not walks)</option>
+              <option value="garmin:outdoor">Outdoor activity (walk, run, hike or ride, 15+ min)</option>
+              <option value="garmin:steps">Steps goal</option>
+              <option value="garmin:sport:pickleball">Pickleball</option>
+              <option value="garmin:sport:run">Running</option>
+              <option value="garmin:sport:cycl">Cycling</option>
+              <option value="garmin:sport:swim">Swimming</option>
+              <option value="garmin:sport:yoga">Yoga</option>
+              <option value="garmin:sport:tennis">Tennis</option>
+              <option value="garmin:sport:golf">Golf</option>
+            </select>
+            <div id="editHabitAutoStepsRow" class="auto-steps" style="display:none;">
+              <input id="editHabitAutoSteps" type="number" inputmode="numeric" min="1000" step="500" value="15000" onchange="autoSaveHabit()"/> <span>steps or more</span>
             </div>
           </div>
           <button class="habit-modal-delete"onclick="deleteHabitFromModal()">Delete habit</button>
@@ -3588,27 +3615,58 @@ async function handleBarcode(raw) {
 }
 
 // ── Drag the sheet down to close ──
+// Works from anywhere on the sheet (when the content under your thumb is
+// scrolled to the top, like iOS) and from the dimmed area above it.
+// Sideways swipes (meal chips, tabs, rows) are left alone.
 (function () {
-  let y0 = null, dy = 0, t0 = 0;
+  let st = null; // { y0, x0, t0, mode: null|'drag'|'skip', scroller }
   const sheet = () => document.getElementById('logSheet');
-  const start = e => { y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); sheet().classList.add('dragging'); };
-  const move = e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); sheet().style.transform = `translateY(${dy}px)`; };
-  const end = () => {
-    if (y0 == null) return;
-    const v = dy / Math.max(1, Date.now() - t0);
-    sheet().classList.remove('dragging');
-    y0 = null;
-    if (dy > 120 || v > 0.6) closeLogSheet(); else sheet().style.transform = '';
+  // Nearest element under the finger that can scroll vertically
+  const scrollerOf = el => {
+    for (let n = el; n && n !== sheet() && n !== document.body; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) return n;
+    }
+    return null;
   };
-  ['sheetGrab'].forEach(id => {
-    const el = document.getElementById(id); if (!el) return;
+  const start = e => {
+    if (!document.body.classList.contains('sheet-open') || e.touches.length > 1) { st = null; return; }
+    const t = e.touches[0];
+    st = { y0: t.clientY, x0: t.clientX, t0: Date.now(), dy: 0, mode: null, scroller: scrollerOf(e.target) };
+  };
+  const move = e => {
+    if (!st) return;
+    const t = e.touches[0], dx = t.clientX - st.x0, dy = t.clientY - st.y0;
+    if (!st.mode) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      // Down, mostly vertical, and nothing under the finger is scrolled down → drag the sheet
+      st.mode = Math.abs(dy) > Math.abs(dx) && dy > 0 && !(st.scroller && st.scroller.scrollTop > 0) ? 'drag' : 'skip';
+      if (st.mode === 'drag') { st.y0 = t.clientY; st.t0 = Date.now(); st.pts = []; sheet().classList.add('dragging'); }
+    }
+    if (st.mode !== 'drag') return;
+    e.preventDefault(); // don't scroll or rubber-band while dragging the sheet
+    st.dy = Math.max(0, t.clientY - st.y0);
+    const now = Date.now(); st.pts.push([now, t.clientY]); st.pts = st.pts.filter(p => now - p[0] <= 120);
+    sheet().style.transform = `translateY(${st.dy}px)`;
+  };
+  const end = () => {
+    if (!st) return;
+    const s = st; st = null;
+    if (s.mode !== 'drag') return;
+    // Flick speed = finger speed over the last ~120ms (like iOS), not the whole drag
+    const p = s.pts || [], a = p[0], b = p[p.length - 1];
+    const v = a && b && b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : s.dy / Math.max(1, Date.now() - s.t0);
+    sheet().classList.remove('dragging');
+    if (s.dy > 110 || (v > 0.5 && s.dy > 30)) { window._sheetJustDragged = Date.now(); closeLogSheet(); }
+    else sheet().style.transform = '';
+  };
+  [document.getElementById('logSheet'), document.getElementById('logSheetBackdrop')].forEach(el => {
+    if (!el) return;
     el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
     el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
   });
-  document.querySelector('.sheet-head')?.addEventListener('touchstart', start, { passive: true });
-  document.querySelector('.sheet-head')?.addEventListener('touchmove', move, { passive: true });
-  document.querySelector('.sheet-head')?.addEventListener('touchend', end);
 })();
 
 // Keep the sheet above the iOS keyboard (Describe tab)
@@ -4939,7 +4997,8 @@ async function runGarminSync(days = 8) {
     const d = await res.json().catch(() => ({ error: `Sync failed (${res.status})` }));
     renderGarminReport(d);
     if (!res.ok || d.error) throw new Error(d.error || 'Sync failed');
-    await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer(), typeof loadWeightsFromServer === 'function' ? loadWeightsFromServer() : null]);
+    await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer(), typeof loadWeightsFromServer === 'function' ? loadWeightsFromServer() : null, d.habitsCompleted ? loadHabitLogsFromServer() : null]);
+    if (d.habitsCompleted) renderHabits();
     if (_settings) applySettings(_settings);
     renderGarminCard(); renderToday();
     showToast(d.message || 'Garmin synced');
@@ -6485,7 +6544,8 @@ function renderHabits() {
       }
     }).join('');
 
-    const streakLabel = streak > 0 ? `<span class="habit-streak-lbl">${streak}d streak</span>` : '';
+    const autoLbl = h.auto_source && String(h.auto_source).startsWith('garmin:') ? '<span class="habit-auto-lbl">Auto · Garmin</span>' : '';
+    const streakLabel = (streak > 0 || autoLbl) ? `<span class="habit-streak-lbl">${streak > 0 ? `${streak}d streak` : ''}${streak > 0 && autoLbl ? ' · ' : ''}${autoLbl}</span>` : '';
 
     return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})" ontouchstart="habitLongPressStart(event,${h.id})">
       <div class="habit-icon-wrap" style="background:${h.color};background:linear-gradient(160deg, color-mix(in srgb, ${h.color} 70%, white), ${h.color});">${habitIconSvg(iconKey, '#fff', 20)}</div>
@@ -6896,6 +6956,20 @@ function openHabitModal(habitId) {
   if (importantCb) importantCb.checked = isImportant;
   if (track) track.style.background = isImportant ? 'var(--green)' : 'var(--border-med)';
   if (thumb) thumb.style.transform = isImportant ? 'translateX(18px)' : 'translateX(0)';
+  // Auto-complete from Garmin
+  const auto = h.auto_source && String(h.auto_source).startsWith('garmin:') ? h.auto_source : '';
+  const sel = document.getElementById('editHabitAuto');
+  if (sel) {
+    const stepsM = auto.match(/^garmin:steps:(\d+)/);
+    sel.value = stepsM ? 'garmin:steps' : auto;
+    if (stepsM) document.getElementById('editHabitAutoSteps').value = stepsM[1];
+    document.getElementById('editHabitAutoHint')?.remove();
+    if (!auto) { // offer a suggestion from the name, without turning it on
+      const sug = suggestAutoSource(h.name);
+      if (sug) sel.insertAdjacentHTML('afterend', `<div id="editHabitAutoHint" class="auto-hint">Suggested: <button onclick="applyAutoSuggestion('${sug}')">${escapeHtml(describeAuto(sug))}</button></div>`);
+    }
+    toggleAutoSteps();
+  }
   // Show modal immediately — defer heavy icon picker and calendar to next frame
   document.getElementById('habitEditOverlay').classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -6965,6 +7039,42 @@ function selectEditHabitColor(el) {
   autoSaveHabit();
 }
 
+// auto_source values: '' | 'garmin:gym' | 'garmin:workout' | 'garmin:outdoor' | 'garmin:steps:15000' | 'garmin:sport:pickleball'
+function readAutoSource() {
+  const v = document.getElementById('editHabitAuto')?.value || '';
+  if (v === 'garmin:steps') return `garmin:steps:${Math.max(1000, parseInt(document.getElementById('editHabitAutoSteps')?.value) || 15000)}`;
+  return v || null;
+}
+// A sensible default for a habit that has none yet, from its name ("15k Steps" → steps ≥ 15,000)
+function suggestAutoSource(name) {
+  const n = String(name || '').toLowerCase();
+  const k = n.match(/(\d+(?:\.\d+)?)\s*k\s*steps|(\d{4,6})\s*steps/);
+  if (k) return `garmin:steps:${k[1] ? Math.round(parseFloat(k[1]) * 1000) : parseInt(k[2])}`;
+  if (/\bgym\b|lift|weights|strength/.test(n)) return 'garmin:gym';
+  if (/pickleball/.test(n)) return 'garmin:sport:pickleball';
+  if (/outside|outdoor/.test(n) && /exercise|workout|activity/.test(n)) return 'garmin:outdoor';
+  return '';
+}
+function describeAuto(src) {
+  const m = String(src || '').match(/^garmin:steps:(\d+)/);
+  if (m) return `${Number(m[1]).toLocaleString()}+ steps`;
+  const sel = document.getElementById('editHabitAuto');
+  return [...(sel?.options || [])].find(o => o.value === src)?.textContent.replace(/ \(.*\)$/, '') || src;
+}
+function applyAutoSuggestion(src) {
+  const sel = document.getElementById('editHabitAuto'); if (!sel) return;
+  const m = src.match(/^garmin:steps:(\d+)/);
+  sel.value = m ? 'garmin:steps' : src;
+  if (m) document.getElementById('editHabitAutoSteps').value = m[1];
+  document.getElementById('editHabitAutoHint')?.remove();
+  toggleAutoSteps(); autoSaveHabit();
+  showToast('Auto-complete on. It runs on the next Garmin sync');
+}
+function toggleAutoSteps() {
+  const row = document.getElementById('editHabitAutoStepsRow');
+  if (row) row.style.display = document.getElementById('editHabitAuto')?.value === 'garmin:steps' ? 'flex' : 'none';
+}
+
 function toggleHabitImportant() {
   const cb = document.getElementById('editHabitImportant');
   if (!cb) return;
@@ -6991,7 +7101,8 @@ function autoSaveHabit() {
   const updates = {
     name, color: color||h.color, icon: icon||h.icon,
     target_type: type, target_value: type==='quantity' ? target : 1, target_unit: unit,
-    important: document.getElementById('editHabitImportant')?.checked ?? true
+    important: document.getElementById('editHabitImportant')?.checked ?? true,
+    auto_source: readAutoSource(),
   };
   // Update toggle visuals (if toggled directly via toggleHabitImportant, already updated)
   const isImp = updates.important;
@@ -7028,10 +7139,10 @@ async function saveEditedHabit() {
     await api(`habits?id=${id}`, { method: 'PATCH', body: {
       name, color, icon, target_type: type,
       target_value: type === 'quantity'? target : 1,
-      target_unit: unit,
+      target_unit: unit, auto_source: readAutoSource(),
     }});
     const idx = _habits.findIndex(h => h.id === id);
-    if (idx > -1) _habits[idx] = { ..._habits[idx], name, color, icon, target_type: type, target_value: type==='quantity'?target:1, target_unit: unit };
+    if (idx > -1) _habits[idx] = { ..._habits[idx], name, color, icon, target_type: type, target_value: type==='quantity'?target:1, target_unit: unit, auto_source: readAutoSource() };
     cacheSet('habits', _habits);
     closeHabitModal();
     renderHabits();

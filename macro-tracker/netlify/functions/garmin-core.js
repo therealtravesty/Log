@@ -230,12 +230,55 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
   try { for (const rows of Object.values(groups)) await sb('health_daily?on_conflict=profile_id,date', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } }); }
   catch (e) { saveError = e.message.slice(0, 220); }
 
+  // ── Habits that complete themselves (auto_source 'garmin:…') ──
+  //   garmin:gym          strength / HIIT / cardio machines, 15+ min that day
+  //   garmin:workout      any workout except walks, 15+ min
+  //   garmin:sport:<word> an activity whose type or name contains <word> (e.g. pickleball)
+  //   garmin:outdoor      an outdoor walk, run, hike or ride, 15+ min
+  //   garmin:steps:<n>    at least n steps
+  // Only ever ADDS a completion; never removes or changes one you entered.
+  let habitsCompleted = 0;
+  try {
+    const habits = (await sb(`habits?profile_id=eq.${profileId}&auto_source=like.garmin*&select=id,name,auto_source,target_type,target_value`)) || [];
+    if (habits.length) {
+      const ex = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=date,name,sport_type,moving_time`)) || [];
+      const hd = (await sb(`health_daily?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=date,steps`)) || [];
+      const steps = {}; hd.forEach(r => { steps[r.date] = r.steps; }); Object.entries(byDate).forEach(([d, r]) => { if (r.steps != null) steps[d] = r.steps; });
+      const txt = e => `${e.sport_type || ''} ${e.name || ''}`.toLowerCase();
+      const mins = e => (Number(e.moving_time) || 0) / 60;
+      const indoor = e => /indoor|treadmill|virtual|trainer|elliptical/.test(txt(e));
+      const isWalk = e => /walk/.test(txt(e)) && !indoor(e);
+      const isGym = e => !isWalk(e) && /strength|weight|lift|hiit|functional|crossfit|core|cardio|elliptical|stair|row|spin|indoor cycl|treadmill|bootcamp|training/.test(txt(e));
+      const isOutdoor = e => !indoor(e) && /walk|run|hik|trail|cycl|bik|ride|golf/.test(txt(e));
+      const byDay = {}; ex.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+      const dates = []; for (let d = startDate; d <= endDate; d = addDays(d, 1)) dates.push(d);
+      const rule = (src, d) => {
+        const list = byDay[d] || [];
+        const [, kind, arg] = String(src).split(':');
+        const total = f => list.filter(f).reduce((a, e) => a + mins(e), 0);
+        if (kind === 'gym') return total(isGym) >= 15;
+        if (kind === 'workout') return total(e => !isWalk(e)) >= 15;
+        if (kind === 'outdoor') return total(isOutdoor) >= 15;
+        if (kind === 'sport') return !!arg && list.some(e => txt(e).includes(arg.toLowerCase()));
+        if (kind === 'steps') return steps[d] != null && steps[d] >= (Number(arg) || 15000);
+        return false;
+      };
+      const rows = [], names = {};
+      habits.forEach(h => dates.forEach(d => { if (rule(h.auto_source, d)) {
+        rows.push({ habit_id: h.id, profile_id: profileId, date: d, value: h.target_type === 'quantity' ? (Number(h.target_value) || 1) : 1 });
+        names[h.name] = (names[h.name] || 0) + 1; } }));
+      if (rows.length) await sb('habit_logs?on_conflict=habit_id,date', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' } });
+      habitsCompleted = rows.length;
+      report.habits = { ok: true, count: habits.length, fields: Object.entries(names).map(([n, c]) => `${n}: ${c} day${c === 1 ? '' : 's'}`) };
+    }
+  } catch (e) { report.habits = { ok: false, count: 0, fields: [], error: e.message.slice(0, 160) }; }
+
   const dayCount = Object.keys(byDate).length;
   const got = k => Object.values(byDate).filter(r => r[k] != null).length;
   return {
     ok: !saveError, error: saveError ? `Saving failed: ${saveError}` : undefined, range: [startDate, endDate], days: dayCount,
     found: { steps: got('steps'), calories: got('active_kcal'), resting_hr: got('resting_hr'), sleep: got('sleep_min'), hrv: got('hrv_ms'), stress: got('stress_avg'), body_battery: got('bb_high') },
-    workoutsAdded, weightsAdded, report,
+    workoutsAdded, weightsAdded, habitsCompleted, report,
     message: `Garmin synced ${dayCount} day${dayCount === 1 ? '' : 's'}${workoutsAdded ? `, ${workoutsAdded} new workout${workoutsAdded === 1 ? '' : 's'}` : ''}${dupesRemoved ? `, removed ${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'}` : ''}${weightsAdded ? `, ${weightsAdded} weigh-in${weightsAdded === 1 ? '' : 's'}` : ''}`,
   };
 }
