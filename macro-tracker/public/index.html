@@ -545,6 +545,20 @@
   .auto-hint { margin-top: 8px; font-size: 12px; color: var(--text-3); }
   .auto-hint button { border: none; background: rgba(55,138,221,0.1); color: var(--blue); border-radius: 10px; padding: 3px 9px; font: 600 12px 'DM Sans', system-ui, sans-serif; cursor: pointer; }
   .habit-auto-lbl { color: #1D9E75; }
+  .hday-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .hday-sec { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-3); margin: 4px 0 4px; }
+  .hday-ex { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 5px 0; border-bottom: 0.5px solid var(--border); }
+  .hday-ex span:last-child { font: 12px 'DM Mono', monospace; color: var(--text-2); white-space: nowrap; }
+  .hday-ex.walk { color: var(--text-3); } .hday-ex i { font-style: normal; font-size: 11px; }
+  .hday-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .hday-stat { background: var(--surface-2, rgba(128,128,128,0.08)); border-radius: 10px; padding: 7px 9px; }
+  .hday-stat span { display: block; font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+  .hday-stat b { font: 500 13px 'DM Mono', monospace; }
+  .hday-hab { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; color: var(--text-3); }
+  .hday-hab.on { color: var(--text); } .hday-hab b { margin-left: auto; color: #1D9E75; }
+  .hday-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .hday-done { color: #1D9E75; } .hday-miss { color: var(--text-3); }
+  .hday-empty { font-size: 13px; color: var(--text-3); padding: 14px 4px; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1266,7 +1280,7 @@
           </div>
           <div class="habit-modal-field">
             <div style="font-size:13px;font-weight:500;color:var(--text);">Complete automatically from Garmin</div>
-            <div style="font-size:12px;color:var(--text-3);margin:2px 0 8px;">Checked off on each Garmin sync when the day qualifies. It never unchecks a day you completed yourself.</div>
+            <div style="font-size:12px;color:var(--text-3);margin:2px 0 8px;">Adds a checkmark when Garmin shows the day qualifies. It never removes one, so if you weren't wearing your watch, just check it off yourself.</div>
             <select id="editHabitAuto" class="auto-select" onchange="toggleAutoSteps(); autoSaveHabit()">
               <option value="">Off</option>
               <option value="garmin:gym">Gym workout (strength, HIIT or cardio machines, 15+ min)</option>
@@ -1336,7 +1350,7 @@
       <div class="stat-card"><div class="stat-label">Avg calories</div><div class="stat-val" id="statAvgCal">—</div><div class="stat-sub" id="statAvgCalSub">—</div></div>
     </div>
 
-    <div class="hist-list-head"><span>Meals this range</span><button class="ghost-btn" onclick="exportAll()">Export CSV</button></div>
+    <div class="hist-list-head"><span id="histListTitle">Meals this range</span><button class="ghost-btn" id="histExportBtn" onclick="exportAll()">Export CSV</button></div>
     <div id="historyList"></div>
   </div>
 
@@ -1845,6 +1859,7 @@ async function refreshFromServer() {
   if (pid !== activeProfileId) return; // profile switched mid-refresh
   if (_settings) applySettings(_settings); // Garmin data may change the calorie target
   _bootData = null;
+  setTimeout(maybeAutoGarminSync, 2500);    // fresh Garmin data when it's been 15+ min
   setTimeout(maybeAutoRefreshCoach, 1500); // fresh read in the background, ready for the Coach tab
   rerenderAfterRefresh();
 }
@@ -4988,22 +5003,36 @@ function copyText(text, msg) {
 // Sync now: Lōg's server pulls straight from Garmin (Personal API). No phone,
 // Shortcut or Connect app needed; your watch just has to have synced to Garmin.
 let _garminBusy = false;
-async function runGarminSync(days = 8) {
+const garminSyncKey = () => `garminLastSync_${activeProfileId}`;
+// Sync on open: when Lōg opens or comes back to the foreground and the last
+// sync was 15+ minutes ago, pull the latest from Garmin in the background.
+function maybeAutoGarminSync() {
+  if (!activeProfileId || !navigator.onLine || document.visibilityState !== 'visible') return;
+  let last = 0; try { last = parseInt(localStorage.getItem(garminSyncKey()) || '0'); } catch (_) {}
+  if (Date.now() - last > 15 * 60000) runGarminSync(3, { silent: true });
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(maybeAutoGarminSync, 800); });
+async function runGarminSync(days = 8, opts = {}) {
   if (_garminBusy || !activeProfileId) return;
   _garminBusy = true;
+  const silent = !!opts.silent;
   document.querySelectorAll('.garmin-sync-btn, .garmin-log-sync').forEach(b => { b.dataset.t = b.textContent; b.textContent = 'Syncing…'; b.disabled = true; });
   try {
     const res = await fetch('/api/garmin-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile_id: activeProfileId, days }) });
     const d = await res.json().catch(() => ({ error: `Sync failed (${res.status})` }));
     renderGarminReport(d);
     if (!res.ok || d.error) throw new Error(d.error || 'Sync failed');
+    try { localStorage.setItem(garminSyncKey(), String(Date.now())); } catch (_) {}
     await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer(), typeof loadWeightsFromServer === 'function' ? loadWeightsFromServer() : null, d.habitsCompleted ? loadHabitLogsFromServer() : null]);
     if (d.habitsCompleted) renderHabits();
     if (_settings) applySettings(_settings);
     renderGarminCard(); renderToday();
-    showToast(d.message || 'Garmin synced');
+    if (document.getElementById('view-history')?.offsetWidth) renderHistory();
+    // Background syncs stay quiet unless something new happened
+    if (!silent) showToast(d.message || 'Garmin synced');
+    else if (d.habitsCompleted || d.workoutsAdded) showToast(d.message);
     maybeAutoRefreshCoach();
-  } catch (e) { showToast(e.message); }
+  } catch (e) { if (!silent) showToast(e.message); }
   finally {
     _garminBusy = false;
     document.querySelectorAll('.garmin-sync-btn, .garmin-log-sync').forEach(b => { b.textContent = b.dataset.t || 'Sync now'; b.disabled = false; });
@@ -5633,7 +5662,7 @@ const ACTIVITY_METRICS = {
 };
 // Outdoor walks/hikes count toward steps, not workouts (treadmill walks count)
 function isWorkoutEntry(e) {
-  if (e.source !== 'health' && e.source !== 'strava') return true; // manual entries
+  if (!['health', 'strava', 'garmin'].includes(e.source)) return true; // manual entries
   const t = String(e.name || '');
   return !(/walk|hik/i.test(t) && !/treadmill|indoor/i.test(t));
 }
@@ -5787,7 +5816,91 @@ function renderHistory() {
   renderHistStats(w);
   renderHistHabitList(w);
   withChartJs(() => renderHistChart(w));
-  renderHistoryList([...foodDaysIn(w.days)].reverse());
+  renderHistoryDayList(w);
+}
+
+// ── The list under the chart follows what you're looking at ──
+//   Activity  → each day: the selected metric, plus that day's workouts
+//   Weight    → each weigh-in, with the change from the one before
+//   Habits    → each day: how many were done, and which
+//   Nutrition / Drinks → meals by day (as before)
+function renderHistoryDayList(w) {
+  const title = document.getElementById('histListTitle'), exp = document.getElementById('histExportBtn');
+  const listEl = document.getElementById('historyList');
+  if (_histGroup === 'nutrition' || _histGroup === 'drinks') {
+    title.textContent = _histGroup === 'drinks' ? 'Drinks and meals this range' : 'Meals this range';
+    exp.style.display = '';
+    return renderHistoryList([...foodDaysIn(w.days)].reverse());
+  }
+  exp.style.display = 'none';
+  const today = todayStr();
+  const days = [...(w.days || [])].filter(d => d <= today).reverse().slice(0, 120);
+  const dateLbl = d => `${d === today ? 'Today · ' : ''}${fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  const hm = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+  const card = (d, right, sub, body) => `<div class="day-card">
+      <div class="day-card-header"${body ? ` onclick="toggleDay('${d}')"` : ''}>
+        <div><div class="day-card-date">${dateLbl(d)}</div>${sub ? `<div class="hday-sub">${sub}</div>` : ''}</div>
+        <div class="day-card-right"><div class="day-card-kcal">${right}</div>${body ? `<div class="day-card-chevron" id="chev-${d}">▾</div>` : ''}</div>
+      </div>${body ? `<div class="day-card-body" id="body-${d}">${body}</div>` : ''}</div>`;
+
+  if (_histGroup === 'activity') {
+    const key = _histMetric.activity, m = ACTIVITY_METRICS[key];
+    title.textContent = `${m.label} by day`;
+    const wkMins = d => (_exercise[d] || []).filter(isWorkoutEntry).reduce((a, e) => a + (Number(e.moving_time) || 0) / 60, 0);
+    const value = (d, h) => {
+      if (key === 'steps') return h?.steps ? `${h.steps.toLocaleString()} steps` : null;
+      if (key === 'active') return h?.active_kcal ? `${h.active_kcal.toLocaleString()} kcal` : null;
+      if (key === 'burn') return h?.active_kcal && h?.resting_kcal ? `${(h.active_kcal + h.resting_kcal).toLocaleString()} kcal` : null;
+      if (key === 'workouts') { const mm = wkMins(d); return mm ? `${Math.round(mm)} min` : null; }
+      if (key === 'sleep') return h?.sleep_min ? hm(h.sleep_min) : null;
+      if (key === 'rhr') return h?.resting_hr ? `${h.resting_hr} bpm` : null;
+      if (key === 'hrv') return h?.hrv_ms ? `${h.hrv_ms} ms` : null;
+      return null;
+    };
+    const rows = days.map(d => {
+      const h = healthOn(d), v = value(d, h), ex = _exercise[d] || [];
+      if (!v && !ex.length) return '';
+      const sub = [h?.steps && key !== 'steps' ? `${h.steps.toLocaleString()} steps` : null,
+        h?.active_kcal && key !== 'active' ? `${h.active_kcal.toLocaleString()} active` : null,
+        h?.sleep_min && key !== 'sleep' ? `${hm(h.sleep_min)} sleep` : null].filter(Boolean).join(' · ');
+      const stat = (lbl, val) => val ? `<div class="hday-stat"><span>${lbl}</span><b>${val}</b></div>` : '';
+      const body = `${ex.length ? `<div class="hday-sec">Workouts</div>${ex.map(e => `<div class="hday-ex${isWorkoutEntry(e) ? '' : ' walk'}">
+          <span>${escapeHtml(e.name || 'Workout')}${isWorkoutEntry(e) ? '' : ' <i>· counts toward steps, not workouts</i>'}</span>
+          <span>${e.moving_time ? Math.round(e.moving_time / 60) + ' min' : ''}${e.calories_burned ? ` · ${e.calories_burned} kcal` : ''}</span></div>`).join('')}` : ''}
+        <div class="hday-grid">${stat('Steps', h?.steps?.toLocaleString())}${stat('Active', h?.active_kcal ? h.active_kcal.toLocaleString() + ' kcal' : '')}${stat('Resting', h?.resting_kcal ? h.resting_kcal.toLocaleString() + ' kcal' : '')}
+          ${stat('Sleep', h?.sleep_min ? hm(h.sleep_min) : '')}${stat('Resting HR', h?.resting_hr ? h.resting_hr + ' bpm' : '')}${stat('HRV', h?.hrv_ms ? h.hrv_ms + ' ms' : '')}
+          ${stat('Stress', h?.stress_avg ? h.stress_avg + '/100' : '')}${stat('Body Battery', h?.bb_high ? `${h.bb_low ?? '?'}–${h.bb_high}` : '')}${stat('Workouts', wkMins(d) ? Math.round(wkMins(d)) + ' min' : '')}</div>`;
+      return card(d, v || '—', sub, body);
+    }).filter(Boolean);
+    listEl.innerHTML = rows.join('') || '<div class="hday-empty">No Garmin data in this range.</div>';
+    return;
+  }
+
+  if (_histGroup === 'weight') {
+    title.textContent = 'Weigh-ins';
+    const all = Object.keys(_weights).filter(d => _weights[d]).sort();
+    const rows = days.filter(d => _weights[d]).map(d => {
+      const prev = all.filter(x => x < d).pop();
+      const diff = prev ? Math.round((_weights[d] - _weights[prev]) * 10) / 10 : null;
+      const sub = diff == null ? '' : `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)} lbs since ${fmtDate(prev, { month: 'short', day: 'numeric' })}`;
+      return card(d, `${_weights[d]} lbs`, sub, '');
+    });
+    listEl.innerHTML = rows.join('') || '<div class="hday-empty">No weigh-ins in this range.</div>';
+    return;
+  }
+
+  // Habits
+  const focus = _histMetric.habits !== 'all' ? _habits.find(h => String(h.id) === String(_histMetric.habits)) : null;
+  title.textContent = focus ? `${focus.name} by day` : 'Habits by day';
+  const rows = days.map(d => {
+    if (focus) return d >= habitStartDate(focus) ? card(d, isHabitDone(focus, d) ? '<span class="hday-done">Done</span>' : '<span class="hday-miss">Not done</span>', '', '') : '';
+    const active = _habits.filter(h => d >= habitStartDate(h));
+    if (!active.length) return '';
+    const done = active.filter(h => isHabitDone(h, d));
+    const body = active.map(h => `<div class="hday-hab${isHabitDone(h, d) ? ' on' : ''}"><span class="hday-dot" style="background:${h.color || '#888'}"></span>${escapeHtml(h.name)}<b>${isHabitDone(h, d) ? '✓' : ''}</b></div>`).join('');
+    return card(d, `${done.length} of ${active.length}`, done.length === active.length ? 'All done' : '', body);
+  }).filter(Boolean);
+  listEl.innerHTML = rows.join('') || '<div class="hday-empty">No habits tracked in this range.</div>';
 }
 
 function renderHistMetricChips() {
@@ -6544,7 +6657,7 @@ function renderHabits() {
       }
     }).join('');
 
-    const autoLbl = h.auto_source && String(h.auto_source).startsWith('garmin:') ? '<span class="habit-auto-lbl">Auto · Garmin</span>' : '';
+    const autoLbl = effectiveAuto(h) ? '<span class="habit-auto-lbl">Auto · Garmin</span>' : '';
     const streakLabel = (streak > 0 || autoLbl) ? `<span class="habit-streak-lbl">${streak > 0 ? `${streak}d streak` : ''}${streak > 0 && autoLbl ? ' · ' : ''}${autoLbl}</span>` : '';
 
     return `<div class="habit-card" data-habit-id="${h.id}" onclick="openHabitModal(${h.id})" ontouchstart="habitLongPressStart(event,${h.id})">
@@ -6957,17 +7070,18 @@ function openHabitModal(habitId) {
   if (track) track.style.background = isImportant ? 'var(--green)' : 'var(--border-med)';
   if (thumb) thumb.style.transform = isImportant ? 'translateX(18px)' : 'translateX(0)';
   // Auto-complete from Garmin
-  const auto = h.auto_source && String(h.auto_source).startsWith('garmin:') ? h.auto_source : '';
+  const auto = effectiveAuto(h) || '';
   const sel = document.getElementById('editHabitAuto');
   if (sel) {
     const stepsM = auto.match(/^garmin:steps:(\d+)/);
+    sel.querySelectorAll('option[data-dyn]').forEach(o => o.remove());
+    if (auto && !stepsM && ![...sel.options].some(o => o.value === auto)) // e.g. Soccer: add it to the menu
+      sel.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(auto)}" data-dyn="1">${escapeHtml(describeAuto(auto))}</option>`);
     sel.value = stepsM ? 'garmin:steps' : auto;
     if (stepsM) document.getElementById('editHabitAutoSteps').value = stepsM[1];
     document.getElementById('editHabitAutoHint')?.remove();
-    if (!auto) { // offer a suggestion from the name, without turning it on
-      const sug = suggestAutoSource(h.name);
-      if (sug) sel.insertAdjacentHTML('afterend', `<div id="editHabitAutoHint" class="auto-hint">Suggested: <button onclick="applyAutoSuggestion('${sug}')">${escapeHtml(describeAuto(sug))}</button></div>`);
-    }
+    const inferred = auto && !String(h.auto_source || '').startsWith('garmin:');
+    if (inferred) sel.insertAdjacentHTML('afterend', '<div id="editHabitAutoHint" class="auto-hint">On automatically, based on the habit\'s name. Choose Off to keep it manual.</div>');
     toggleAutoSteps();
   }
   // Show modal immediately — defer heavy icon picker and calendar to next frame
@@ -7043,23 +7157,45 @@ function selectEditHabitColor(el) {
 function readAutoSource() {
   const v = document.getElementById('editHabitAuto')?.value || '';
   if (v === 'garmin:steps') return `garmin:steps:${Math.max(1000, parseInt(document.getElementById('editHabitAutoSteps')?.value) || 15000)}`;
-  return v || null;
+  return v || 'off';
 }
+// Same rule the server uses: explicit setting, else inferred from the name, 'off' = manual
+function effectiveAuto(h) {
+  const src = String(h?.auto_source || '');
+  if (src.startsWith('garmin:')) return src;
+  if (src === 'off') return null;
+  return suggestAutoSource(h?.name) || null;
+}
+// Sports recognized in a habit's name → words to look for in the Garmin
+// activity (its type or name). Word boundaries keep "Inbox zero" from being boxing.
+const SPORT_RULES = [
+  [/pickleball/, 'pickleball'], [/\btennis\b/, 'tennis'], [/\bpadel\b/, 'padel'], [/squash\b/, 'squash'],
+  [/racquetball/, 'racquetball'], [/badminton/, 'badminton'], [/table tennis|ping ?pong/, 'table tennis|ping pong'],
+  [/soccer|futbol/, 'soccer|football'], [/basketball/, 'basketball'], [/volleyball/, 'volleyball'],
+  [/hockey/, 'hockey'], [/baseball|softball/, 'baseball|softball'], [/\bgolf/, 'golf'],
+  [/\bswim/, 'swim'], [/\byoga\b/, 'yoga'], [/pilates/, 'pilates'], [/\b(run|running|jog|jogging)\b/, 'run'],
+  [/\b(bike|biking|cycl\w*|ride|spin)\b/, 'cycl|bik|ride|spin'], [/\bhik(e|ing)\b/, 'hik'],
+  [/climb|boulder/, 'climb|boulder'], [/\bbox(ing)?\b/, 'box'], [/\brow(ing)?\b/, 'row'],
+  [/\bski(ing)?\b|snowboard/, 'ski|snowboard'], [/\bsurf/, 'surf'],
+];
 // A sensible default for a habit that has none yet, from its name ("15k Steps" → steps ≥ 15,000)
 function suggestAutoSource(name) {
   const n = String(name || '').toLowerCase();
   const k = n.match(/(\d+(?:\.\d+)?)\s*k\s*steps|(\d{4,6})\s*steps/);
   if (k) return `garmin:steps:${k[1] ? Math.round(parseFloat(k[1]) * 1000) : parseInt(k[2])}`;
   if (/\bgym\b|lift|weights|strength/.test(n)) return 'garmin:gym';
-  if (/pickleball/.test(n)) return 'garmin:sport:pickleball';
-  if (/outside|outdoor/.test(n) && /exercise|workout|activity/.test(n)) return 'garmin:outdoor';
+  const sport = SPORT_RULES.find(([re]) => re.test(n));
+  if (sport) return `garmin:sport:${sport[1]}`;
   return '';
 }
 function describeAuto(src) {
   const m = String(src || '').match(/^garmin:steps:(\d+)/);
   if (m) return `${Number(m[1]).toLocaleString()}+ steps`;
   const sel = document.getElementById('editHabitAuto');
-  return [...(sel?.options || [])].find(o => o.value === src)?.textContent.replace(/ \(.*\)$/, '') || src;
+  const opt = [...(sel?.options || [])].find(o => o.value === src);
+  if (opt) return opt.textContent.replace(/ \(.*\)$/, '');
+  const sp = String(src).match(/^garmin:sport:(.+)/);
+  return sp ? sp[1].split('|')[0].replace(/\b\w/g, c => c.toUpperCase()) : src;
 }
 function applyAutoSuggestion(src) {
   const sel = document.getElementById('editHabitAuto'); if (!sel) return;
@@ -7115,7 +7251,9 @@ function autoSaveHabit() {
   Object.assign(h, updates);
   cacheSet('habits', _habits);
   renderHabits();
-  api(`habits?id=${id}`, { method: 'PATCH', body: updates }).catch(() => {});
+  api(`habits?id=${id}`, { method: 'PATCH', body: updates })
+    .then(r => { if (r && Array.isArray(r.skipped) && r.skipped.length) showToast(`Saved, but your database is missing: ${r.skipped.join(', ')}. Run the latest SQL update.`); })
+    .catch(e => showToast("Couldn't save that habit change. " + String(e.message || '').slice(0, 80)));
 }
 
 function toggleEditQuantityFields() {

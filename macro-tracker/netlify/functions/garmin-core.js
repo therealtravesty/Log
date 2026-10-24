@@ -110,6 +110,34 @@ async function sb(path, init = {}) {
   return t ? JSON.parse(t) : null;
 }
 
+// Sports recognized in a habit's name → words to look for in the Garmin
+// activity (its type or name). Word boundaries keep "Inbox zero" from being boxing.
+const SPORT_RULES = [
+  [/pickleball/, 'pickleball'], [/\btennis\b/, 'tennis'], [/\bpadel\b/, 'padel'], [/squash\b/, 'squash'],
+  [/racquetball/, 'racquetball'], [/badminton/, 'badminton'], [/table tennis|ping ?pong/, 'table tennis|ping pong'],
+  [/soccer|futbol/, 'soccer|football'], [/basketball/, 'basketball'], [/volleyball/, 'volleyball'],
+  [/hockey/, 'hockey'], [/baseball|softball/, 'baseball|softball'], [/\bgolf/, 'golf'],
+  [/\bswim/, 'swim'], [/\byoga\b/, 'yoga'], [/pilates/, 'pilates'], [/\b(run|running|jog|jogging)\b/, 'run'],
+  [/\b(bike|biking|cycl\w*|ride|spin)\b/, 'cycl|bik|ride|spin'], [/\bhik(e|ing)\b/, 'hik'],
+  [/climb|boulder/, 'climb|boulder'], [/\bbox(ing)?\b/, 'box'], [/\brow(ing)?\b/, 'row'],
+  [/\bski(ing)?\b|snowboard/, 'ski|snowboard'], [/\bsurf/, 'surf'],
+];
+// Which Garmin rule a habit uses: its explicit setting, or one inferred from its
+// name ("15k Steps" → steps ≥ 15,000; "Gym" → gym workout; "Pickleball").
+// auto_source 'off' means the user chose to keep it manual.
+function effectiveAuto(h) {
+  const src = String(h.auto_source || '');
+  if (src.startsWith('garmin:')) return src;
+  if (src === 'off') return null;
+  const n = String(h.name || '').toLowerCase();
+  const k = n.match(/(\d+(?:\.\d+)?)\s*k\s*steps|(\d{4,6})\s*steps/);
+  if (k) return `garmin:steps:${k[1] ? Math.round(parseFloat(k[1]) * 1000) : parseInt(k[2])}`;
+  if (/\bgym\b|lift|weights|strength/.test(n)) return 'garmin:gym';
+  const sport = SPORT_RULES.find(([re]) => re.test(n));
+  if (sport) return `garmin:sport:${sport[1]}`;
+  return null;
+}
+
 // ── Main ──
 async function syncGarmin({ profileId, days = 8, end = null }) {
   if (!profileId) throw new Error('profile_id required');
@@ -239,7 +267,9 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
   // Only ever ADDS a completion; never removes or changes one you entered.
   let habitsCompleted = 0;
   try {
-    const habits = (await sb(`habits?profile_id=eq.${profileId}&auto_source=like.garmin*&select=id,name,auto_source,target_type,target_value`)) || [];
+    // Explicit setting wins ('garmin:…' on, 'off' manual); otherwise infer from the name
+    const allHabits = (await sb(`habits?profile_id=eq.${profileId}&select=id,name,auto_source,target_type,target_value`)) || [];
+    const habits = allHabits.map(h => ({ ...h, auto_source: effectiveAuto(h) })).filter(h => h.auto_source);
     if (habits.length) {
       const ex = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=date,name,sport_type,moving_time`)) || [];
       const hd = (await sb(`health_daily?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=date,steps`)) || [];
@@ -259,7 +289,8 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
         if (kind === 'gym') return total(isGym) >= 15;
         if (kind === 'workout') return total(e => !isWalk(e)) >= 15;
         if (kind === 'outdoor') return total(isOutdoor) >= 15;
-        if (kind === 'sport') return !!arg && list.some(e => txt(e).includes(arg.toLowerCase()));
+        if (kind === 'sport') { const words = String(src).split(':').slice(2).join(':').toLowerCase().split('|').filter(Boolean);
+          return words.length > 0 && list.some(e => words.some(w => txt(e).includes(w))); }
         if (kind === 'steps') return steps[d] != null && steps[d] >= (Number(arg) || 15000);
         return false;
       };
@@ -283,4 +314,4 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
   };
 }
 
-module.exports = { syncGarmin, addDays, ymd };
+module.exports = { syncGarmin, addDays, ymd, effectiveAuto };

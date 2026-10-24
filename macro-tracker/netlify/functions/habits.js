@@ -25,12 +25,25 @@ exports.handler = async (event) => {
       const { id } = params;
       if (!id) return err('Missing id', 400);
       const body = JSON.parse(event.body);
-      const result = await query(`habits?id=eq.${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-        prefer: 'return=representation',
-      });
-      return ok(result);
+      // If the table is missing a column the app sends (e.g. after a new
+      // feature), drop that field and retry, so one unknown field can't block
+      // the rest of the update. The response lists anything that was skipped.
+      const skipped = [];
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const result = await query(`habits?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+            prefer: 'return=representation',
+          });
+          return ok(skipped.length ? { result, skipped } : result);
+        } catch (e) {
+          const m = String(e.message).match(/Could not find the '([^']+)' column/);
+          if (!m || !(m[1] in body)) throw e;
+          skipped.push(m[1]); delete body[m[1]];
+        }
+      }
+      return err('Habit update failed', 500);
     }
 
     if (method === 'DELETE') {

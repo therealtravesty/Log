@@ -31,6 +31,8 @@
 [functions."garmin-sync"]
   timeout = 26
 
-# Pull from Garmin every 4 hours (no phone needed). Needs GARMIN_PROFILE_ID.
+# Pull from Garmin hourly while you're awake: :15 past each hour, 10:00-04:00 UTC
+# = about 6 AM to midnight Eastern (5 AM-11 PM once clocks fall back). The app
+# also syncs on open when it's been 15+ minutes. Needs GARMIN_PROFILE_ID.
 [functions."garmin-sync-scheduled"]
-  schedule = "15 */4 * * *"
+  schedule = "15 0-4,10-23 * * *"

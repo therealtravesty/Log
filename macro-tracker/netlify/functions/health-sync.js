@@ -202,6 +202,19 @@ exports.handler = async (event) => {
         moving_time: minutes != null ? minutes * 60 : null,
       };
     }).filter(Boolean);
+    // Skip workouts the Garmin API already saved (same day, near-identical
+    // duration and calories), so the Shortcut never adds a second copy.
+    let skippedGarmin = 0;
+    if (workouts.length) {
+      const days = [...new Set(workouts.map(w => w.date))];
+      let garmin = [];
+      try { garmin = (await sb(`exercise_logs?profile_id=eq.${encodeURIComponent(profile_id)}&health_id=like.garmin*&date=in.(${days.join(',')})&select=date,moving_time,calories_burned`)) || []; } catch (_) {}
+      const same = (w, g) => g.date === w.date
+        && Math.abs((Number(g.moving_time) || 0) - (Number(w.moving_time) || 0)) <= 180
+        && Math.abs((Number(g.calories_burned) || 0) - (Number(w.calories_burned) || 0)) <= Math.max(15, (Number(w.calories_burned) || 0) * 0.05);
+      const keep = workouts.filter(w => { const dup = garmin.some(g => same(w, g)); if (dup) skippedGarmin++; return !dup; });
+      workouts.length = 0; workouts.push(...keep);
+    }
     if (workouts.length) {
       await sb('exercise_logs?on_conflict=profile_id,health_id', {
         method: 'POST', body: JSON.stringify(workouts),
@@ -209,12 +222,12 @@ exports.handler = async (event) => {
       });
     }
 
-    const badLines = lines(body.workouts).length - workouts.length;
+    const badLines = lines(body.workouts).length - workouts.length - skippedGarmin;
     const warn = skipped || badLines ? ` (skipped ${skipped + badLines} odd value${skipped + badLines === 1 ? '' : 's'} — check the Shortcut)` : '';
     const watchNote = watchDays ? ` (${watchDays} from Apple Watch)` : '';
     const mismatchNote = mismatch ? ` ⚠︎ active matched resting on ${mismatch} day${mismatch === 1 ? '' : 's'} — check the Active Energy blocks` : '';
     const message = `Lōg synced ${dates.length} day${dates.length === 1 ? '' : 's'}${watchNote} and ${workouts.length} workout${workouts.length === 1 ? '' : 's'}${warn}${mismatchNote}`;
-    return json(200, { ok: true, days: dates.length, workouts: workouts.length, message });
+    return json(200, { ok: true, days: dates.length, workouts: workouts.length, skippedGarmin, message: message + (skippedGarmin ? ` (${skippedGarmin} already synced from the Garmin API)` : '') });
   } catch (e) {
     console.error('[health-sync]', e.message);
     return json(500, { error: e.message, message: `Lōg sync failed: ${e.message.slice(0, 120)}` });
