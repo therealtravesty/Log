@@ -244,6 +244,27 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       await sb(`exercise_logs?profile_id=eq.${profileId}&health_id=in.(${encodeURIComponent(ids)})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
       dupesRemoved += Math.min(50, dupes.length - i);
     }
+    // Same workout saved twice (e.g. by the Shortcut and the Garmin API, or by
+    // an earlier sync)? Same day + duration within 3 min + calories within 5%
+    // = one workout. Keep the Garmin API copy; delete the rest. Doesn't rely
+    // on start times, so it catches every pair in the synced range.
+    const all = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=id,date,health_id,source,moving_time,calories_burned`)) || [];
+    const byDate = {}; all.forEach(r => (byDate[r.date] = byDate[r.date] || []).push(r));
+    const same = (a, b) => Math.abs((Number(a.moving_time) || 0) - (Number(b.moving_time) || 0)) <= 180
+      && Math.abs((Number(a.calories_burned) || 0) - (Number(b.calories_burned) || 0)) <= Math.max(15, Math.max(Number(a.calories_burned) || 0, Number(b.calories_burned) || 0) * 0.05)
+      && (Number(a.moving_time) || 0) > 0;
+    const isApi = r => String(r.health_id || '').startsWith('garmin:');
+    const drop = new Set();
+    Object.values(byDate).forEach(rows => {
+      const ordered = [...rows].sort((a, b) => (isApi(b) - isApi(a)) || (a.id - b.id)); // Garmin API copies first
+      ordered.forEach((r, i) => { if (drop.has(r.id)) return;
+        ordered.slice(i + 1).forEach(o => { if (!drop.has(o.id) && same(r, o)) drop.add(o.id); }); });
+    });
+    const ids = [...drop];
+    for (let i = 0; i < ids.length; i += 50) {
+      await sb(`exercise_logs?profile_id=eq.${profileId}&id=in.(${ids.slice(i, i + 50).join(',')})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    }
+    dupesRemoved += ids.length;
     report.workouts = { ok: true, count: acts.length, fields: [`${workoutsAdded} new`, `${skippedShortcut} already saved by the Shortcut`, `${refreshed} already synced from Garmin`, ...(dupesRemoved ? [`${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'} removed`] : [])] };
   } catch (e) { report.activities = { ...(report.activities || {}), error: e.message.slice(0, 160) }; }
 

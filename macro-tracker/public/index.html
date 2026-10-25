@@ -296,12 +296,6 @@
   .garmin-stat .v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .garmin-stat .l { font-size: 10px; color: var(--text-3); margin-top: 1px; }
   .garmin-stat .d { font-size: 10px; margin-top: 2px; }
-  .garmin-setup { margin-top: 12px; font-size: 12px; color: var(--text-2); }
-  .garmin-setup summary { cursor: pointer; color: var(--text-3); }
-  .garmin-setup-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .garmin-setup-row span { flex-shrink: 0; width: 84px; color: var(--text-3); }
-  .garmin-setup-row code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px 'DM Mono', monospace; }
-  .garmin-setup-row button { flex-shrink: 0; border: 0.5px solid var(--border-med); background: var(--surface); border-radius: 8px; padding: 3px 8px; font-size: 11px; color: var(--text-2); cursor: pointer; }
   .garmin-log-sync { width: 100%; margin-top: 10px; padding: 8px 12px; background: none; border: 0.5px solid var(--border-med); border-radius: var(--radius); font: 500 12px 'DM Sans', system-ui, sans-serif; color: var(--text-2); cursor: pointer; }
   .src-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--bg); color: var(--text-3); font-size: 10px; font-weight: 500; vertical-align: middle; }
 
@@ -1468,13 +1462,7 @@
       </div>
       <div class="garmin-stats" id="garminStats"></div>
       <div class="garmin-report" id="garminReport"></div>
-      <div class="garmin-more"><button onclick="runGarminSync(120)">Backfill 120 days from Garmin</button> · <button onclick="runHealthSync()">Run the Shortcut instead</button></div>
-      <details class="garmin-setup">
-        <summary>Shortcut setup details</summary>
-        <div class="garmin-setup-row"><span>Profile ID</span><code id="garminPid"></code><button onclick="copyText(activeProfileId, 'Profile ID copied')">Copy</button></div>
-        <div class="garmin-setup-row"><span>URL</span><code>https://macrotracker12.netlify.app/api/health-sync</code><button onclick="copyText('https://macrotracker12.netlify.app/api/health-sync', 'URL copied')">Copy</button></div>
-        <div class="garmin-setup-row"><span>Shortcut name</span><code>Log Health Sync</code></div>
-      </details>
+      <div class="garmin-more"><button onclick="runGarminSync(120)">Backfill 120 days from Garmin</button></div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -2543,7 +2531,7 @@ function updateSettingsSummary(s, g) {
   if (goalsHeader) goalsHeader.textContent = summary;
   document.getElementById('settingsResult').innerHTML = [
     ['Calories', `${g.cal.toLocaleString()} kcal`],
-    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg)` : g.tdeeSource === 'implausible' ? `TDEE (estimate — Garmin average of ${Number(g.tdeeDays).toLocaleString()} looks off, check the Shortcut)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
+    [g.tdeeSource === 'garmin' ? `TDEE (Garmin, ${g.tdeeDays}-day avg)` : g.tdeeSource === 'implausible' ? `TDEE (estimate — Garmin average of ${Number(g.tdeeDays).toLocaleString()} looks off; try Sync now on the Coach tab)` : ((s.targetMode || 'garmin') === 'garmin' ? 'TDEE (estimate — not enough Garmin data yet)' : 'TDEE (activity estimate)'), `${g.tdee.toLocaleString()} kcal`],
     ['Protein',  `${g.pro}g (1 g/lb bodyweight)`],
     ['Carbs',    `${g.carb}g`],
     ['Fat',      `${g.fat}g`],
@@ -4965,8 +4953,6 @@ function coachCacheKey() { return `coach_${activeProfileId}`; }
 // ── Garmin (Apple Health) ─────────────────────────────────────────
 function renderGarminCard() {
   const sub = document.getElementById('garminSub'), stats = document.getElementById('garminStats');
-  const pidEl = document.getElementById('garminPid');
-  if (pidEl) pidEl.textContent = activeProfileId || '';
   if (!sub || !stats) return;
   const rows = (_healthDaily || []).filter(r => r.date < todayStr()).sort((x, y) => x.date < y.date ? -1 : 1);
   if (!rows.length) { sub.textContent = 'Not synced yet. Tap Sync now'; stats.innerHTML = ''; return; }
@@ -5048,26 +5034,6 @@ function renderGarminReport(d) {
     <details class="g-rep-details"><summary>Sync report</summary>${Object.entries(d.report || {}).map(([k, r]) =>
       `<div class="g-rep-row"><b>${r.ok ? '✓' : '✗'} ${escapeHtml(k)}</b> · ${r.count || 0} item${r.count === 1 ? '' : 's'}${r.status && !r.ok ? ` · HTTP ${r.status}` : ''}${r.error ? ` · ${escapeHtml(r.error)}` : ''}<div class="g-rep-f">${escapeHtml((r.fields || []).join(', '))}</div></div>`).join('')}</details>`;
 }
-
-// Runs the iOS Shortcut (fallback while the Garmin API sync is being verified).
-// Passing "open" tells it to open Garmin Connect first.
-function runHealthSync() {
-  try { sessionStorage.setItem('healthSyncPending', String(Date.now())); } catch (_) {}
-  location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent('Log Health Sync') + '&input=text&text=open';
-}
-
-// Coming back to Lōg after the Shortcut ran: pull in the fresh data
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible' || !activeProfileId) return;
-  let t = 0; try { t = parseInt(sessionStorage.getItem('healthSyncPending') || '0'); } catch (_) {}
-  if (!t || Date.now() - t > 10 * 60000) return;
-  try { sessionStorage.removeItem('healthSyncPending'); } catch (_) {}
-  await Promise.all([loadHealthDailyFromServer(), loadExerciseFromServer()]);
-  if (_settings) applySettings(_settings);
-  renderGarminCard(); renderToday();
-  showToast('Garmin data updated');
-  maybeAutoRefreshCoach();
-});
 
 function coachNotesKey() { return `coachNotes_${activeProfileId}`; }
 let _coachNotesTimer = null;
