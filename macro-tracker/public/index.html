@@ -553,6 +553,11 @@
   .hday-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .hday-done { color: #1D9E75; } .hday-miss { color: var(--text-3); }
   .hday-empty { font-size: 13px; color: var(--text-3); padding: 14px 4px; }
+  .lib-dups { margin: 8px 0 12px; padding: 10px 12px; border-radius: 14px; background: rgba(55,138,221,0.07); }
+  .lib-dup { padding: 8px 0; border-top: 0.5px solid var(--border); font-size: 13px; }
+  .lib-keep span, .lib-drop span { font: 11px 'DM Mono', monospace; color: var(--text-3); margin-left: 4px; }
+  .lib-drop { color: var(--text-3); margin-top: 3px; }
+  .lib-dups .pill-btn { margin-top: 10px; height: 38px; width: 100%; }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -2135,7 +2140,7 @@ async function loadCustomFoodsFromServer() {
         isDrink: f.isDrink === true,
         servingLabel: f.servingLabel||'1 serving',
         verified: f.verified === true, source: f.source || '', sourceUrl: f.sourceUrl || '',
-        quality: f.quality || null, barcode: f.barcode || null };
+        quality: f.quality || null, barcode: f.barcode || null, aliases: Array.isArray(f.aliases) ? f.aliases : [] };
     });
     cacheSet('customFoods', _customFoods);
   } catch(e) {
@@ -2159,7 +2164,7 @@ async function saveCustomFood(food, silent = false) {
       satFat: food.satFat||0, sug: food.sug||0, sod: food.sod||0, fib: food.fib||0,
       servingLabel: food.servingLabel||'1 serving',
       verified: food.verified === true, source: food.source || '', sourceUrl: food.sourceUrl || '',
-      quality: food.quality || null, barcode: food.barcode || null
+      quality: food.quality || null, barcode: food.barcode || null, aliases: food.aliases || []
     }});
     await loadCustomFoodsFromServer();
     if (!silent) showToast(`"${food.name}" saved to My Foods`);
@@ -2309,6 +2314,15 @@ async function autoLearnCustomFood(food) {
   entry.sourceUrl = food.sourceUrl || (same ? prev?.sourceUrl : '') || '';
   entry.quality = food.quality || prev?.quality || null;   // keep ingredient data once known
   entry.barcode = food.barcode || prev?.barcode || null;
+  entry.aliases = prev?.aliases || [];
+  // Same product already in the library under another name, with an equal or
+  // better source? Don't make a second copy; remember this name as an alias.
+  const canon = libraryEntryFor(entry.name);
+  if (canon && canon.name.toLowerCase().trim() !== lc && libRank(canon) >= libRank(entry)) {
+    const known = [canon.name, ...(canon.aliases || [])].some(n => n.toLowerCase().trim() === lc);
+    if (!known) { try { await saveCustomFood({ ...canon, aliases: [...(canon.aliases || []), entry.name] }, true); } catch (_) {} }
+    return;
+  }
   // Update local copy: replace existing entry with same name, or append.
   const existingIdx = _customFoods.findIndex(f => f.name.toLowerCase() === lc);
   if (existingIdx !== -1) {
@@ -2773,10 +2787,67 @@ function isWholeFood(name) {
 }
 // Quality data comes from the food itself (fresh lookups), its library entry,
 // or whole-food recognition
+// "Sola Blueberry Bagel", "Sola Bagel Blueberry" and "Sola Blu-Berry Flavored
+// Bagels, Blu-Berry" are one product: same words once order, plurals, filler
+// ("flavored") and near-spellings ("bluberry") are ignored. Conservative: every
+// word on each side must match one on the other.
+const PRODUCT_FILLER = new Set('flavored flavor flavour the of with and a an original classic size pack'.split(' '));
+function productTokens(name) {
+  return [...new Set(String(name || '').toLowerCase().replace(/&/g, ' and ').replace(/-/g, '').replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/).filter(Boolean).map(w => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w))
+    .filter(w => !PRODUCT_FILLER.has(w)))];
+}
+function tokenMatch(a, b) {
+  if (a === b) return true;
+  if (a.length < 5 || b.length < 5) return false;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, edits = 0;                      // one-edit distance
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+function sameProduct(a, b) {
+  const A = productTokens(a), B = productTokens(b);
+  if (!A.length || !B.length) return false;
+  if (A.length === 1 || B.length === 1) return A.length === B.length && A[0] === B[0];
+  return A.every(x => B.some(y => tokenMatch(x, y))) && B.every(y => A.some(x => tokenMatch(x, y)));
+}
+// Which copy wins: barcode > label / package photo > verified > your edits > estimate (newest breaks ties)
+function libRank(f) {
+  if (f.barcode) return 4;
+  if (/label|package/i.test(`${f.source || ''} ${f.quality?.source || ''}`)) return 3;
+  if (f.verified) return /edited by you|confirmed by you/i.test(f.source || '') ? 1.5 : 2;
+  return 0;
+}
+function libraryGroups() {
+  const list = [...(_customFoods || [])], groups = [], used = new Set();
+  list.forEach(f => {
+    if (used.has(f.id)) return;
+    const g = list.filter(o => !used.has(o.id) && (o.id === f.id || sameProduct(f.name, o.name)));
+    g.forEach(o => used.add(o.id));
+    g.sort((x, y) => libRank(y) - libRank(x) || y.id - x.id);
+    groups.push(g);
+  });
+  return groups;
+}
+// The library with duplicates collapsed to their best copy
+function canonicalLibrary() { return libraryGroups().map(g => g[0]); }
+// The library entry for a name: exact name or alias, then the best copy of that product
+function libraryEntryFor(name) {
+  const lc = String(name || '').toLowerCase().trim(); if (!lc) return null;
+  const all = _customFoods || [];
+  const direct = all.find(f => f.name.toLowerCase().trim() === lc || (f.aliases || []).some(a => a.toLowerCase().trim() === lc));
+  const group = all.filter(f => (direct && f.id === direct.id) || sameProduct(name, f.name));
+  return group.sort((x, y) => libRank(y) - libRank(x) || y.id - x.id)[0] || direct || null;
+}
+
 function qualityDataFor(food) {
   if (food.quality) return food.quality;
-  const lc = (food.name || '').toLowerCase().trim();
-  const lib = (_customFoods || []).find(f => f.name.toLowerCase().trim() === lc)?.quality;
+  const lib = libraryEntryFor(food.name)?.quality;
   if (lib) return lib;
   if (isWholeFood(food.name)) return { nova: 1, additives: [], source: 'whole food (recognized by name)', inferred: true };
   if (isFreshJuice(food.name)) return { nova: 1, additives: [], source: 'fresh juice (recognized by name)', inferred: true };
@@ -3902,7 +3973,7 @@ function findInternalFood(query) {
   const q = foodTokens(rest);
   if (!q.length) return null;
   let best = null, bestScore = 0;
-  for (const f of _customFoods) {
+  for (const f of canonicalLibrary()) {
     if (!f.verified) continue; // older memory-based estimates get looked up properly instead
     const n = foodTokens(f.name);
     if (!n.length) continue;
@@ -3922,7 +3993,7 @@ function findSimilarFoods(text, limit = 3) {
   if (!_customFoods?.length || !text) return [];
   const q = foodTokens(parseQuantity(text.toLowerCase()).rest);
   if (q.length < 2) return [];
-  return _customFoods.filter(f => f.verified).map(f => {
+  return canonicalLibrary().filter(f => f.verified).map(f => {
     const n = foodTokens(f.name);
     const shared = q.filter(w => n.includes(w)).length;
     const sameBrand = n[0] && q[0] === n[0];
@@ -4048,14 +4119,43 @@ function useAlternative(i) {
 }
 
 // ── Food library check: re-verify older estimate entries ──
+// Merge each group into its best copy: keep that copy's numbers, fill in a
+// missing barcode / ingredient data from the others, remember their names as
+// aliases (so foods already logged under them still find their data), and
+// delete the rest.
+async function mergeLibraryDuplicates() {
+  const groups = libraryGroups().filter(g => g.length > 1);
+  if (!groups.length) return;
+  const btn = document.getElementById('libMergeBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Merging…'; }
+  let removed = 0;
+  try {
+    for (const g of groups) {
+      const [keep, ...rest] = g;
+      const aliases = [...new Set([...(keep.aliases || []), ...rest.flatMap(r => [r.name, ...(r.aliases || [])])])].filter(n => n.toLowerCase() !== keep.name.toLowerCase());
+      await saveCustomFood({ ...keep, barcode: keep.barcode || rest.find(r => r.barcode)?.barcode || null,
+        quality: keep.quality || rest.find(r => r.quality)?.quality || null, aliases }, true);
+      for (const r of rest) { await api(`custom-foods?id=${r.id}`, { method: 'DELETE' }); removed++; }
+    }
+    await loadCustomFoodsFromServer();
+    showToast(`Merged ${groups.length} product${groups.length === 1 ? '' : 's'} · removed ${removed} duplicate${removed === 1 ? '' : 's'}`);
+  } catch (e) { showToast('Merge stopped: ' + String(e.message || '').slice(0, 80)); await loadCustomFoodsFromServer(); }
+  renderLibraryCheck();
+}
+
 function renderLibraryCheck() {
   const goals = document.getElementById('view-goals'); if (!goals) return;
   let card = document.getElementById('libraryCheck');
   if (!card) { card = document.createElement('div'); card.id = 'libraryCheck'; card.className = 'card'; goals.appendChild(card); }
   const all = _customFoods || [], est = all.filter(f => !f.verified);
   const ver = all.length - est.length;
+  const dupGroups = libraryGroups().filter(g => g.length > 1);
+  const why = f => f.barcode ? 'barcode' : /label|package/i.test(`${f.source || ''} ${f.quality?.source || ''}`) ? 'label photo' : f.verified ? 'verified' : 'estimate';
   card.innerHTML = `<div class="section-title">Food library</div>
-    <div class="lib-sum">${ver} verified · ${est.length} older estimate${est.length === 1 ? '' : 's'}</div>
+    <div class="lib-sum">${ver} verified · ${est.length} older estimate${est.length === 1 ? '' : 's'}${dupGroups.length ? ` · ${dupGroups.length} with duplicates` : ''}</div>
+    ${dupGroups.length ? `<div class="lib-dups"><div class="lib-hint">The same product saved under different names. Merging keeps the best copy (barcode, then label photo, then verified) and remembers the other names, so past logs still find it.</div>
+      ${dupGroups.slice(0, 12).map(g => `<div class="lib-dup"><div class="lib-keep">Keep: <b>${escapeHtml(g[0].name)}</b> <span>${why(g[0])} · ${g[0].cal} kcal · ${g[0].pro}g P</span></div>
+        ${g.slice(1).map(r => `<div class="lib-drop">Merge: ${escapeHtml(r.name)} <span>${why(r)} · ${r.cal} kcal · ${r.pro}g P</span></div>`).join('')}</div>`).join('')}
+      <button class="pill-btn" id="libMergeBtn" onclick="mergeLibraryDuplicates()">Merge ${dupGroups.length} product${dupGroups.length === 1 ? '' : 's'}</button></div>` : ''}
     ${est.length ? `<div class="lib-hint">These were saved from memory-based lookups before Lōg checked real sources. <b>Check all</b> runs each one against USDA, Open Food Facts and the web (about a cent each): clear matches with a source are updated automatically, and anything uncertain is left below for you.</div>
     <div class="lib-all"><button class="pill-btn" id="libAllBtn" onclick="checkAllLibrary()">Check all ${est.length}</button><span id="libAllStatus" class="lib-wait"></span></div>` : '<div class="lib-hint">Everything in your library is backed by a label or a cited source.</div>'}
     <div id="libList">${est.slice(0, 40).map(f => `<div class="lib-row" id="lib-${f.id}">
@@ -6343,15 +6443,16 @@ function renderFoodDbDropdown(query) {
     return;
   }
   // Score: exact name start = 3, contains = 2, word match = 1
-  const scored = _customFoods.map(f => {
-    const n = f.name.toLowerCase();
+  const canon = canonicalLibrary();
+  const scored = canon.map(f => {
+    const n = [f.name, ...(f.aliases || [])].join(' | ').toLowerCase();
     let score = 0;
     if (n.startsWith(query)) score = 3;
     else if (n.includes(query)) score = 2;
     else if (query.split(/\s+/).some(w => w.length > 2 && n.includes(w))) score = 1;
     return { f, score };
   }).filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score || _customFoods.indexOf(b.f) - _customFoods.indexOf(a.f))
+    .sort((a, b) => b.score - a.score || libRank(b.f) - libRank(a.f) || b.f.id - a.f.id)
     .slice(0, 8);
 
   if (!scored.length) {

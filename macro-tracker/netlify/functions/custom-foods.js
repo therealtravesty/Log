@@ -138,6 +138,8 @@ exports.handler = async (event) => {
               source: String(body.quality.source || '').slice(0, 80),
             } : null,
             barcode: /^\d{6,14}$/.test(String(body.barcode || '')) ? String(body.barcode) : null,
+            // Other names this same product was saved under (kept after merging duplicates)
+            aliases: Array.isArray(body.aliases) ? [...new Set(body.aliases.map(a => String(a).slice(0, 120)).filter(Boolean))].slice(0, 20) : [],
           }],
         };
       }
