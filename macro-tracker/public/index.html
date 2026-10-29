@@ -558,6 +558,20 @@
   .lib-keep span, .lib-drop span { font: 11px 'DM Mono', monospace; color: var(--text-3); margin-left: 4px; }
   .lib-drop { color: var(--text-3); margin-top: 3px; }
   .lib-dups .pill-btn { margin-top: 10px; height: 38px; width: 100%; }
+  /* ── Typing mode in the add-food sheet ── */
+  .food-db-inline { margin-top: 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+  .sheet-typing-bar { display: none; align-items: center; justify-content: space-between; padding: 0 18px 8px; font-size: 13px; color: var(--text-2); }
+  .sheet-typing-bar button { border: none; background: none; font: 600 14px 'DM Sans', system-ui, sans-serif; color: var(--blue); padding: 4px 0; cursor: pointer; }
+  .log-sheet.typing .sheet-typing-bar { display: flex; }
+  .log-sheet.typing .sheet-head, .log-sheet.typing .sheet-seg { display: none; }
+  .log-sheet.typing .search-hint, .log-sheet.typing #imageScanHint { display: none; }
+  .log-sheet.typing .search-textarea { min-height: 44px; }
+  .srv-chip { flex-shrink: 0; min-width: 34px; height: 26px; padding: 0 6px; margin-right: 10px; border-radius: 13px; border: 0.5px solid var(--border-med); background: transparent; color: var(--text-3); font: 600 12px 'DM Mono', monospace; cursor: pointer; }
+  .srv-chip.multi { color: var(--text); background: rgba(55,138,221,0.12); border-color: rgba(55,138,221,0.35); }
+  .srv-stepper { position: fixed; z-index: 480; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); }
+  .srv-stepper button { width: 36px; height: 32px; border: none; border-radius: 16px; background: transparent; font: 600 18px 'DM Sans', system-ui, sans-serif; color: var(--text); cursor: pointer; }
+  .srv-stepper span { min-width: 40px; text-align: center; font: 600 14px 'DM Mono', monospace; }
+  .srv-stepper .srv-done { width: auto; padding: 0 12px; font-size: 13px; color: var(--blue); }
   /* Tab slide animation */
   .views-container { position: relative; overflow: hidden; }
   .view { display: none; }
@@ -1498,6 +1512,7 @@
   <div class="sheet-backdrop" id="logSheetBackdrop" onclick="closeLogSheet()"></div>
   <div class="log-sheet glass" id="logSheet" role="dialog" aria-modal="true" aria-label="Add food">
     <div class="sheet-grab-zone" id="sheetGrab"><div class="sheet-grab"></div></div>
+    <div class="sheet-typing-bar" id="sheetTypingBar"><span id="sheetTypingMeal">Adding to Breakfast</span><button onmousedown="event.preventDefault()" onclick="document.getElementById('searchInput').blur()">Done</button></div>
     <div class="sheet-head">
       <div class="sheet-title">Add to</div>
       <div class="meal-tabs meal-chips" id="mealTabs">
@@ -1525,9 +1540,10 @@
         
         <div class="search-wrap">
           <div style="position:relative;flex:1;display:flex;">
-            <textarea id="searchInput"class="search-textarea"placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..." style="width:100%;padding-right:28px;" oninput="document.getElementById('searchClearBtn').style.display=this.value?'block':'none'"></textarea>
+            <textarea id="searchInput" class="search-textarea" autocomplete="off" name="food-search" enterkeyhint="search" rows="3" placeholder="e.g. 2 scrambled eggs with toast, grilled salmon 6oz, protein shake with banana, Chipotle burrito bowl..." style="width:100%;padding-right:28px;" oninput="document.getElementById('searchClearBtn').style.display=this.value?'block':'none'"></textarea>
             <button onclick="clearSearchInput()" id="searchClearBtn" style="display:none;position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;">×</button>
           </div>
+          <div id="foodDbDropdown" class="food-db-inline" style="display:none;"></div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
             <button class="lookup-btn"id="lookupBtn"onclick="lookupFood()">Look up</button>
             
@@ -1543,9 +1559,7 @@
           <span id="imageScanHint" style="display:none;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;">Analysing image...</span>
         </div>
         <div class="search-hint">Include quantity and prep for best accuracy. Press Enter to look up.</div>
-        <div style="position:relative;height:0;">
-          <div id="foodDbDropdown" style="display:none;position:absolute;top:4px;left:0;right:0;z-index:50;border:0.5px solid var(--border-med);border-radius:var(--radius);background:var(--surface);max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.12);"></div>
-        </div>
+
         
       </div>
       </div>
@@ -3029,6 +3043,70 @@ async function repeatMeal(meal, btn) {
     showToast(`Added ${src.foods.length} item${src.foods.length === 1 ? '' : 's'} from ${src.label}`);
     if (btn) { btn.textContent = 'Added ✓'; btn.classList.add('done'); btn.disabled = true; }
   } catch (e) { showToast('Could not add — try again'); }
+}
+
+// ── Servings: the chip on each logged entry, with a quick − / + stepper ──
+function fmtServings(m) {
+  m = Number(m) || 1;
+  const frac = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+  const whole = Math.floor(m), rest = Math.round((m - whole) * 100) / 100;
+  if (frac[rest] !== undefined) return (whole ? whole : '') + frac[rest];
+  return String(Math.round(m * 100) / 100);
+}
+const SERVING_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+let _stepper = null; // { id, mult, orig }
+function openServingStepper(id, chip) {
+  closeServingStepper();
+  const f = getActiveFoods().find(x => x.id === id); if (!f) return;
+  const r = chip.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.id = 'servingStepper'; el.className = 'srv-stepper glass';
+  el.innerHTML = `<button aria-label="Fewer" onclick="stepServings(-1)">−</button><span id="srvVal"></span><button aria-label="More" onclick="stepServings(1)">+</button><button class="srv-done" onclick="closeServingStepper(true)">Done</button>`;
+  document.body.appendChild(el);
+  el.style.top = Math.max(8, r.top - 6) + 'px'; el.style.left = Math.max(8, r.left - 6) + 'px';
+  _stepper = { id, mult: Number(f.servingMult) || 1, orig: Number(f.servingMult) || 1 };
+  paintStepper();
+  setTimeout(() => document.addEventListener('pointerdown', stepperOutside, true), 0);
+}
+function stepperOutside(e) { if (!e.target.closest('#servingStepper')) closeServingStepper(true); }
+function stepServings(dir) {
+  if (!_stepper) return;
+  const m = _stepper.mult;
+  const next = dir > 0 ? SERVING_STEPS.find(v => v > m + 1e-9) : [...SERVING_STEPS].reverse().find(v => v < m - 1e-9);
+  if (next != null) { _stepper.mult = next; paintStepper(); }
+}
+// Live preview on the row while stepping (saved when the stepper closes)
+function paintStepper() {
+  const f = getActiveFoods().find(x => x.id === _stepper.id); if (!f) return;
+  const k = _stepper.mult / (Number(f.servingMult) || 1);
+  document.getElementById('srvVal').textContent = `${fmtServings(_stepper.mult)}×`;
+  const row = document.getElementById(`food-item-${f.id}`); if (!row) return;
+  row.querySelector('.srv-chip').textContent = `${fmtServings(_stepper.mult)}×`;
+  row.querySelector('.food-row-nums').innerHTML = `<b>${Math.round(f.cal * k)}</b> kcal<br>${Math.round(f.pro * k)}g P`;
+}
+async function closeServingStepper(save) {
+  document.removeEventListener('pointerdown', stepperOutside, true);
+  document.getElementById('servingStepper')?.remove();
+  const st = _stepper; _stepper = null;
+  if (!st || !save || Math.abs(st.mult - st.orig) < 1e-9) { if (st) renderToday(); return; }
+  await applyServings(st.id, st.mult);
+}
+async function applyServings(id, mult) {
+  const food = getActiveFoods().find(f => f.id === id); if (!food) return;
+  const old = Number(food.servingMult) || 1;
+  const base = k => (food['base' + k[0].toUpperCase() + k.slice(1)] ?? (Number(food[k]) || 0) / old);
+  const updated = { ...food, servingMult: mult };
+  ['cal', 'pro', 'carb', 'fat', 'satFat', 'sug', 'sod', 'fib'].forEach(k => {
+    const b = base(k); updated[k] = Math.round(b * mult);
+    updated['base' + k[0].toUpperCase() + k.slice(1)] = Math.round(b);
+  });
+  delete updated.dbId;
+  try {
+    await removeFood(food);
+    await addFood({ ...updated, id: Date.now() }, food.meal);
+    renderToday();
+    showToast(`${food.name.length > 28 ? food.name.slice(0, 28) + '…' : food.name}: ${fmtServings(mult)}×${food.isDrink ? ` · ${drinkTotal(getActiveFoods())} drinks today` : ''}`);
+  } catch (e) { showToast('Could not update servings'); renderToday(); }
 }
 
 // ── Move a food to another meal ──
@@ -4587,14 +4665,18 @@ function renderFoodResult(food, servingLabel, sourceText, isInternal) {
   });
 }
 
+// A drink entry counts as its servings: 2 glasses of wine = 2 drinks
+const drinkUnits = f => (f && f.isDrink ? (Number(f.servingMult) || 1) : 0);
+const drinkTotal = foods => Math.round((foods || []).reduce((a, f) => a + drinkUnits(f), 0) * 2) / 2;
 function renderDrinkCount() {
   const drinks = (getActiveFoods()).filter(f => f.isDrink);
+  const total = drinkTotal(drinks);
   const pill  = document.getElementById('drinkCountPill');
   const label = document.getElementById('drinkCountLabel');
   if (!pill || !label) return;
   if (drinks.length > 0) {
     pill.style.display = 'flex';
-    label.textContent = `${drinks.length} drink${drinks.length !== 1 ? 's' : ''}`;
+    label.textContent = `${total} drink${total !== 1 ? 's' : ''}`;
   } else {
     pill.style.display = 'none';
   }
@@ -4604,12 +4686,12 @@ function showDrinksModal() {
   const drinks = getActiveFoods().filter(f => f.isDrink);
   if (!drinks.length) { showToast('No drinks logged today'); return; }
 
-  document.getElementById('macroBreakdownTitle').textContent = `Drinks logged today (${drinks.length})`;
+  document.getElementById('macroBreakdownTitle').textContent = `Drinks logged today (${drinkTotal(drinks)})`;
   document.getElementById('macroBreakdownBody').innerHTML = drinks.map(d => `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name}</div>
-        <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:1px;">${d.cal} kcal · ${d.meal || 'uncategorized'}</div>
+        <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:1px;">${(d.servingMult || 1) !== 1 ? `${fmtServings(d.servingMult)}× · ` : ''}${d.cal} kcal · ${d.meal || 'uncategorized'}</div>
       </div>
       <button onclick="unflagDrink(${d.id})" title="Remove from drinks" style="background:var(--red-bg);color:var(--red-text);border:none;border-radius:6px;width:28px;height:28px;font-size:16px;font-weight:500;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">×</button>
     </div>`).join('');
@@ -5586,9 +5668,10 @@ function renderToday() {
         ${mf.length ? mf.map(f=>`<div class="food-swipe" data-id="${f.id}">
           <button class="food-del" onclick="delFood(${f.id})">Delete</button>
           <div class="food-row" id="food-item-${f.id}" onclick="onFoodRowTap(${f.id})">
+            <button class="srv-chip${(f.servingMult || 1) !== 1 ? ' multi' : ''}" onclick="event.stopPropagation(); openServingStepper(${f.id}, this)" aria-label="Servings">${fmtServings(f.servingMult || 1)}×</button>
             <div class="food-row-main">
               <div class="food-row-name">${escapeHtml(f.name)}</div>
-              <div class="food-row-sub">${f.servingMult && f.servingMult !== 1 ? `${f.servingMult}× ${escapeHtml(f.servingLabel || 'serving')} · ` : ''}${f.carb}g C · ${f.fat}g F</div>
+              <div class="food-row-sub">${f.servingLabel && !/^1 serving$/i.test(f.servingLabel) ? `${escapeHtml(f.servingLabel)} · ` : ''}${f.carb}g C · ${f.fat}g F</div>
             </div>
             <div class="food-row-nums"><b>${f.cal}</b> kcal<br>${f.pro}g P</div>
             ${qualityBadge(f, f.id)}
@@ -6240,7 +6323,7 @@ function renderHistChart(w) {
   // ── Drinks: total per bucket ──
   else {
     titleEl.textContent = 'Drinks';
-    const count = d => (_allFoods[d] || []).filter(f => f.isDrink).length;
+    const count = d => drinkTotal(_allFoods[d] || []);
     const data = w.buckets.map(b => b.days.reduce((a, d) => a + count(d), 0));
     const total = data.reduce((a, b) => a + b, 0);
     const weeks = Math.max(1, w.days.length / 7);
@@ -6428,6 +6511,27 @@ function bindFoodDbDropdown() {
   });
 }
 bindFoodDbDropdown();
+
+// ── Typing mode (Describe) ──
+// While the keyboard is up, the meal chips and tabs collapse to one slim line
+// and the text box shrinks to a single line that grows as you type, so the
+// matches sit right under it, above the keyboard.
+(function () {
+  const input = document.getElementById('searchInput'), sheet = document.getElementById('logSheet');
+  if (!input || !sheet) return;
+  const fit = () => { if (!sheet.classList.contains('typing')) { input.rows = 3; input.style.height = ''; return; }
+    input.rows = 1; input.style.height = 'auto'; input.style.height = Math.min(120, Math.max(44, input.scrollHeight)) + 'px'; };
+  input.addEventListener('focus', () => {
+    const meal = document.querySelector('#mealTabs .meal-tab.active')?.textContent || '';
+    document.getElementById('sheetTypingMeal').textContent = meal ? `Adding to ${meal}` : 'Describe what you ate';
+    sheet.classList.add('typing'); fit();
+    const q = input.value.trim().toLowerCase(); if (q.length >= 2) renderFoodDbDropdown(q);
+  });
+  input.addEventListener('blur', () => setTimeout(() => {
+    if (document.activeElement !== input) { sheet.classList.remove('typing'); fit(); }
+  }, 180));
+  input.addEventListener('input', fit);
+})();
 
 function hideFoodDbDropdown() {
   const el = document.getElementById('foodDbDropdown');

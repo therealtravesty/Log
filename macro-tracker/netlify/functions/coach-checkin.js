@@ -182,7 +182,8 @@ exports.handler = async (event) => {
     const hm = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
     const last7Sleep = health.filter(h => h.date >= addDays(today, -7) && h.date <= yest && h.sleep_min).map(h => h.sleep_min);
     const sleepRange = last7Sleep.length >= 3 ? Math.max(...last7Sleep) - Math.min(...last7Sleep) : null;
-    const drinks7 = (foodRows || []).filter(r => r.is_drink && r.date >= addDays(today, -6) && r.date <= today).length;
+    // A drink entry counts as its servings (2 glasses = 2 drinks)
+    const drinks7 = Math.round((foodRows || []).filter(r => r.is_drink && r.date >= addDays(today, -6) && r.date <= today).reduce((a, r) => a + (Number(r.serving_mult) || 1), 0) * 2) / 2;
     const recoveryLines = [
       last7Sleep.length >= 3 ? `- Sleep consistency (last 7 nights): shortest ${hm(Math.min(...last7Sleep))}, longest ${hm(Math.max(...last7Sleep))} (a ${hm(sleepRange)} swing); 7h+ on ${last7Sleep.filter(m => m >= 420).length} of ${last7Sleep.length}` : null,
       `- Alcoholic drinks logged: ${drinks7} in the last 7 days`,
@@ -227,7 +228,7 @@ exports.handler = async (event) => {
       const ds = Object.keys(byDate).filter(d => d >= addDays(today, -(n - 1)));
       if (!ds.length) return { days: 0 };
       const t = sumMacros(ds.flatMap(d => byDate[d]));
-      return { days: ds.length, cal: Math.round(t.cal / ds.length), pro: Math.round(t.pro / ds.length), carb: Math.round(t.carb / ds.length), fat: Math.round(t.fat / ds.length), sug: Math.round(t.sug / ds.length), drinks: ds.flatMap(d => byDate[d]).filter(r => r.is_drink).length };
+      return { days: ds.length, cal: Math.round(t.cal / ds.length), pro: Math.round(t.pro / ds.length), carb: Math.round(t.carb / ds.length), fat: Math.round(t.fat / ds.length), sug: Math.round(t.sug / ds.length), drinks: Math.round(ds.flatMap(d => byDate[d]).filter(r => r.is_drink).reduce((a, r) => a + (Number(r.serving_mult) || 1), 0) * 2) / 2 };
     };
     const f7 = foodWindow(7), f30 = foodWindow(30);
     const vsGoal = (v, goal, unit) => goal ? `${v}${unit}/day (target ${goal}${unit}, ${signed(v - goal)})` : `${v}${unit}/day`;
