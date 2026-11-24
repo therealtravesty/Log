@@ -929,6 +929,9 @@
   .zone-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0 4px; font-size: 11px; color: var(--text-2); font-family: 'DM Mono', monospace; }
   .zone-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
   .lift-session { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; margin-bottom: 6px; background: var(--bg); border-radius: var(--radius); cursor: pointer; }
+  .lift-recents-toggle { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 8px 0; background: none; border: none; border-top: 0.5px solid var(--border); cursor: pointer; font: 500 11px 'DM Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; }
+  .lift-chev { font-size: 14px; transition: transform 0.2s; }
+  .lift-chev.open { transform: rotate(180deg); }
   .cardio-src { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--bg); color: var(--text-3); border: 0.5px solid var(--border-med); font-weight: 400; }
 </style>
 </head>
@@ -7756,11 +7759,21 @@ function renderLiftRecents() {
     el.innerHTML = q ? '' : routines + '<div class="empty-msg" style="padding:4px 0;">Exercises you log will show up here for one-tap logging.</div>';
     return;
   }
-  el.innerHTML = routines + `<div class="section-title" style="margin-bottom:2px;">${q ? 'Matches' : 'Recent exercises'}</div>` +
+  let open = true;
+  if (!q) { try { open = localStorage.getItem('liftRecentsOpen') === '1'; } catch (_) { open = false; } }
+  const head = q ? '<div class="section-title" style="margin-bottom:2px;">Matches</div>'
+    : `<button class="lift-recents-toggle" onclick="toggleLiftRecents()" aria-expanded="${open}"><span>Recent exercises · ${list.length}</span><span class="lift-chev${open ? ' open' : ''}">▾</span></button>`;
+  if (!open) { el.innerHTML = routines + head; return; }
+  el.innerHTML = routines + head +
     list.map((l, i) => `<div class="lift-recent" onclick="pickLiftRecent(${i})">
       <div style="min-width:0;"><div class="lift-item-name">${escapeHtml(l.exercise)}</div>
       <div class="lift-item-sub">Last: ${liftFmt(l)} · ${liftAgo(l.date)}</div></div>
       <span style="color:var(--text-3);font-size:20px;line-height:1;">+</span></div>`).join('');
+}
+
+function toggleLiftRecents() {
+  try { localStorage.setItem('liftRecentsOpen', localStorage.getItem('liftRecentsOpen') === '1' ? '0' : '1'); } catch (_) {}
+  renderLiftRecents();
 }
 
 function pickLiftRecent(i) {
