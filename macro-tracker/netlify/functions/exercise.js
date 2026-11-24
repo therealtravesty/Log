@@ -23,6 +23,22 @@ exports.handler = async (event) => {
       return ok(result);
     }
 
+    // Details Garmin can't know (treadmill speed/incline, machine level).
+    // Kept in their own column so Garmin syncs never overwrite them.
+    if (method === 'PATCH') {
+      const { id } = params;
+      if (!id) return err('Missing id', 400);
+      const body = JSON.parse(event.body || '{}');
+      const d = body.details && typeof body.details === 'object' ? body.details : {};
+      const num = (v, lo, hi) => { const n = parseFloat(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 10) / 10 : null; };
+      const details = { speed_mph: num(d.speed_mph, 0.5, 20), incline_pct: num(d.incline_pct, -5, 40), level: num(d.level, 1, 40) };
+      Object.keys(details).forEach(k => details[k] == null && delete details[k]);
+      const result = await query(`exercise_logs?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH', body: JSON.stringify({ details: Object.keys(details).length ? details : null }), prefer: 'return=representation',
+      });
+      return ok(result);
+    }
+
     if (method === 'DELETE') {
       const { id } = params;
       if (!id) return err('Missing id', 400);

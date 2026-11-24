@@ -52,6 +52,34 @@ async function gget(path, params) {
 }
 
 // ── Helpers ──
+// Per-workout performance numbers from Garmin's activity summary. Field names
+// vary, so each is read from a list of likely names; anything missing is left out.
+function activityStats(a) {
+  const n = names => { const v = Number(pick(a, names)); return Number.isFinite(v) && v > 0 ? v : null; };
+  const r1 = v => (v == null ? null : Math.round(v * 10) / 10);
+  const st = {
+    distance_m: n(['distance', 'distanceInMeters']),
+    avg_speed: n(['averageSpeed', 'avgSpeed']),            // m/s
+    max_speed: n(['maxSpeed']),
+    avg_hr: n(['averageHR', 'averageHeartRate', 'avgHr', 'averageHeartRateInBeatsPerMinute']),
+    max_hr: n(['maxHR', 'maxHeartRate', 'maxHeartRateInBeatsPerMinute']),
+    elev_gain_m: n(['elevationGain', 'totalElevationGain', 'totalElevationGainInMeters']),
+    aerobic_te: n(['aerobicTrainingEffect', 'trainingEffect']),
+    anaerobic_te: n(['anaerobicTrainingEffect']),
+    load: n(['activityTrainingLoad', 'trainingLoad']),
+    vo2max: n(['vO2MaxValue', 'vo2MaxValue', 'vo2Max']),
+    cadence: n(['averageRunningCadenceInStepsPerMinute', 'averageBikingCadenceInRevPerMinute', 'averageCadence', 'avgCadence']),
+    power: n(['avgPower', 'averagePower', 'averagePowerInWatts']),
+    steps: n(['steps', 'totalSteps']),
+    floors: n(['floorsClimbed']),
+    sets: n(['activeSets', 'totalSets']),
+    reps: n(['totalReps']),
+  };
+  const zones = [1, 2, 3, 4, 5].map(i => n([`hrTimeInZone_${i}`]) || 0);
+  if (zones.some(z => z > 0)) st.hr_zones = zones.map(z => Math.round(z));
+  Object.keys(st).forEach(k => { if (st[k] == null) delete st[k]; else if (typeof st[k] === 'number') st[k] = /speed/.test(k) ? Math.round(st[k] * 1000) / 1000 : r1(st[k]); });
+  return Object.keys(st).length ? st : null;
+}
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
 function chunks(start, end, size = 28) {
@@ -206,7 +234,7 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
   } catch (e) { report.weight = { ...(report.weight || {}), error: e.message.slice(0, 160) }; }
 
   // Workouts: skip any the Shortcut already saved (same start time ±2 min)
-  let workoutsAdded = 0, skippedShortcut = 0, refreshed = 0, dupesRemoved = 0; const dupes = [];
+  let workoutsAdded = 0, replacedShortcut = 0, refreshed = 0, dupesRemoved = 0; const shortcutDrop = new Set();
   try {
     const acts = [];
     for (let start = 0; start < 400; start += 100) {
@@ -215,34 +243,40 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       if (start === 0) note('activities', ar, al);
       acts.push(...al); if (al.length < 100) break;
     }
-    const existing = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=health_id,source`)) || [];
+    const existing = (await sb(`exercise_logs?profile_id=eq.${profileId}&date=gte.${startDate}&date=lte.${endDate}&select=id,health_id,source`)) || [];
     const haveGarmin = new Set(existing.map(r => String(r.health_id || '')).filter(h => h.startsWith('garmin:')));
     const taken = existing.filter(r => r.health_id && !String(r.health_id).startsWith('garmin:'))
-      .map(r => { const m = String(r.health_id).match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/); return m ? new Date(`${m[1]}T${m[2]}:${m[3]}:00`).getTime() : null; }).filter(Boolean);
+      .map(r => { const m = String(r.health_id).match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/); return m ? { id: r.id, t: new Date(`${m[1]}T${m[2]}:${m[3]}:00`).getTime() } : null; }).filter(Boolean);
     const title = s => String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const rows = acts.map(a => {
       const id = pick(a, ['activityId', 'id']); const startLocal = String(pick(a, ['startTimeLocal', 'startTime', 'beginTimestamp']) || '');
       const m = startLocal.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/);
       if (!id || !m) return null;
       const t = new Date(`${m[1]}T${m[2]}:${m[3]}:00`).getTime();
-      if (taken.some(x => Math.abs(x - t) <= 120000)) { // already saved by the Shortcut
-        skippedShortcut++;
-        if (haveGarmin.has(`garmin:${id}`)) dupes.push(`garmin:${id}`); // a copy slipped in earlier: remove it
-        return null;
-      }
+      // Also saved by the old Shortcut? Keep the Garmin API copy (it has the
+      // performance stats) and remove the Shortcut's copy once this one is saved.
+      const hits = taken.filter(x => Math.abs(x.t - t) <= 120000);
+      if (hits.length) { if (!haveGarmin.has(`garmin:${id}`)) replacedShortcut++; hits.forEach(h => shortcutDrop.add(h.id)); }
       if (haveGarmin.has(`garmin:${id}`)) refreshed++;
       const type = title(pick(a, ['activityType.typeKey', 'activityTypeDTO.typeKey', 'activityType']) || 'workout');
       const secs = Number(pick(a, ['movingDuration', 'duration', 'elapsedDuration']) || 0);
       return { profile_id: profileId, date: m[1], name: String(pick(a, ['activityName']) || type).slice(0, 80),
         calories_burned: Math.round(Number(pick(a, ['calories', 'activeKilocalories']) || 0)), source: 'garmin',
-        health_id: `garmin:${id}`, sport_type: type, trainer: null, moving_time: secs ? Math.round(secs) : null };
+        health_id: `garmin:${id}`, sport_type: type, trainer: null, moving_time: secs ? Math.round(secs) : null,
+        stats: activityStats(a) };
     }).filter(Boolean);
-    if (rows.length) await sb('exercise_logs?on_conflict=profile_id,health_id', { method: 'POST', body: JSON.stringify(rows), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
-    workoutsAdded = rows.length - refreshed;
-    for (let i = 0; i < dupes.length; i += 50) {
-      const ids = dupes.slice(i, i + 50).map(h => `"${h}"`).join(',');
-      await sb(`exercise_logs?profile_id=eq.${profileId}&health_id=in.(${encodeURIComponent(ids)})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
-      dupesRemoved += Math.min(50, dupes.length - i);
+    if (rows.length) {
+      const up = body => sb('exercise_logs?on_conflict=profile_id,health_id', { method: 'POST', body: JSON.stringify(body), headers: { Prefer: 'resolution=merge-duplicates,return=minimal' } });
+      try { await up(rows); }
+      catch (e) { // stats column not added yet: save workouts without it
+        if (!/stats/i.test(e.message)) throw e;
+        await up(rows.map(({ stats, ...r }) => r)); report.workoutStats = { ok: false, error: 'Run the SQL to add exercise_logs.stats' };
+      }
+    }
+    workoutsAdded = rows.length - refreshed - replacedShortcut;
+    const dropIds = [...shortcutDrop];
+    for (let i = 0; i < dropIds.length; i += 50) {
+      await sb(`exercise_logs?profile_id=eq.${profileId}&id=in.(${dropIds.slice(i, i + 50).join(',')})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     }
     // Same workout saved twice (e.g. by the Shortcut and the Garmin API, or by
     // an earlier sync)? Same day + duration within 3 min + calories within 5%
@@ -265,7 +299,7 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       await sb(`exercise_logs?profile_id=eq.${profileId}&id=in.(${ids.slice(i, i + 50).join(',')})`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     }
     dupesRemoved += ids.length;
-    report.workouts = { ok: true, count: acts.length, fields: [`${workoutsAdded} new`, `${skippedShortcut} already saved by the Shortcut`, `${refreshed} already synced from Garmin`, ...(dupesRemoved ? [`${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'} removed`] : [])] };
+    report.workouts = { ok: true, count: acts.length, fields: [`${Math.max(0, workoutsAdded)} new`, `${replacedShortcut} Shortcut cop${replacedShortcut === 1 ? 'y' : 'ies'} replaced with Garmin's`, `${rows.filter(r => r.stats).length} with performance stats`, `${refreshed} already synced from Garmin`, ...(dupesRemoved ? [`${dupesRemoved} duplicate${dupesRemoved === 1 ? '' : 's'} removed`] : [])] };
   } catch (e) { report.activities = { ...(report.activities || {}), error: e.message.slice(0, 160) }; }
 
   // Save daily rows (PostgREST bulk upserts need identical keys per batch)

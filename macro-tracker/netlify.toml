@@ -19,6 +19,9 @@
 [functions."exercise-lookup"]
   timeout = 26
 
+[functions."lift-lookup"]
+  timeout = 26
+
 # Barcode may fall back to a web lookup for the official product page
 [functions."barcode"]
   timeout = 26

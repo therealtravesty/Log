@@ -96,7 +96,7 @@ exports.handler = async (event) => {
     const pid = encodeURIComponent(profile_id);
     const since = addDays(today, -120);
     const safe = p => sb(p).catch(e => { console.warn('[coach] fetch failed:', p, e.message); return []; });
-    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogRows, healthRows] = await Promise.all([
+    const [foodRows, weightRows, exerciseRows, settingsRows, habitsRows, habitLogRows, healthRows, liftRows, routineRows] = await Promise.all([
       safe(`food_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
       safe(`weights?profile_id=eq.${pid}&order=date.asc&limit=100000`),
       safe(`exercise_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
@@ -104,6 +104,8 @@ exports.handler = async (event) => {
       safe(`habits?profile_id=eq.${pid}&order=sort_order.asc`),
       safe(`habit_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc&limit=100000`),
       safe(`health_daily?profile_id=eq.${pid}&date=gte.${since}&order=date.asc`),
+      safe(`lift_logs?profile_id=eq.${pid}&date=gte.${since}&order=date.asc,id.asc&limit=100000`),
+      safe(`lift_routines?profile_id=eq.${pid}&order=name.asc`),
     ]);
     const settings = (settingsRows && settingsRows[0] && settingsRows[0].data) || {};
 
@@ -202,6 +204,91 @@ exports.handler = async (event) => {
       hr7 ? `- Resting heart rate: ${hr7.v} bpm last 7 days vs ${hr28 ? hr28.v + ' bpm the 4 weeks before' : 'no baseline yet'}${hr28 ? ` (${signed(hr7.v - hr28.v)} bpm)` : ''}` : '- Resting heart rate: no data synced',
     ].filter(Boolean);
 
+    // ── Strength log (Lift tab): sets x reps @ weight per exercise per session ──
+    const strengthLines = (() => {
+      const lifts = (liftRows || []).filter(l => l.date <= today && l.exercise)
+        .map(l => ({ ...l, sets: parseInt(l.sets) || 1, reps: parseInt(l.reps) || 0, weight: parseFloat(l.weight) || 0 }));
+      if (!lifts.length) return ['- Nothing logged in the Lift tab yet'];
+      const vol = l => (l.weight > 0 ? l.sets * l.reps * l.weight : 0);
+      const fmtN = n => Math.round(n).toLocaleString('en-US');
+      const out = [];
+      const wk = [0, 1, 2, 3].map(i => {
+        const from = addDays(thisWeek, -7 * i), to = addDays(from, 6);
+        const rows = lifts.filter(l => inRange(l.date, from, to));
+        const d = new Set(rows.map(r => r.date)).size;
+        return `${i === 0 ? 'this week so far' : `${i} week${i > 1 ? 's' : ''} ago`}: ${d} lifting day${d === 1 ? '' : 's'}, ${fmtN(rows.reduce((a, r) => a + vol(r), 0))} lbs volume`;
+      });
+      out.push(`- Weekly: ${wk.join('; ')}`);
+      const muscleOf = g => { const s = String(g || '').toLowerCase();
+        if (/quad|hamstring|calf|calves|leg/.test(s)) return 'Legs'; if (/lat|trap|back/.test(s)) return 'Back'; if (/delt|shoulder/.test(s)) return 'Shoulders'; if (/ab|core|oblique/.test(s)) return 'Core';
+        return ['Chest', 'Biceps', 'Triceps', 'Glutes'].find(m => s.includes(m.toLowerCase())) || (s ? 'Other' : 'Unlabeled'); };
+      const setsBy = (from, to) => { const o = {}; lifts.filter(l => inRange(l.date, from, to)).forEach(l => { const m = muscleOf(l.muscle_group); o[m] = (o[m] || 0) + l.sets; }); return o; };
+      const thisWk = setsBy(thisWeek, today), last4 = setsBy(addDays(thisWeek, -28), addDays(thisWeek, -1));
+      const mgroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Glutes', 'Core'];
+      out.push(`- Working sets per muscle group, this week so far vs average per week over the previous 4 weeks: ${mgroups.map(g => `${g} ${thisWk[g] || 0} vs ${Math.round(((last4[g] || 0) / 4) * 10) / 10}`).join('; ')}`);
+      const routines = (routineRows || []).filter(r => Array.isArray(r.exercises) && r.exercises.length);
+      if (routines.length) out.push(`- Saved routines: ${routines.map(r => `${r.name} (${r.exercises.map(x => x.exercise).join(', ')})`).join('; ')}`);
+      const key = n => String(n).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const groups = {};
+      lifts.forEach(l => (groups[key(l.exercise)] = groups[key(l.exercise)] || []).push(l));
+      const from8 = addDays(today, -55);
+      const fmt = l => `${l.sets}x${l.reps} @ ${l.weight > 0 ? l.weight + ' lbs' : 'bodyweight'}`;
+      const perEx = Object.values(groups).filter(g => g.some(l => l.date >= from8)).map(g => {
+        const byDate = {};
+        g.forEach(l => { const s = byDate[l.date] || (byDate[l.date] = { top: 0, reps: 0, last: l }); s.top = Math.max(s.top, l.weight); s.reps = Math.max(s.reps, l.reps); s.last = l; });
+        const dates = Object.keys(byDate).sort();
+        const recent = dates.filter(d => d >= from8);
+        const latestD = dates[dates.length - 1], latest = byDate[latestD], first = byDate[recent[0]];
+        const bw = dates.every(d => byDate[d].top === 0);
+        const m = s => (bw ? s.reps : s.top), unit = bw ? ' reps' : ' lbs';
+        const trend = recent.length < 2 ? 'only one session in this window'
+          : m(latest) > m(first) ? `best set up from ${m(first)} to ${m(latest)}${unit} since ${recent[0]}`
+          : m(latest) < m(first) ? `best set down from ${m(first)} to ${m(latest)}${unit} since ${recent[0]}`
+          : `best set flat at ${m(latest)}${unit} since ${recent[0]}`;
+        const prior = dates.filter(d => d < latestD).map(d => m(byDate[d]));
+        const pr = prior.length && m(latest) > Math.max(...prior) ? ' — PR on latest session' : '';
+        const name = g[g.length - 1].exercise, mg = g[g.length - 1].muscle_group;
+        return { latestD, line: `- ${name}${mg ? ` (${mg})` : ''}: ${recent.length} session${recent.length === 1 ? '' : 's'} in 8 weeks; latest ${latestD} ${fmt(latest.last)}; ${trend}${pr}` };
+      }).sort((a, b) => (a.latestD < b.latestD ? 1 : -1)).slice(0, 15).map(r => r.line);
+      return out.concat(perEx);
+    })();
+
+    // ── Cardio performance (Garmin per-workout stats), by activity type ──
+    const cardioLines = (() => {
+      const rows = (exerciseRows || []).filter(e => e.date <= today && e.date >= addDays(today, -55) && ((e.stats && typeof e.stats === 'object') || e.details))
+        .map(e => ({ ...e, stats: e.stats && typeof e.stats === 'object' ? e.stats : {} }));
+      if (!rows.length) return ['- No Garmin workout stats synced yet'];
+      const groups = {};
+      rows.forEach(e => { const k = String(e.sport_type || e.name || 'workout').toLowerCase(); (groups[k] = groups[k] || []).push(e); });
+      const avg = (arr, f) => { const v = arr.map(f).filter(x => Number.isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      const onFoot = k => /run|walk|hik|jog|treadmill/.test(k);
+      const pace = mps => { const s = 1609.34 / mps; return `${Math.floor(s / 60)}:${String(Math.round(s % 60) % 60).padStart(2, '0')}/mi`; };
+      const speedOf = e => (e.details && e.details.speed_mph ? e.details.speed_mph / 2.23694 : null) || e.stats.avg_speed || (e.stats.distance_m && e.moving_time ? e.stats.distance_m / e.moving_time : null);
+      const zoneMix = (from, to) => { const z = [0, 0, 0, 0, 0]; rows.filter(e => inRange(e.date, from, to)).forEach(e => (e.stats.hr_zones || []).forEach((v, i) => { if (i < 5) z[i] += Number(v) || 0; })); const t = z.reduce((a, b) => a + b, 0); return t >= 300 ? { min: Math.round(t / 60), easy: Math.round((z[0] + z[1]) / t * 100), mod: Math.round(z[2] / t * 100), hard: Math.round((z[3] + z[4]) / t * 100) } : null; };
+      const zw = zoneMix(addDays(today, -6), today), z4 = zoneMix(addDays(today, -27), today);
+      const zLine = z => `${z.min} min: ${z.easy}% easy (Z1-2), ${z.mod}% moderate (Z3), ${z.hard}% hard (Z4-5)`;
+      const head = zw || z4 ? [`- Heart-rate zone mix: last 7 days ${zw ? zLine(zw) : 'n/a'}; last 28 days ${z4 ? zLine(z4) : 'n/a'}`] : [];
+      return head.concat(Object.entries(groups).sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([k, g]) => {
+        const recent = g.filter(e => e.date >= addDays(today, -27)), prior = g.filter(e => e.date < addDays(today, -27));
+        const hrR = avg(recent, e => e.stats.avg_hr), hrP = avg(prior, e => e.stats.avg_hr);
+        const moves = g.filter(e => (e.stats.distance_m || 0) >= 80 || (e.details && e.details.speed_mph));
+        const spR = avg(recent.filter(e => moves.includes(e)), speedOf), spP = avg(prior.filter(e => moves.includes(e)), speedOf);
+        const fmtSp = v => (onFoot(k) ? pace(v) : `${(v * 2.23694).toFixed(1)} mph`);
+        const mins = Math.round(avg(g, e => e.moving_time / 60) || 0);
+        const parts = [`${g.length} session${g.length === 1 ? '' : 's'} in 8 weeks (avg ${mins} min)`];
+        if (hrR) parts.push(`avg HR ${Math.round(hrR)} bpm last 4 weeks${hrP ? ` vs ${Math.round(hrP)} the 4 weeks before` : ''}`);
+        if (spR && moves.length >= 2) parts.push(`${onFoot(k) ? 'pace' : 'speed'} ${fmtSp(spR)}${spP ? ` vs ${fmtSp(spP)} before` : ''}`);
+        const te = avg(recent, e => e.stats.aerobic_te); if (te) parts.push(`aerobic training effect ${te.toFixed(1)}`);
+        const dl = arr => arr.filter(e => e.details);
+        const incR = avg(dl(recent), e => e.details.incline_pct + 0.0001), incP = avg(dl(prior), e => e.details.incline_pct + 0.0001);
+        if (incR != null) parts.push(`user-entered incline ${incR.toFixed(1)}%${incP != null ? ` vs ${incP.toFixed(1)}% before` : ''}`);
+        const lvR = avg(dl(recent), e => e.details.level), lvP = avg(dl(prior), e => e.details.level);
+        if (lvR) parts.push(`machine level ${lvR.toFixed(1)}${lvP ? ` vs ${lvP.toFixed(1)} before` : ''}`);
+        if (g.some(e => e.details && e.details.speed_mph)) parts.push('speed is user-entered from the treadmill (more accurate than Garmin\'s estimate)');
+        return `- ${k.replace(/_/g, ' ')}: ${parts.join('; ')}`;
+      }));
+    })();
+
     // ── Habits ──
     const logs = {};
     (habitLogRows || []).forEach(l => { (logs[l.habit_id] = logs[l.habit_id] || {})[l.date] = l.value || 0; });
@@ -292,12 +379,13 @@ The scale is one signal, not the verdict. Look for the connections a good coach 
 - Strength training on plan + protein at or near target + the scale moving slower than planned: muscle may be partly offsetting fat loss. Say "possibly" and suggest a weekly waist measurement (or photos) to confirm. Never use this to excuse a stall when logged intake is over target or training is off plan.
 - Alcohol worsens sleep and appetite the following day.
 - Steps are a large, easy share of their daily burn; a drop shows up on the scale.
+- Review training like a coach, using the STRENGTH LOG and CARDIO PERFORMANCE: a lift whose best set hasn't moved in 3+ sessions, a muscle group with few or no working sets for weeks (roughly 10+ sets a week per major group is a common target), cardio that's nearly all hard (Z4-5) or all easy, or treadmill speed/incline unchanged for weeks. When one of these shows up, suggest ONE specific change with numbers: a weight or rep target, sets to add for a group, a routine tweak, or a speed/incline step. During a cut, holding strength is the goal. Only suggest adding weight when recovery supports it (HRV in their normal range, resting heart rate not up, sleep around 7h); when recovery is off, suggest holding the same weights or a lighter week instead and name the signal. The app's own lifting targets follow the same rule.
 
 STRUCTURE (plain text, rendered as-is; no markdown, no #, **, *, -, or numbered lists):
 Paragraph 1, WINS: one or two specific things that went well, from any pillar, with numbers. If little went well, find the most genuine positive; don't invent one.
-Paragraph 2, BIG PICTURE: an honest read of the week across the four pillars in plain language: where the body trend is against the plan, a one-line recovery read (always include it), training consistency, and how they connect. Name the ONE pillar that is the biggest lever right now.
+Paragraph 2, BIG PICTURE: an honest read of the week across the four pillars in plain language: where the body trend is against the plan, a one-line recovery read (always include it), training consistency and, when the STRENGTH LOG has data, whether key lifts are progressing, flat or slipping (holding strength during a cut counts as a win), and how they connect. Name the ONE pillar that is the biggest lever right now.
 Paragraph 3, FOOD: what their logged food shows: which meals carry protein and which are light, which foods drive calories, one concrete swap or addition using foods they already eat.
-Paragraph 4, THIS WEEK: one or two specific, measurable actions from whichever pillar is the biggest lever (sleep, training, food or steps). Then stop.
+Paragraph 4, THIS WEEK: one or two specific, measurable actions from whichever pillar is the biggest lever (sleep, training, food or steps). If the training data shows one of the issues above, one of the actions is that specific training change. Then stop.
 260-340 words. Finish every sentence. Write numbers over 999 with commas (2,298 kcal).
 
 HOW TO READ THE DATA:
@@ -349,6 +437,12 @@ ${recoveryLines.join('\n')}
 
 FOOD QUALITY (Lōg score 0-100, calorie-weighted; from logged foods over the last 7 days)
 ${fq && fq.days ? `- Average ${Math.round(fq.score)}/100 over ${fq.days} logged day${fq.days === 1 ? '' : 's'}${fq.upfPct != null && fq.coverage >= 0.5 ? `; ${fq.upfPct}% of calories from ultra-processed foods` : `; processing unknown (ingredient data for only ${Math.round((fq.coverage || 0) * 100)}% of calories, too little to judge)`}` : '- Not enough logged food to judge'}
+
+CARDIO PERFORMANCE (Garmin workout stats by activity type; same or faster pace at a lower heart rate = improving fitness)
+${cardioLines.join('\n')}
+
+STRENGTH LOG (Workouts tab: best set per exercise; weights in lbs)
+${strengthLines.join('\n')}
 
 HABITS
 ${habitLines.length ? habitLines.join('\n') : '- No habits set up'}

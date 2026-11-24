@@ -19,6 +19,8 @@ const PARTS = {
   'habit-logs':             ['./habit-logs',   q => ({ profile_id: q.profile_id })],
   'health-sync':            ['./health-sync',  q => ({ profile_id: q.profile_id, days: '120' })],
   'settings':               ['./settings',     q => ({ profile_id: q.profile_id })],
+  'lifts':                  ['./lifts',        q => ({ profile_id: q.profile_id })],
+  'lift-routines':          ['./lift-routines', q => ({ profile_id: q.profile_id })],
 };
 
 // Static requires so Netlify's bundler includes each function
@@ -27,6 +29,7 @@ const HANDLERS = {
   './saved-meals': require('./saved-meals'), './custom-foods': require('./custom-foods'),
   './habits': require('./habits'), './habit-logs': require('./habit-logs'),
   './health-sync': require('./health-sync'), './settings': require('./settings'),
+  './lifts': require('./lifts'), './lift-routines': require('./lift-routines'),
 };
 
 exports.handler = async (event) => {
