@@ -478,6 +478,28 @@
   .result-name.with-q { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .left-quality:not(:empty) { flex-basis: 100%; font-size: 12px; color: var(--text-2); margin-top: 10px; }
   .left-card { flex-wrap: wrap; }
+  .plate-card { width: 100%; display: block; padding: 12px 16px; margin: 0 0 10px; border-radius: 20px; text-align: left; cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; color: var(--text); -webkit-tap-highlight-color: transparent; }
+  .plate-row { display: flex; align-items: center; gap: 16px; }
+  .plate-donut { flex-shrink: 0; }
+  .plate-donut-num { font-size: 7px; font-weight: 600; fill: var(--text); font-family: 'DM Mono', monospace; }
+  .plate-donut-sub { font-size: 4.2px; fill: var(--text-3); }
+  .plate-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+  .plate-legend div, .plate-grp-head { display: flex; align-items: center; gap: 8px; }
+  .plate-legend i, .plate-grp-head i { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+  .plate-legend b { margin-left: auto; font-weight: 500; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .plate-produce { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 0.5px solid var(--border); font-size: 12px; color: var(--text-2); }
+  .plate-produce-lbl { font-weight: 500; color: var(--text); }
+  .plate-produce-n { font-family: 'DM Mono', monospace; }
+  .plate-whole { margin-left: auto; color: var(--text-3); }
+  .pdots { display: inline-flex; gap: 4px; }
+  .pdot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #3E9B5A; box-sizing: border-box; }
+  .pdot.on { background: #3E9B5A; }
+  .pdot.half { background: linear-gradient(90deg, #3E9B5A 50%, transparent 50%); }
+  .plate-grp { padding: 10px 0; border-top: 0.5px solid var(--border); }
+  .plate-grp-head { font-size: 14px; font-weight: 500; }
+  .plate-grp-head span { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--text-3); }
+  .plate-grp-foods { font-size: 12px; color: var(--text-2); margin: 4px 0 0 17px; line-height: 1.4; }
+  .plate-note { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-top: 6px; }
   .q-overlay { position: fixed; inset: 0; z-index: 460; background: rgba(0,0,0,0.25); display: flex; align-items: flex-end; justify-content: center; padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); opacity: 0; transition: opacity 0.2s; }
   .q-overlay.on { opacity: 1; }
   .q-card { width: 100%; max-width: 520px; border-radius: 24px; padding: 18px; background: rgba(250,249,246,0.92); transform: translateY(20px); transition: transform 0.35s cubic-bezier(.32,.72,0,1); }
@@ -917,6 +939,28 @@
   .lift-muscle { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: var(--bg); border: 0.5px solid var(--border-med); color: var(--text-2); }
   .lift-muscle b { color: var(--text); font-weight: 600; }
   .lift-muscle.zero { opacity: 0.45; }
+  .bm-head { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 4px; }
+  .bm-seg { display: inline-flex; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: 10px; padding: 2px; }
+  .bm-seg button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 0; background: none; color: var(--text-2); cursor: pointer; }
+  .bm-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .bm-figs { display: flex; justify-content: center; gap: 6px; }
+  .bm-fig { text-align: center; } .bm-lbl { font-size: 11px; color: var(--text-3); }
+  .bm-sil { fill: #F4F2ED; stroke: #C9C5BB; }
+  .bm-reg { stroke: #F4F2ED; stroke-width: 1.2; stroke-linejoin: round; cursor: pointer; }
+  .bm-reg.none { fill: #E5E2DA; }
+  .bm-reg.sel { stroke: #0B3D30; stroke-width: 2.2; }
+  .bm-none-dot { background: #E5E2DA; }
+  .bm-legend { display: flex; justify-content: center; align-items: center; gap: 14px; font-size: 11px; color: var(--text-2); margin: 8px 0 2px; }
+  .bm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .bm-grad { display: inline-block; width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgb(184,221,203), #0F6E56); }
+  .bm-detail { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 0.5px solid var(--border-med); border-radius: 12px; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+  .bm-detail .t { font-size: 13px; color: var(--text); font-weight: 500; display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .bm-detail b { color: var(--text); font-weight: 500; }
+  .bm-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+  .bm-gaps { font-size: 12px; color: var(--text-2); margin-top: 10px; line-height: 1.45; } .bm-gaps b { color: var(--text); font-weight: 500; }
+  @media (prefers-color-scheme: dark) {
+    .bm-sil { fill: #2F2E2B; stroke: #55534E; } .bm-reg { stroke: #2F2E2B; } .bm-reg.none, .bm-none-dot { fill: #45433F; background: #45433F; } .bm-reg.sel { stroke: #E8F5EE; }
+  }
   .lift-target { display: block; width: 100%; margin-top: 8px; padding: 8px 10px; text-align: left; font: 500 13px 'DM Sans', system-ui, sans-serif; color: var(--text); background: var(--surface); border: 0.5px dashed var(--amber); border-radius: var(--radius); cursor: pointer; }
   .lift-target-why { display: block; font-size: 11px; font-weight: 400; color: var(--text-2); margin-top: 3px; }
   .lift-ready { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin-bottom: 12px; border-radius: var(--radius); border: 0.5px solid var(--border-med); background: var(--surface); border-left: 3px solid var(--green); }
@@ -1120,6 +1164,8 @@
       <svg class="left-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       <div class="left-quality" id="leftQuality"></div>
     </button>
+    <!-- Today's plate: calories by food group + produce servings -->
+    <button class="plate-card glass" id="plateCard" onclick="showPlate()" style="display:none" aria-label="Today's plate"></button>
     <div class="nutrient-details" id="nutrientDetails">
     <div class="summary-grid">
       <div class="metric-card" onclick="showMacroBreakdown('cal','Calories','kcal')"><span class="metric-goal"id="goalCal"></span><div class="metric-label">Calories</div><div class="metric-val"id="totCal">0</div><div class="progress-bar"><div class="progress-fill"id="barCal" style="background:var(--blue);width:0%"></div></div></div>
@@ -1378,7 +1424,7 @@
       <div id="liftSession"></div>
       <div id="liftItems"></div>
       <div class="exercise-add-row" style="margin-top:12px;">
-        <input class="exercise-input" id="liftQuery" placeholder="e.g. lat pulldown, incline DB press" autocomplete="off" oninput="renderLiftRecents()" onkeydown="if(event.key==='Enter'){event.preventDefault();liftLookup()}"/>
+        <input class="exercise-input" id="liftQuery" placeholder="e.g. lat pulldown" autocomplete="off" oninput="renderLiftRecents()" onkeydown="if(event.key==='Enter'){event.preventDefault();liftLookup()}"/>
         <button class="exercise-add-btn" id="liftLookupBtn" onclick="liftLookup()">Look up</button>
         <button class="exercise-add-btn" onclick="document.getElementById('liftCameraInput').click()" aria-label="Photo of the machine" style="display:flex;align-items:center;gap:5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
       </div>
@@ -3096,8 +3142,133 @@ function dayQuality(foods) {
   return w ? { score: Math.round(sum / w), upfPct: known ? Math.round(upf / known * 100) : null, coverage: known / w } : null;
 }
 
+// ── Food groups ("plate") — shared by the app and the Coach ──
+// Groups come from the food name first, then its macros. Dishes that name a
+// protein plus something else (chicken salad, turkey sandwich) are split: the
+// protein's calories go to Protein, the rest to the other group.
+const PLATE_GROUPS = [
+  { k: 'veg', label: 'Vegetables', color: '#3E9B5A' },
+  { k: 'fruit', label: 'Fruit', color: '#E8893A' },
+  { k: 'protein', label: 'Protein', color: '#C4574E' },
+  { k: 'grains', label: 'Grains & starches', color: '#D8B145' },
+  { k: 'dairy', label: 'Dairy', color: '#5E9FD6' },
+  { k: 'fats', label: 'Nuts & fats', color: '#9A7651' },
+  { k: 'treats', label: 'Treats & drinks', color: '#A98BC4' },
+];
+const PLATE_RE = {
+  protein: /chicken|turkey|beef|steak|pork|\bham\b|bacon|sausage|salmon|tuna|shrimp|fish|\bcod\b|tilapia|\beggs?\b|egg white|jerky|protein|whey|isolate|tofu|tempeh|seitan|lamb|bison|venison|crab|lobster|scallop|meatball|burger|black bean|pinto|kidney bean|refried|lentil|chickpea|hummus/,
+  treats: /candy|cookie|brownie|\bcake|cupcake|donut|doughnut|pastry|chocolate|ice cream|gelato|\bsoda\b|cola|sprite|gumm|skittles|m&m|reese|snickers|kit ?kat|feastables|muddy bites|beer|\bwine\b|vodka|whiskey|bourbon|tequila|\brum\b|margarita|cocktail|hard seltzer|lemonade|sweet tea|syrup|frosting|\bpie\b|chips|doritos|cheetos|pretzel|fries/,
+  fats: /avocado|guac|almond(?! milk)|peanut|cashew|walnut|pecan|pistachio|nut butter|\bnuts?\b|seeds?\b|olive oil|\boil\b|butter(?!milk)|mayo|dressing|ranch/,
+  fruit: /apple|banana|berr|orange|grape|melon|pineapple|mango|peach|\bpears?\b|cherr|kiwi|fruit|clementine|mandarin|\bplums?\b|apricot|raisin|\bdates\b|\bfigs?\b|pomegranate/,
+  veg: /salad|lettuce|romaine|spinach|kale|arugula|greens|broccoli|cauliflower|carrot|pepper(?!oni)|onion|tomato|cucumber|zucchini|squash|asparagus|green bean|brussels|cabbage|slaw|celery|mushroom|veg|beet|radish|salsa|pico|edamame|okra|eggplant|artichoke|bok choy|pickle|sauerkraut|kimchi|\bpeas\b|\bcorn\b|sweet potato/,
+  dairy: /milk|yogurt|yoghurt|skyr|cheese|cottage|kefir|mozzarella|cheddar|parmesan/,
+  grains: /rice|bread|toast|bagel|tortilla|wrap|pasta|noodle|\boat|cereal|granola|quinoa|potato|cracker|\bbuns?\b|\brolls?\b|pancake|waffle|muffin|couscous|barley|pita|naan|grits|popcorn|sandwich|pizza|burrito|taco/,
+};
+// Returns [{ k, cal }] — usually one part, two for a split dish, [] for ~0 kcal items
+function plateParts(f) {
+  const n = String(f.name || '').toLowerCase(), cal = f.cal || 0;
+  const hit = k => PLATE_RE[k].test(n);
+  if (cal < 5) return [];
+  if (/shake|whey|isolate|protein (bar|powder|chips|cookie)/.test(n)) return [{ k: 'protein', cal }];
+  if (hit('treats')) return [{ k: 'treats', cal }];
+  const others = ['veg', 'fruit', 'grains', 'dairy', 'fats'].filter(hit);
+  if (hit('protein') && others.length) {
+    const p = Math.min(cal, (f.pro || 0) * 4 * 1.4); // lean protein carries some fat with it
+    return [{ k: 'protein', cal: p }, { k: others[0], cal: cal - p }].filter(x => x.cal > 0);
+  }
+  if (hit('protein')) return [{ k: 'protein', cal }];
+  if (others.length) return [{ k: others[0], cal }];
+  if (cal < 20) return [];
+  const pc = (f.pro || 0) * 4 / cal, fc = (f.fat || 0) * 9 / cal, sc = (f.sug || 0) * 4 / cal;
+  return [{ k: pc >= 0.4 ? 'protein' : fc >= 0.55 ? 'fats' : sc >= 0.35 ? 'treats' : 'grains', cal }];
+}
+// Servings of produce: from fiber (about 2 g per vegetable serving, 2.5 g per fruit),
+// falling back to calories when fiber is missing. A serving ≈ 1 cup raw / ½ cup cooked.
+function plateProduce(f) {
+  const parts = plateParts(f), cal = f.cal || 0, n = String(f.name || '').toLowerCase();
+  let veg = 0, fruit = 0;
+  parts.forEach(p => {
+    const share = cal ? p.cal / cal : 1, fib = (f.fib || 0) * share;
+    if (p.k === 'veg') veg += fib >= 1 ? fib / 2 : p.cal / 25;
+    if (p.k === 'fruit') fruit += fib >= 1 ? fib / 2.5 : p.cal / 80;
+  });
+  // Leafy greens can be under 5 kcal and still count
+  if (!parts.length && PLATE_RE.veg.test(n)) veg += 0.5;
+  const r = v => (v > 0 ? Math.max(0.5, Math.round(v * 2) / 2) : 0);
+  return { veg: Math.min(4, r(veg)), fruit: Math.min(3, r(fruit)) };
+}
+function plateSummary(foods) {
+  const by = {}; let total = 0, veg = 0, fruit = 0;
+  const items = {};
+  (foods || []).forEach(f => {
+    plateParts(f).forEach(p => { by[p.k] = (by[p.k] || 0) + p.cal; total += p.cal; (items[p.k] = items[p.k] || []).push({ name: f.name, cal: p.cal }); });
+    const pr = plateProduce(f); veg += pr.veg; fruit += pr.fruit;
+    if (pr.veg && !(items.veg || []).some(x => x.name === f.name)) (items.veg = items.veg || []).push({ name: f.name, cal: 0 });
+  });
+  return { by, total, items, veg, fruit, produce: veg + fruit };
+}
+
+const PLATE_PRODUCE_GOAL = 5;
+function plateDonut(by, total, size, center, sub) {
+  const r = 15.9155, c = 2 * Math.PI * r; let off = 0;
+  const segs = PLATE_GROUPS.filter(g => by[g.k] > 0).map(g => {
+    const len = by[g.k] / total * c, s = `<circle r="${r}" cx="21" cy="21" fill="none" stroke="${g.color}" stroke-width="6" stroke-dasharray="${Math.max(0, len - 0.6)} ${c}" stroke-dashoffset="${-off}"/>`;
+    off += len; return s;
+  }).join('');
+  return `<svg class="plate-donut" width="${size}" height="${size}" viewBox="0 0 42 42" aria-hidden="true">
+    <g transform="rotate(-90 21 21)"><circle r="${r}" cx="21" cy="21" fill="none" stroke="var(--border)" stroke-width="6"/>${segs}</g>
+    <text x="21" y="${sub ? 20.5 : 23}" text-anchor="middle" class="plate-donut-num">${center}</text>${sub ? `<text x="21" y="27" text-anchor="middle" class="plate-donut-sub">${sub}</text>` : ''}</svg>`;
+}
+function plateWholePct(foods) {
+  let known = 0, whole = 0;
+  foods.forEach(f => { const c = f.cal || 0; if (c <= 0) return; const q = foodScore(f); if (!q.nova) return; known += c; if (q.nova <= 2) whole += c; });
+  const all = foods.reduce((a, f) => a + Math.max(0, f.cal || 0), 0);
+  return known && known >= all * 0.8 ? Math.round(whole / known * 100) : null; // only when most foods have ingredient data
+}
+function produceDots(n) {
+  const full = Math.floor(n), half = n - full >= 0.5;
+  return Array.from({ length: Math.min(8, Math.max(PLATE_PRODUCE_GOAL, Math.ceil(n))) }, (_, i) =>
+    `<span class="pdot${i < full ? ' on' : i === full && half ? ' half' : ''}"></span>`).join('');
+}
+function renderPlateCard() {
+  const el = document.getElementById('plateCard');
+  if (!el) return;
+  const foods = getActiveFoods(), s = plateSummary(foods);
+  if (!s.total) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  const top = PLATE_GROUPS.filter(g => s.by[g.k] > 0).sort((a, b) => s.by[b.k] - s.by[a.k]).slice(0, 4);
+  const whole = plateWholePct(foods);
+  const fmtS = v => (v % 1 ? v.toFixed(1) : v);
+  el.innerHTML = `<div class="plate-row">${plateDonut(s.by, s.total, 76, Math.round(s.total).toLocaleString(), 'kcal')}
+      <div class="plate-legend">${top.map(g => `<div><i style="background:${g.color}"></i>${g.label}<b>${Math.round(s.by[g.k] / s.total * 100)}%</b></div>`).join('')}</div></div>
+    <div class="plate-produce"><span class="plate-produce-lbl">Produce</span><span class="pdots">${produceDots(s.produce)}</span>
+      <span class="plate-produce-n">${fmtS(s.produce)} / ${PLATE_PRODUCE_GOAL}</span>${whole != null ? `<span class="plate-whole">Whole foods ${whole}%</span>` : ''}</div>`;
+}
+function showPlate() {
+  const foods = getActiveFoods(), s = plateSummary(foods);
+  if (!s.total) return;
+  const whole = plateWholePct(foods), fmtS = v => (v % 1 ? v.toFixed(1) : v);
+  const rows = PLATE_GROUPS.filter(g => s.by[g.k] > 0 || (g.k === 'veg' && s.veg)).sort((a, b) => (s.by[b.k] || 0) - (s.by[a.k] || 0)).map(g => {
+    const names = [...new Map((s.items[g.k] || []).map(x => [x.name, x])).values()].map(x => escapeHtml(x.name)).join(', ');
+    const extra = g.k === 'veg' ? ` · ${fmtS(s.veg)} serving${s.veg === 1 ? '' : 's'}` : g.k === 'fruit' ? ` · ${fmtS(s.fruit)} serving${s.fruit === 1 ? '' : 's'}` : '';
+    return `<div class="plate-grp"><div class="plate-grp-head"><i style="background:${g.color}"></i>${g.label}<span>${Math.round(s.by[g.k] || 0)} kcal · ${Math.round((s.by[g.k] || 0) / s.total * 100)}%${extra}</span></div><div class="plate-grp-foods">${names}</div></div>`;
+  }).join('');
+  document.getElementById('liftProgressTitle').textContent = activeDate === todayStr() ? "Today's plate" : fmtDate(activeDate, { weekday: 'long', month: 'short', day: 'numeric' });
+  document.getElementById('liftProgressBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;">${plateDonut(s.by, s.total, 120, Math.round(s.total).toLocaleString(), 'kcal')}
+      <div style="flex:1;min-width:0;"><div class="plate-produce" style="margin:0;padding:0;border:0;flex-wrap:wrap;"><span class="plate-produce-lbl">Produce</span><span class="pdots">${produceDots(s.produce)}</span><span class="plate-produce-n">${fmtS(s.produce)} / ${PLATE_PRODUCE_GOAL}</span></div>
+      <div class="plate-note">${fmtS(s.veg)} vegetable · ${fmtS(s.fruit)} fruit${whole != null ? `<br>Whole foods: ${whole}% of calories` : ''}</div></div></div>
+    ${rows}
+    <div class="plate-note">The chart shows where your calories came from. Vegetables are filling but low in calories (a cup of broccoli is about 30 kcal), so their slice stays small. The produce count is where they get credit. One serving is about 1 cup raw or ½ cup cooked, estimated from fiber. For dishes like a chicken salad, the protein's calories count as Protein and the rest as the other group.</div>`;
+  document.getElementById('liftProgressOverlay').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  const modal = document.getElementById('liftProgressModal');
+  if (typeof addSwipeToDismiss === 'function') addSwipeToDismiss(modal, closeLiftProgress);
+}
+
 // ════════ Log tab: Left today, swipe rows, add-food sheet ════════
 function renderLeftCard(t) {
+  renderPlateCard();
   const lq = document.getElementById('leftQuality');
   if (lq) {
     const dq = dayQuality(getActiveFoods());
@@ -7691,6 +7862,7 @@ function shiftLiftDay(dir) {
   const next = liftLocalDate(d);
   if (next > todayStr()) return;
   _liftDate = next === todayStr() ? null : next;
+  _bodyView = null; _bodySel = null;
   closeLiftForm();
   renderLift();
 }
@@ -8261,10 +8433,18 @@ function renderLiftReadiness(date) {
 }
 
 const liftStep = w => (w < 50 ? 2.5 : 5);
-// Targets: add a rep each session; at 12 reps add weight and drop to 8 (double
-// progression). Held back when last session slipped or recovery says so.
+// Big multi-joint lifts work in 6–8 reps during a cut; everything else stays at 10–12.
+const LIFT_ISOLATION_RE = /tricep|curl|\bfly|flye|raise|kickback|extension|pushdown|crunch|calf|shrug|pec deck|face pull/i;
+const LIFT_COMPOUND_RE = /press|bench|row|squat|deadlift|\brdl\b|lunge|split squat|hip thrust|pull[- ]?up|chin[- ]?up|lat pull|hack|step[- ]?up/i;
+function liftIsCompound(name) { const n = String(name || ''); return LIFT_COMPOUND_RE.test(n) && !LIFT_ISOLATION_RE.test(n); }
+// Warm-up / conditioning moves don't count as working sets for a muscle group.
+const LIFT_WARMUP_RE = /jumping jack|jump rope|skipping|high knee|butt kick|arm circle|burpee|mountain climber|jog|warm[- ]?up|stretch|foam roll/i;
+function liftIsWarmup(l) { return LIFT_WARMUP_RE.test(String(l.exercise || '')) || (!(l.weight > 0) && l.reps >= 30 && /full/i.test(String(l.muscle_group || ''))); }
+// Targets (double progression), held back when last session slipped or recovery says so.
+// Main lifts: 6–8 reps, add weight at 8 and drop 2 reps. Others: 10–12, add weight at 12 and drop to 10.
 function liftTarget(last, prev, readiness) {
   if (!last) return null;
+  const compound = liftIsCompound(last.exercise);
   const same = { sets: last.sets, reps: last.reps, weight: last.weight };
   if (readiness && readiness.level === 'easy') {
     if (!(last.weight > 0)) return { ...same, reps: Math.max(1, last.reps - 2), why: 'Lighter day: recovery is low (' + readiness.flags.join(', ') + ')' };
@@ -8275,8 +8455,18 @@ function liftTarget(last, prev, readiness) {
   // Last session slipped (fewer reps at the same or heavier weight)? Consolidate before adding more.
   if (prev && last.weight >= prev.weight && last.reps < prev.reps) return { ...same, why: `Match last time: reps dropped from ${prev.reps} to ${last.reps}, so own this weight first` };
   if (!(last.weight > 0)) return { ...same, reps: last.reps + 1, why: 'One more rep than last time' };
-  if (last.reps >= 12) return { sets: last.sets, reps: 8, weight: last.weight + liftStep(last.weight), why: `You hit ${last.reps} reps, so add ${liftStep(last.weight)} lbs and drop to 8` };
-  return { ...same, reps: last.reps + 1, why: 'One more rep than last time' + (readiness ? ' (recovery looks good)' : '') };
+  const step = liftStep(last.weight);
+  if (compound) {
+    if (last.reps >= 8) {
+      const reps = Math.max(6, Math.min(8, last.reps - 2));
+      return { sets: last.sets, reps, weight: last.weight + step, why: last.reps > 8
+        ? `Main lift: heavier sets of 6–8 hold strength best on a cut. Add ${step} lbs and aim for ${reps}`
+        : `You hit 8 reps, so add ${step} lbs and aim for ${reps}` };
+    }
+    return { ...same, reps: last.reps + 1, why: 'Main lift (6–8 range): one more rep, then add weight at 8' };
+  }
+  if (last.reps >= 12) return { sets: last.sets, reps: 10, weight: last.weight + step, why: `You hit ${last.reps} reps, so add ${step} lbs and go back to 10` };
+  return { ...same, reps: last.reps + 1, why: 'One more rep than last time (add weight once you reach 12)' + (readiness ? ' · recovery looks good' : '') };
 }
 function applyLiftTarget() {
   const t = _liftDraft?.target;
@@ -8299,17 +8489,140 @@ function liftMuscleOf(g) {
 }
 function liftMuscleSets(from, to) {
   const out = {};
-  _lifts.filter(l => l.date >= from && l.date <= to).forEach(l => { const m = liftMuscleOf(l.muscle_group); out[m] = (out[m] || 0) + l.sets; });
+  _lifts.filter(l => l.date >= from && l.date <= to && !liftIsWarmup(l)).forEach(l => { const m = liftMuscleOf(l.muscle_group); out[m] = (out[m] || 0) + l.sets; });
   return out;
 }
+// ── Muscle regions per exercise (shared by the app and the Coach) ──
+// Primary muscles get full credit for the sets, secondary (helper) muscles half.
+const BODY_LABELS = { chest: 'Chest', shoulders: 'Front/side shoulders', rearDelt: 'Rear shoulders', traps: 'Traps', upperBack: 'Upper back', lats: 'Lats',
+  lowerBack: 'Lower back', biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms', abs: 'Abs', obliques: 'Obliques', glutes: 'Glutes',
+  quads: 'Quads', hamstrings: 'Hamstrings', calves: 'Calves' };
+const BODY_GROUPS = [['Chest', ['chest']], ['Shoulders', ['shoulders', 'rearDelt']], ['Back', ['lats', 'upperBack', 'traps', 'lowerBack']], ['Biceps', ['biceps']],
+  ['Triceps', ['triceps']], ['Legs', ['quads', 'hamstrings', 'calves']], ['Glutes', ['glutes']], ['Core', ['abs', 'obliques']]];
+const BODY_RULES = [
+  [/glute kickback|cable kickback.*glute|hip thrust|glute bridge|abduct/, ['glutes'], ['hamstrings']],
+  [/close[- ]?grip bench/, ['triceps'], ['chest', 'shoulders']],
+  [/tricep dip|bench dip/, ['triceps'], ['chest', 'shoulders']],
+  [/\bdips?\b/, ['triceps', 'chest'], ['shoulders']],
+  [/tricep|pushdown|skull ?crusher|kickback|french press/, ['triceps'], []],
+  [/leg curl|hamstring curl|nordic/, ['hamstrings'], []],
+  [/curl/, ['biceps'], ['forearms']],
+  [/leg extension/, ['quads'], []],
+  [/calf|calves/, ['calves'], []],
+  [/reverse fly|rear delt|face pull/, ['rearDelt'], ['upperBack', 'traps']],
+  [/\bfly|flye|pec deck|cable cross/, ['chest'], ['shoulders']],
+  [/lateral raise|side raise|front raise|upright row/, ['shoulders'], ['traps']],
+  [/shrug/, ['traps'], []],
+  [/overhead|shoulder press|military|arnold|landmine press/, ['shoulders'], ['triceps']],
+  [/bench|chest press|push[- ]?up|incline press|decline press|\bpress\b.*chest/, ['chest'], ['shoulders', 'triceps']],
+  [/pull[- ]?up|chin[- ]?up|lat pull|pulldown|pullover/, ['lats'], ['biceps', 'upperBack']],
+  [/\brows?\b|rowing/, ['upperBack', 'lats'], ['biceps', 'rearDelt']],
+  [/romanian|\brdl\b|stiff[- ]?leg|good morning/, ['hamstrings', 'glutes'], ['lowerBack']],
+  [/deadlift/, ['glutes', 'hamstrings', 'lowerBack'], ['traps', 'quads', 'forearms']],
+  [/back extension|hyperextension|superman/, ['lowerBack'], ['glutes', 'hamstrings']],
+  [/squat|leg press|hack|lunge|step[- ]?up|wall sit/, ['quads', 'glutes'], ['hamstrings']],
+  [/adduct/, ['quads'], []],
+  [/russian twist|oblique|woodchop|side plank|wood chop/, ['obliques'], ['abs']],
+  [/crunch|sit[- ]?up|plank|\babs?\b|leg raise|knee raise|hanging|ab wheel|rollout|dead bug|hollow/, ['abs'], ['obliques']],
+  [/farmer|wrist|grip/, ['forearms'], ['traps']],
+];
+const BODY_GROUP_FALLBACK = { chest: ['chest'], back: ['lats', 'upperBack'], shoulders: ['shoulders'], biceps: ['biceps'], triceps: ['triceps'],
+  legs: ['quads', 'hamstrings'], glutes: ['glutes'], core: ['abs'] };
+function liftRegions(l) {
+  const n = String(l.exercise || '').toLowerCase();
+  const r = BODY_RULES.find(([re]) => re.test(n));
+  if (r) return { p: r[1], s: r[2] };
+  const g = String(l.muscle_group || '').toLowerCase().trim();
+  return { p: BODY_GROUP_FALLBACK[g] || [], s: [] };
+}
+// { region: { sets, from: [{ exercise, sets, half }] } } — warm-ups skipped
+function bodySets(lifts, isWarmup) {
+  const out = {};
+  lifts.forEach(l => {
+    if (isWarmup && isWarmup(l)) return;
+    const { p, s } = liftRegions(l), sets = l.sets || 0;
+    const add = (k, v, half) => { const o = out[k] || (out[k] = { sets: 0, primary: false, from: [] }); o.sets += v; if (!half) o.primary = true; o.from.push({ exercise: l.exercise, sets: v, half }); };
+    p.forEach(k => add(k, sets, false)); s.forEach(k => add(k, sets / 2, true));
+  });
+  return out;
+}
+
+let _bodyView = null, _bodySel = null; // null view = automatic (Today when the day has lifts)
+const BODY_SIL = 'M100 60 C94 60 92 64 92 68 C84 74 74 78 64 82 C52 86 46 96 45 110 C43 128 40 146 37 162 C33 182 29 204 25 226 C23 234 18 240 15 248 C13 254 17 262 24 258 C29 254 31 246 33 238 C38 218 45 196 50 176 C54 160 58 142 61 128 C63 150 64 172 64 192 C62 206 59 220 58 240 C57 262 58 282 61 300 C61 316 58 334 60 352 C62 368 64 382 64 394 C60 400 58 406 64 410 C72 412 82 412 85 406 C86 398 84 390 84 380 C86 360 88 340 88 320 C88 304 90 290 92 272 C94 258 96 246 100 236 Z';
+const BODY_FRONT = {
+  shoulders: 'M64 84 C52 88 46 98 46 114 C52 110 58 106 66 104 C68 96 68 90 64 84 Z',
+  chest: 'M68 98 C78 90 90 90 98 94 L98 124 C88 130 76 128 68 118 C66 110 66 104 68 98 Z',
+  biceps: 'M47 120 C44 134 44 148 47 162 C53 152 57 140 58 126 C55 122 51 120 47 120 Z',
+  forearms: 'M44 170 C38 186 33 204 29 222 C35 218 41 204 46 190 C49 182 50 176 49 170 Z',
+  abs: 'M88 130 L97 130 L97 148 L88 148 Z M88 151 L97 151 L97 169 L88 169 Z M89 172 L97 172 L97 196 L90 194 Z',
+  obliques: 'M70 128 C70 150 72 172 76 192 C82 182 85 164 85 140 C80 136 75 132 70 128 Z',
+  quads: 'M65 212 C60 236 60 264 66 292 C74 300 84 300 90 292 C93 268 94 246 92 228 C84 224 74 220 65 212 Z',
+  calves: 'M63 312 C60 332 61 352 65 372 C70 362 74 340 74 318 C70 314 66 312 63 312 Z',
+};
+const BODY_BACK = {
+  traps: 'M98 62 C94 70 82 78 68 84 C80 90 90 100 98 118 Z',
+  rearDelt: BODY_FRONT.shoulders,
+  triceps: 'M47 118 C43 134 44 150 48 164 C54 154 58 140 59 124 C55 120 51 118 47 118 Z',
+  upperBack: 'M70 98 C78 102 88 110 94 120 L88 134 C80 124 72 116 66 108 Z',
+  lats: 'M64 118 C66 144 72 168 84 186 C90 172 92 156 92 140 C84 132 74 124 64 118 Z',
+  lowerBack: 'M90 168 C90 182 92 196 98 204 L98 160 C95 162 92 165 90 168 Z',
+  forearms: BODY_FRONT.forearms,
+  glutes: 'M66 204 C61 222 63 240 72 248 C84 252 94 248 98 240 L98 206 C88 202 76 202 66 204 Z',
+  hamstrings: 'M63 256 C60 274 62 290 68 302 C78 306 88 302 92 294 C94 278 93 264 90 254 C82 258 72 258 63 256 Z',
+  calves: 'M62 312 C57 330 59 348 66 362 C74 364 82 358 84 346 C86 332 84 320 81 312 C74 316 68 316 62 312 Z',
+};
+const bodyMirror = d => `<path d="${d}"/><path d="${d}" transform="translate(200 0) scale(-1 1)"/>`;
+function bodyShade(v) { const t = Math.min(1, v / 10), a = [184, 221, 203], b = [15, 110, 86]; return `rgb(${a.map((x, i) => Math.round(x + (b[i] - x) * t)).join(',')})`; }
+function bodyFigure(map, label, fillFor) {
+  return `<div class="bm-fig"><svg viewBox="8 6 184 410" width="150" role="img" aria-label="${label} muscles">
+    <g class="bm-sil" stroke-width="2.2" stroke-linejoin="round"><ellipse cx="100" cy="36" rx="19" ry="24"/>${bodyMirror(BODY_SIL)}</g>
+    <g class="bm-sil" style="stroke:none">${bodyMirror(BODY_SIL)}<rect x="98" y="60" width="4" height="174"/></g>
+    ${Object.entries(map).map(([k, d]) => { const f = fillFor(k);
+      return `<g class="bm-reg${f ? '' : ' none'}${_bodySel === k ? ' sel' : ''}"${f ? ` style="fill:${f}"` : ''} onclick="selectBodyRegion('${k}')">${bodyMirror(d)}</g>`; }).join('')}
+  </svg><div class="bm-lbl">${label}</div></div>`;
+}
+function setBodyView(v) { _bodyView = v; _bodySel = null; renderLiftMuscles(_liftDate || liftDateStr()); }
+function selectBodyRegion(k) { _bodySel = _bodySel === k ? null : k; renderLiftMuscles(_liftDate || liftDateStr()); }
 function renderLiftMuscles(date) {
   const el = document.getElementById('liftMuscles');
   if (!el) return;
   const from = liftWeekStart(date), to = liftLocalDate(new Date(new Date(from + 'T12:00:00').getTime() + 6 * 86400000));
-  const sets = liftMuscleSets(from, to);
-  const extra = Object.keys(sets).filter(k => !LIFT_MUSCLES.includes(k));
-  el.innerHTML = `<div class="lift-muscle-title">Sets this week</div><div class="lift-muscles">${[...LIFT_MUSCLES, ...extra].map(m =>
-    `<span class="lift-muscle${sets[m] ? '' : ' zero'}">${m} <b>${sets[m] || 0}</b></span>`).join('')}</div>`;
+  const dayLifts = _lifts.filter(l => l.date === date && !liftIsWarmup(l));
+  const view = _bodyView || (dayLifts.length ? 'day' : 'week');
+  const week = view === 'week';
+  const data = bodySets(week ? _lifts.filter(l => l.date >= from && l.date <= to) : dayLifts, liftIsWarmup);
+  const fillFor = k => { const d = data[k]; if (!d || !d.sets) return null; return week ? bodyShade(d.sets) : d.primary ? '#0F6E56' : '#8FCAB1'; };
+  const fmt = v => (v % 1 ? v.toFixed(1) : v);
+  const dayName = date === liftDateStr() ? 'Today' : fmtDate(date, { weekday: 'short' });
+  const legend = week ? '<div class="bm-legend">0<span class="bm-grad"></span>10+ sets</div>'
+    : '<div class="bm-legend"><span><i style="background:#0F6E56"></i>Primary</span><span><i style="background:#8FCAB1"></i>Secondary</span><span><i class="bm-none-dot"></i>Not worked</span></div>';
+  let detail = '';
+  if (_bodySel) {
+    const d = data[_bodySel];
+    const agg = {}; (d?.from || []).forEach(x => { const k = x.exercise + (x.half ? '|h' : ''); agg[k] = { ...x, sets: (agg[k]?.sets || 0) + x.sets }; });
+    const full = Object.values(agg).filter(x => !x.half), half = Object.values(agg).filter(x => x.half);
+    detail = `<div class="bm-detail"><div class="t"><span>${BODY_LABELS[_bodySel]}</span><span>${d ? fmt(d.sets) : 0} sets ${week ? 'this week' : dayName.toLowerCase() === 'today' ? 'today' : 'on ' + dayName}</span></div>${
+      !d ? 'Nothing logged for this muscle yet.' : full.map(x => `${escapeHtml(x.exercise)} ${fmt(x.sets)}`).join(' · ')
+      + (half.length ? `${full.length ? '<br>' : ''}+ half credit from ${half.map(x => escapeHtml(x.exercise)).join(', ')} (${fmt(half.reduce((a, x) => a + x.sets, 0))})` : '')}</div>`;
+  } else if (!week && dayLifts.length) {
+    const prim = BODY_GROUPS.map(([g, ks]) => [g, dayLifts.filter(l => liftRegions(l).p.some(k => ks.includes(k))).reduce((a, l) => a + l.sets, 0)]).filter(x => x[1]);
+    const sec = Object.keys(data).filter(k => !data[k].primary).map(k => BODY_LABELS[k].toLowerCase());
+    const total = dayLifts.reduce((a, l) => a + l.sets, 0);
+    detail = `<div class="bm-detail"><div class="t"><span>${dayName}</span><span>${total} sets</span></div><b>Primary:</b> ${prim.map(([g, n]) => `${g} ${n}`).join(' · ')}${sec.length ? `<br><b>Secondary:</b> ${sec.join(', ').replace(/^./, c => c.toUpperCase())}` : ''}<div class="bm-hint">Tap a muscle for details</div></div>`;
+  }
+  let gaps = '';
+  if (week) {
+    const noPrim = BODY_GROUPS.filter(([, ks]) => !ks.some(k => data[k]?.primary));
+    const helper = noPrim.filter(([, ks]) => ks.some(k => data[k]?.sets)).map(([g]) => g.toLowerCase());
+    const miss = noPrim.filter(([, ks]) => !ks.some(k => data[k]?.sets)).map(([g]) => g.toLowerCase());
+    const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0];
+    gaps = !Object.keys(data).length ? '<div class="bm-gaps">Nothing logged this week yet.</div>'
+      : !noPrim.length ? '<div class="bm-gaps"><b>Every major group trained this week.</b></div>'
+      : `<div class="bm-gaps">${miss.length ? `<b>Not trained yet this week:</b> ${list(miss)}.` : ''}${helper.length ? `${miss.length ? '<br>' : ''}<b>Only helper work:</b> ${list(helper)}.` : ''}</div>`;
+  }
+  el.innerHTML = `<div class="bm-head"><span class="lift-muscle-title" style="margin:0">Muscles worked</span><span class="bm-seg">
+      <button class="${week ? 'on' : ''}" onclick="setBodyView('week')">This week</button><button class="${week ? '' : 'on'}" onclick="setBodyView('day')">${dayName === 'Today' ? 'Today' : dayName}</button></span></div>
+    <div class="bm-figs">${bodyFigure(BODY_FRONT, 'Front', fillFor)}${bodyFigure(BODY_BACK, 'Back', fillFor)}</div>${legend}${detail}${gaps}`;
 }
 
 // ── Routines ──

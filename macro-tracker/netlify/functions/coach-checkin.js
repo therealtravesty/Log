@@ -20,6 +20,127 @@ const MODELS = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001']; // first that
 // Outdoor walks/hikes support the step goal; everything else is a workout.
 // Works for Strava sport_types ("Walk", "Hike") and Apple Health names
 // ("Walking", "Hiking", "Outdoor Walk"); treadmill/indoor walks count.
+// ── Food groups ("plate") — shared by the app and the Coach ──
+// Groups come from the food name first, then its macros. Dishes that name a
+// protein plus something else (chicken salad, turkey sandwich) are split: the
+// protein's calories go to Protein, the rest to the other group.
+const PLATE_GROUPS = [
+  { k: 'veg', label: 'Vegetables', color: '#3E9B5A' },
+  { k: 'fruit', label: 'Fruit', color: '#E8893A' },
+  { k: 'protein', label: 'Protein', color: '#C4574E' },
+  { k: 'grains', label: 'Grains & starches', color: '#D8B145' },
+  { k: 'dairy', label: 'Dairy', color: '#5E9FD6' },
+  { k: 'fats', label: 'Nuts & fats', color: '#9A7651' },
+  { k: 'treats', label: 'Treats & drinks', color: '#A98BC4' },
+];
+const PLATE_RE = {
+  protein: /chicken|turkey|beef|steak|pork|\bham\b|bacon|sausage|salmon|tuna|shrimp|fish|\bcod\b|tilapia|\beggs?\b|egg white|jerky|protein|whey|isolate|tofu|tempeh|seitan|lamb|bison|venison|crab|lobster|scallop|meatball|burger|black bean|pinto|kidney bean|refried|lentil|chickpea|hummus/,
+  treats: /candy|cookie|brownie|\bcake|cupcake|donut|doughnut|pastry|chocolate|ice cream|gelato|\bsoda\b|cola|sprite|gumm|skittles|m&m|reese|snickers|kit ?kat|feastables|muddy bites|beer|\bwine\b|vodka|whiskey|bourbon|tequila|\brum\b|margarita|cocktail|hard seltzer|lemonade|sweet tea|syrup|frosting|\bpie\b|chips|doritos|cheetos|pretzel|fries/,
+  fats: /avocado|guac|almond(?! milk)|peanut|cashew|walnut|pecan|pistachio|nut butter|\bnuts?\b|seeds?\b|olive oil|\boil\b|butter(?!milk)|mayo|dressing|ranch/,
+  fruit: /apple|banana|berr|orange|grape|melon|pineapple|mango|peach|\bpears?\b|cherr|kiwi|fruit|clementine|mandarin|\bplums?\b|apricot|raisin|\bdates\b|\bfigs?\b|pomegranate/,
+  veg: /salad|lettuce|romaine|spinach|kale|arugula|greens|broccoli|cauliflower|carrot|pepper(?!oni)|onion|tomato|cucumber|zucchini|squash|asparagus|green bean|brussels|cabbage|slaw|celery|mushroom|veg|beet|radish|salsa|pico|edamame|okra|eggplant|artichoke|bok choy|pickle|sauerkraut|kimchi|\bpeas\b|\bcorn\b|sweet potato/,
+  dairy: /milk|yogurt|yoghurt|skyr|cheese|cottage|kefir|mozzarella|cheddar|parmesan/,
+  grains: /rice|bread|toast|bagel|tortilla|wrap|pasta|noodle|\boat|cereal|granola|quinoa|potato|cracker|\bbuns?\b|\brolls?\b|pancake|waffle|muffin|couscous|barley|pita|naan|grits|popcorn|sandwich|pizza|burrito|taco/,
+};
+// Returns [{ k, cal }] — usually one part, two for a split dish, [] for ~0 kcal items
+function plateParts(f) {
+  const n = String(f.name || '').toLowerCase(), cal = f.cal || 0;
+  const hit = k => PLATE_RE[k].test(n);
+  if (cal < 5) return [];
+  if (/shake|whey|isolate|protein (bar|powder|chips|cookie)/.test(n)) return [{ k: 'protein', cal }];
+  if (hit('treats')) return [{ k: 'treats', cal }];
+  const others = ['veg', 'fruit', 'grains', 'dairy', 'fats'].filter(hit);
+  if (hit('protein') && others.length) {
+    const p = Math.min(cal, (f.pro || 0) * 4 * 1.4); // lean protein carries some fat with it
+    return [{ k: 'protein', cal: p }, { k: others[0], cal: cal - p }].filter(x => x.cal > 0);
+  }
+  if (hit('protein')) return [{ k: 'protein', cal }];
+  if (others.length) return [{ k: others[0], cal }];
+  if (cal < 20) return [];
+  const pc = (f.pro || 0) * 4 / cal, fc = (f.fat || 0) * 9 / cal, sc = (f.sug || 0) * 4 / cal;
+  return [{ k: pc >= 0.4 ? 'protein' : fc >= 0.55 ? 'fats' : sc >= 0.35 ? 'treats' : 'grains', cal }];
+}
+// Servings of produce: from fiber (about 2 g per vegetable serving, 2.5 g per fruit),
+// falling back to calories when fiber is missing. A serving ≈ 1 cup raw / ½ cup cooked.
+function plateProduce(f) {
+  const parts = plateParts(f), cal = f.cal || 0, n = String(f.name || '').toLowerCase();
+  let veg = 0, fruit = 0;
+  parts.forEach(p => {
+    const share = cal ? p.cal / cal : 1, fib = (f.fib || 0) * share;
+    if (p.k === 'veg') veg += fib >= 1 ? fib / 2 : p.cal / 25;
+    if (p.k === 'fruit') fruit += fib >= 1 ? fib / 2.5 : p.cal / 80;
+  });
+  // Leafy greens can be under 5 kcal and still count
+  if (!parts.length && PLATE_RE.veg.test(n)) veg += 0.5;
+  const r = v => (v > 0 ? Math.max(0.5, Math.round(v * 2) / 2) : 0);
+  return { veg: Math.min(4, r(veg)), fruit: Math.min(3, r(fruit)) };
+}
+function plateSummary(foods) {
+  const by = {}; let total = 0, veg = 0, fruit = 0;
+  const items = {};
+  (foods || []).forEach(f => {
+    plateParts(f).forEach(p => { by[p.k] = (by[p.k] || 0) + p.cal; total += p.cal; (items[p.k] = items[p.k] || []).push({ name: f.name, cal: p.cal }); });
+    const pr = plateProduce(f); veg += pr.veg; fruit += pr.fruit;
+    if (pr.veg && !(items.veg || []).some(x => x.name === f.name)) (items.veg = items.veg || []).push({ name: f.name, cal: 0 });
+  });
+  return { by, total, items, veg, fruit, produce: veg + fruit };
+}
+
+// ── Muscle regions per exercise (shared by the app and the Coach) ──
+// Primary muscles get full credit for the sets, secondary (helper) muscles half.
+const BODY_LABELS = { chest: 'Chest', shoulders: 'Front/side shoulders', rearDelt: 'Rear shoulders', traps: 'Traps', upperBack: 'Upper back', lats: 'Lats',
+  lowerBack: 'Lower back', biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms', abs: 'Abs', obliques: 'Obliques', glutes: 'Glutes',
+  quads: 'Quads', hamstrings: 'Hamstrings', calves: 'Calves' };
+const BODY_GROUPS = [['Chest', ['chest']], ['Shoulders', ['shoulders', 'rearDelt']], ['Back', ['lats', 'upperBack', 'traps', 'lowerBack']], ['Biceps', ['biceps']],
+  ['Triceps', ['triceps']], ['Legs', ['quads', 'hamstrings', 'calves']], ['Glutes', ['glutes']], ['Core', ['abs', 'obliques']]];
+const BODY_RULES = [
+  [/glute kickback|cable kickback.*glute|hip thrust|glute bridge|abduct/, ['glutes'], ['hamstrings']],
+  [/close[- ]?grip bench/, ['triceps'], ['chest', 'shoulders']],
+  [/tricep dip|bench dip/, ['triceps'], ['chest', 'shoulders']],
+  [/\bdips?\b/, ['triceps', 'chest'], ['shoulders']],
+  [/tricep|pushdown|skull ?crusher|kickback|french press/, ['triceps'], []],
+  [/leg curl|hamstring curl|nordic/, ['hamstrings'], []],
+  [/curl/, ['biceps'], ['forearms']],
+  [/leg extension/, ['quads'], []],
+  [/calf|calves/, ['calves'], []],
+  [/reverse fly|rear delt|face pull/, ['rearDelt'], ['upperBack', 'traps']],
+  [/\bfly|flye|pec deck|cable cross/, ['chest'], ['shoulders']],
+  [/lateral raise|side raise|front raise|upright row/, ['shoulders'], ['traps']],
+  [/shrug/, ['traps'], []],
+  [/overhead|shoulder press|military|arnold|landmine press/, ['shoulders'], ['triceps']],
+  [/bench|chest press|push[- ]?up|incline press|decline press|\bpress\b.*chest/, ['chest'], ['shoulders', 'triceps']],
+  [/pull[- ]?up|chin[- ]?up|lat pull|pulldown|pullover/, ['lats'], ['biceps', 'upperBack']],
+  [/\brows?\b|rowing/, ['upperBack', 'lats'], ['biceps', 'rearDelt']],
+  [/romanian|\brdl\b|stiff[- ]?leg|good morning/, ['hamstrings', 'glutes'], ['lowerBack']],
+  [/deadlift/, ['glutes', 'hamstrings', 'lowerBack'], ['traps', 'quads', 'forearms']],
+  [/back extension|hyperextension|superman/, ['lowerBack'], ['glutes', 'hamstrings']],
+  [/squat|leg press|hack|lunge|step[- ]?up|wall sit/, ['quads', 'glutes'], ['hamstrings']],
+  [/adduct/, ['quads'], []],
+  [/russian twist|oblique|woodchop|side plank|wood chop/, ['obliques'], ['abs']],
+  [/crunch|sit[- ]?up|plank|\babs?\b|leg raise|knee raise|hanging|ab wheel|rollout|dead bug|hollow/, ['abs'], ['obliques']],
+  [/farmer|wrist|grip/, ['forearms'], ['traps']],
+];
+const BODY_GROUP_FALLBACK = { chest: ['chest'], back: ['lats', 'upperBack'], shoulders: ['shoulders'], biceps: ['biceps'], triceps: ['triceps'],
+  legs: ['quads', 'hamstrings'], glutes: ['glutes'], core: ['abs'] };
+function liftRegions(l) {
+  const n = String(l.exercise || '').toLowerCase();
+  const r = BODY_RULES.find(([re]) => re.test(n));
+  if (r) return { p: r[1], s: r[2] };
+  const g = String(l.muscle_group || '').toLowerCase().trim();
+  return { p: BODY_GROUP_FALLBACK[g] || [], s: [] };
+}
+// { region: { sets, from: [{ exercise, sets, half }] } } — warm-ups skipped
+function bodySets(lifts, isWarmup) {
+  const out = {};
+  lifts.forEach(l => {
+    if (isWarmup && isWarmup(l)) return;
+    const { p, s } = liftRegions(l), sets = l.sets || 0;
+    const add = (k, v, half) => { const o = out[k] || (out[k] = { sets: 0, primary: false, from: [] }); o.sets += v; if (!half) o.primary = true; o.from.push({ exercise: l.exercise, sets: v, half }); };
+    p.forEach(k => add(k, sets, false)); s.forEach(k => add(k, sets / 2, true));
+  });
+  return out;
+}
+
 function isWorkoutRow(e) {
   if (e.source === 'strava' && e.trainer) return true;
   const t = String(e.sport_type || e.name || '');
@@ -222,10 +343,14 @@ exports.handler = async (event) => {
       const muscleOf = g => { const s = String(g || '').toLowerCase();
         if (/quad|hamstring|calf|calves|leg/.test(s)) return 'Legs'; if (/lat|trap|back/.test(s)) return 'Back'; if (/delt|shoulder/.test(s)) return 'Shoulders'; if (/ab|core|oblique/.test(s)) return 'Core';
         return ['Chest', 'Biceps', 'Triceps', 'Glutes'].find(m => s.includes(m.toLowerCase())) || (s ? 'Other' : 'Unlabeled'); };
-      const setsBy = (from, to) => { const o = {}; lifts.filter(l => inRange(l.date, from, to)).forEach(l => { const m = muscleOf(l.muscle_group); o[m] = (o[m] || 0) + l.sets; }); return o; };
+      const warmup = l => /jumping jack|jump rope|skipping|high knee|butt kick|arm circle|burpee|mountain climber|jog|warm[- ]?up|stretch|foam roll/i.test(l.exercise) || (!(l.weight > 0) && l.reps >= 30 && /full/i.test(String(l.muscle_group || '')));
+      const compound = n => /press|bench|row|squat|deadlift|\brdl\b|lunge|split squat|hip thrust|pull[- ]?up|chin[- ]?up|lat pull|hack|step[- ]?up/i.test(n) && !/tricep|curl|\bfly|flye|raise|kickback|extension|pushdown|crunch|calf|shrug|pec deck|face pull/i.test(n);
+      const setsBy = (from, to) => { const o = {}; lifts.filter(l => inRange(l.date, from, to) && !warmup(l)).forEach(l => { const m = muscleOf(l.muscle_group); o[m] = (o[m] || 0) + l.sets; }); return o; };
       const thisWk = setsBy(thisWeek, today), last4 = setsBy(addDays(thisWeek, -28), addDays(thisWeek, -1));
       const mgroups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Glutes', 'Core'];
       out.push(`- Working sets per muscle group, this week so far vs average per week over the previous 4 weeks: ${mgroups.map(g => `${g} ${thisWk[g] || 0} vs ${Math.round(((last4[g] || 0) / 4) * 10) / 10}`).join('; ')}`);
+      const regWk = bodySets(lifts.filter(l => inRange(l.date, thisWeek, today)), warmup), reg4 = bodySets(lifts.filter(l => inRange(l.date, addDays(thisWeek, -28), addDays(thisWeek, -1))), warmup);
+      out.push(`- Sets by muscle including half credit for helper muscles (e.g. bench counts half for triceps and front shoulders), this week so far vs weekly average over the previous 4 weeks: ${Object.keys(BODY_LABELS).map(k => `${BODY_LABELS[k]} ${Math.round((regWk[k]?.sets || 0) * 10) / 10} vs ${Math.round((reg4[k]?.sets || 0) / 4 * 10) / 10}`).join('; ')}`);
       const routines = (routineRows || []).filter(r => Array.isArray(r.exercises) && r.exercises.length);
       if (routines.length) out.push(`- Saved routines: ${routines.map(r => `${r.name} (${r.exercises.map(x => x.exercise).join(', ')})`).join('; ')}`);
       const key = n => String(n).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -248,7 +373,11 @@ exports.handler = async (event) => {
         const prior = dates.filter(d => d < latestD).map(d => m(byDate[d]));
         const pr = prior.length && m(latest) > Math.max(...prior) ? ' — PR on latest session' : '';
         const name = g[g.length - 1].exercise, mg = g[g.length - 1].muscle_group;
-        return { latestD, line: `- ${name}${mg ? ` (${mg})` : ''}: ${recent.length} session${recent.length === 1 ? '' : 's'} in 8 weeks; latest ${latestD} ${fmt(latest.last)}; ${trend}${pr}` };
+        if (warmup(g[g.length - 1])) return { latestD, line: `- ${name}: warm-up/conditioning, ${recent.length} session${recent.length === 1 ? '' : 's'} in 8 weeks (not counted as working sets)` };
+        const tail = dates.slice(-3).map(d => byDate[d]);
+        const stuck = !bw && tail.length === 3 && tail.every(s => s.top === tail[0].top && s.last.reps === tail[0].last.reps) ? `; same ${tail[0].last.sets}x${tail[0].last.reps} @ ${tail[0].top} lbs for 3+ sessions` : '';
+        const kind = compound(name) ? 'main lift, target 6–8 reps' : 'accessory, target 10–12 reps';
+        return { latestD, line: `- ${name}${mg ? ` (${mg})` : ''} [${kind}]${stuck}: ${recent.length} session${recent.length === 1 ? '' : 's'} in 8 weeks; latest ${latestD} ${fmt(latest.last)}; ${trend}${pr}` };
       }).sort((a, b) => (a.latestD < b.latestD ? 1 : -1)).slice(0, 15).map(r => r.line);
       return out.concat(perEx);
     })();
@@ -346,6 +475,13 @@ exports.handler = async (event) => {
         const lim = [goals.sug ? `sugar ${avg('sug')}g (limit ${goals.sug}g)` : null, goals.sod ? `sodium ${avg('sod').toLocaleString()}mg (limit ${goals.sod.toLocaleString()}mg)` : null,
           goals.fib ? `fiber ${avg('fib')}g (goal ${goals.fib}g)` : null, goals.satFat ? `saturated fat ${avg('sat')}g (limit ${goals.satFat}g)` : null].filter(Boolean);
         if (lim.length) foodLines.push(`- Full days: ${lim.join(', ')}`);
+        // Food groups and produce (vegetable + fruit servings, estimated from fiber)
+        const plates = full.map(t => plateSummary(byDate[t.d]));
+        const pAvg = k => Math.round(plates.reduce((a, x) => a + x[k], 0) / plates.length * 10) / 10;
+        const grpTot = {}; let calTot = 0;
+        plates.forEach(x => { Object.entries(x.by).forEach(([k, v]) => { grpTot[k] = (grpTot[k] || 0) + v; calTot += v; }); });
+        const fiveDays = plates.filter(x => x.produce >= 5).length;
+        foodLines.push(`- Full days: produce ${pAvg('produce')} servings/day (${pAvg('veg')} vegetable, ${pAvg('fruit')} fruit; goal 5), 5+ on ${fiveDays}/${plates.length} days. Calories by food group: ${PLATE_GROUPS.filter(g => grpTot[g.k]).map(g => `${g.label} ${Math.round(grpTot[g.k] / (calTot || 1) * 100)}%`).join(', ')}`);
       }
       // Meals: average per logged day that had that meal
       const mealStats = {};
@@ -373,16 +509,17 @@ exports.handler = async (event) => {
 THINK IN FOUR PILLARS, AND HOW THEY CONNECT:
 - BODY: the weight trend against the plan.
 - TRAINING: sessions against plan (especially strength training), minutes, steps against the 15k goal.
-- NUTRITION: calories and protein on logged days, how meals are built, food quality.
+- NUTRITION: calories and protein on logged days, how meals are built, food quality, and balance: produce servings (goal about 5 a day) and calories by food group.
 - RECOVERY: sleep amount and consistency, HRV against their normal range, resting heart rate, stress and Body Battery, alcohol.
 The scale is one signal, not the verdict. Look for the connections a good coach would:
+- Calories and protein come first on a cut, but balance matters too. If produce averages under about 4 servings a day, or treats/drinks take a big share of calories, name one easy, specific addition (e.g. a cup of roasted broccoli at dinner, berries with the yogurt). Vegetables cost very few calories and add volume, so frame them as making the cut easier, never as a trade against protein.
 - Short or erratic sleep drives hunger and cravings, weaker sessions and a noisier scale. When it lines up with overeating or a stall, sleep is the lever, ahead of cutting calories.
 - Resting heart rate up 5+ bpm, or HRV below their normal range on several nights (or a falling HRV trend), while training hard in a deficit means under-recovery: ease the deficit or the load, don't push harder. HRV is the more sensitive signal; one low night means little, a run of them matters.
 - High Garmin stress or a low Body Battery morning high alongside short sleep is the same story: recovery is the lever.
 - Strength training on plan + protein at or near target + the scale moving slower than planned: muscle may be partly offsetting fat loss. Say "possibly" and suggest a weekly waist measurement (or photos) to confirm. Never use this to excuse a stall when logged intake is over target or training is off plan.
 - Alcohol worsens sleep and appetite the following day.
 - Steps are a large, easy share of their daily burn; a drop shows up on the scale.
-- Review training like a coach, using the STRENGTH LOG and CARDIO PERFORMANCE: a lift whose best set hasn't moved in 3+ sessions, a muscle group with few or no working sets for weeks (roughly 10+ sets a week per major group is a common target), cardio that's nearly all hard (Z4-5) or all easy, or treadmill speed/incline unchanged for weeks. When one of these shows up, suggest ONE specific change with numbers: a weight or rep target, sets to add for a group, a routine tweak, or a speed/incline step. During a cut, holding strength is the goal. Only suggest adding weight when recovery supports it (HRV in their normal range, resting heart rate not up, sleep around 7h); when recovery is off, suggest holding the same weights or a lighter week instead and name the signal. The app's own lifting targets follow the same rule.
+- Review training like a coach, using the STRENGTH LOG and CARDIO PERFORMANCE: a lift whose best set hasn't moved in 3+ sessions (lines marked "same … for 3+ sessions"), main lifts still done at 10+ reps (the app now moves main lifts to 6–8 reps and adds weight at 8; accessories stay at 10–12 — back that up, don't contradict it), a muscle group with few or no working sets for weeks (roughly 10+ sets a week per major group is a common target), cardio that's nearly all hard (Z4-5) or all easy, or treadmill speed/incline unchanged for weeks. When one of these shows up, suggest ONE specific change with numbers: a weight or rep target, sets to add for a group, a routine tweak, or a speed/incline step. During a cut, holding strength is the goal. Only suggest adding weight when recovery supports it (HRV in their normal range, resting heart rate not up, sleep around 7h); when recovery is off, suggest holding the same weights or a lighter week instead and name the signal. The app's own lifting targets follow the same rule.
 
 STRUCTURE (plain text, rendered as-is; no markdown, no #, **, *, -, or numbered lists):
 Paragraph 1, WINS: one or two specific things that went well, from any pillar, with numbers. If little went well, find the most genuine positive; don't invent one.
