@@ -284,6 +284,9 @@ exports.handler = async (event) => {
         if (incR != null) parts.push(`user-entered incline ${incR.toFixed(1)}%${incP != null ? ` vs ${incP.toFixed(1)}% before` : ''}`);
         const lvR = avg(dl(recent), e => e.details.level), lvP = avg(dl(prior), e => e.details.level);
         if (lvR) parts.push(`machine level ${lvR.toFixed(1)}${lvP ? ` vs ${lvP.toFixed(1)} before` : ''}`);
+        const fpm = e => { const f = (e.details && e.details.floors) || e.stats.floors; return f && e.moving_time ? f / (e.moving_time / 60) : null; };
+        const fR = avg(recent, fpm), fP = avg(prior, fpm);
+        if (fR) parts.push(`stair pace ${fR.toFixed(1)} floors/min${fP ? ` vs ${fP.toFixed(1)} before` : ''}`);
         if (g.some(e => e.details && e.details.speed_mph)) parts.push('speed is user-entered from the treadmill (more accurate than Garmin\'s estimate)');
         return `- ${k.replace(/_/g, ' ')}: ${parts.join('; ')}`;
       }));

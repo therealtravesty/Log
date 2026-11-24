@@ -31,7 +31,7 @@ exports.handler = async (event) => {
       const body = JSON.parse(event.body || '{}');
       const d = body.details && typeof body.details === 'object' ? body.details : {};
       const num = (v, lo, hi) => { const n = parseFloat(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 10) / 10 : null; };
-      const details = { speed_mph: num(d.speed_mph, 0.5, 20), incline_pct: num(d.incline_pct, -5, 40), level: num(d.level, 1, 40) };
+      const details = { speed_mph: num(d.speed_mph, 0.5, 20), incline_pct: num(d.incline_pct, -5, 40), level: num(d.level, 1, 40), floors: num(d.floors, 1, 3000) };
       Object.keys(details).forEach(k => details[k] == null && delete details[k]);
       const result = await query(`exercise_logs?id=eq.${encodeURIComponent(id)}`, {
         method: 'PATCH', body: JSON.stringify({ details: Object.keys(details).length ? details : null }), prefer: 'return=representation',

@@ -928,6 +928,7 @@
   .zone-bar span { display: block; height: 100%; }
   .zone-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0 4px; font-size: 11px; color: var(--text-2); font-family: 'DM Mono', monospace; }
   .zone-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  .lift-session { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; margin-bottom: 6px; background: var(--bg); border-radius: var(--radius); cursor: pointer; }
   .cardio-src { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--bg); color: var(--text-3); border: 0.5px solid var(--border-med); font-weight: 400; }
 </style>
 </head>
@@ -1371,18 +1372,9 @@
     <div id="liftReadiness"></div>
     <div class="card">
       <div class="section-title">Strength</div>
+      <div id="liftSession"></div>
       <div id="liftItems"></div>
-      <div id="liftMuscles"></div>
-    </div>
-    <div class="card">
-      <div class="section-title">Cardio &amp; activities</div>
-      <div id="cardioItems"></div>
-      <div id="cardioZones"></div>
-      <button class="garmin-log-sync" onclick="runGarminSync()">Sync Garmin activity</button>
-    </div>
-    <div class="card">
-      <div class="section-title">Log strength exercise</div>
-      <div class="exercise-add-row" style="margin-top:0;">
+      <div class="exercise-add-row" style="margin-top:12px;">
         <input class="exercise-input" id="liftQuery" placeholder="e.g. lat pulldown, incline DB press" autocomplete="off" oninput="renderLiftRecents()" onkeydown="if(event.key==='Enter'){event.preventDefault();liftLookup()}"/>
         <button class="exercise-add-btn" id="liftLookupBtn" onclick="liftLookup()">Look up</button>
         <button class="exercise-add-btn" onclick="document.getElementById('liftCameraInput').click()" aria-label="Photo of the machine" style="display:flex;align-items:center;gap:5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
@@ -1391,6 +1383,13 @@
       <div class="search-hint" style="margin-top:6px;">Describe it, snap the machine, or pick one you've done before.</div>
       <div id="liftResult"></div>
       <div id="liftRecents" style="margin-top:14px;"></div>
+      <div id="liftMuscles"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Cardio &amp; activities</div>
+      <div id="cardioItems"></div>
+      <div id="cardioZones"></div>
+      <button class="garmin-log-sync" onclick="runGarminSync()">Sync Garmin activity</button>
     </div>
   </div>
 
@@ -7708,7 +7707,7 @@ function renderLift() {
   const wk = _lifts.filter(l => l.date >= wkStart && l.date <= todayStr());
   const wkEx = Object.entries(_exercise || {}).filter(([d]) => d >= wkStart && d <= todayStr()).flatMap(([d, rows]) => rows.map(r => ({ ...r, date: d })));
   const days = new Set([...wk.map(l => l.date), ...wkEx.map(e => e.date)]).size;
-  const cardioMin = Math.round(wkEx.reduce((a, e) => a + (e.moving_time || 0), 0) / 60);
+  const cardioMin = Math.round(wkEx.filter(e => !isStrengthSession(e)).reduce((a, e) => a + (e.moving_time || 0), 0) / 60);
   const sub = document.getElementById('liftSub');
   if (sub) sub.textContent = days
     ? [`${days} workout day${days === 1 ? '' : 's'} this week`, wk.length ? `${liftNum(wk.reduce((a, l) => a + liftVol(l), 0))} lbs lifted` : '', cardioMin ? `${cardioMin} min cardio` : ''].filter(Boolean).join(' · ')
@@ -7722,7 +7721,9 @@ function renderLift() {
   const el = document.getElementById('liftItems');
   if (el) {
     if (!items.length) {
-      el.innerHTML = `<div class="empty-msg" style="padding:6px 0;">No lifts logged ${isToday ? 'yet today' : 'this day'}</div>`;
+      el.innerHTML = ((_exercise || {})[date] || []).some(isStrengthSession)
+        ? '<div class="search-hint" style="margin:2px 0 0;">Garmin has the session. Add the exercises below to track weights.</div>'
+        : `<div class="empty-msg" style="padding:6px 0;">No lifts logged ${isToday ? 'yet today' : 'this day'}</div>`;
     } else {
       const total = items.reduce((a, l) => a + liftVol(l), 0);
       el.innerHTML = items.map(l => `<div class="lift-item">
@@ -8039,6 +8040,7 @@ function cardioLine(e) {
   if (dt.speed_mph) bits.push(`${dt.speed_mph} mph`);
   if (dt.incline_pct != null) bits.push(`${dt.incline_pct}% incline`);
   if (dt.level != null) bits.push(`level ${dt.level}`);
+  if (cardioFloors(e)) bits.push(`${Math.round(cardioFloors(e))} floors` + (cardioFpm(e) ? ` · ${cardioFpm(e)} fl/min` : ''));
   if (sp && (cardioOnFoot(e) || !dt.speed_mph)) bits.push(cardioOnFoot(e) ? cardioPaceStr(sp) : `${(sp * 2.23694).toFixed(1)} mph`);
   if (s.avg_hr) bits.push(`${Math.round(s.avg_hr)} bpm`);
   if (s.elev_gain_m && s.elev_gain_m * 3.281 >= 30) bits.push(`${Math.round(s.elev_gain_m * 3.281)} ft up`);
@@ -8047,16 +8049,25 @@ function cardioLine(e) {
   return bits.join(' · ');
 }
 
+const isStrengthSession = e => /strength|weight ?(training|lifting)|lifting|functional|crossfit/i.test(`${e.sport_type || ''} ${e.name || ''}`);
 function renderCardio(date) {
   const el = document.getElementById('cardioItems');
   if (!el) return;
   const items = [...((_exercise || {})[date] || [])].sort((a, b) => (a.id || 0) - (b.id || 0));
   _cardioList = items;
-  if (!items.length) {
-    el.innerHTML = `<div class="empty-msg" style="padding:6px 0;">No Garmin workouts ${date === todayStr() ? 'yet today' : 'this day'}</div>`;
+  // Garmin's strength session (time, heart rate, calories) sits with your lifts
+  const ses = document.getElementById('liftSession');
+  if (ses) {
+    const sessions = items.map((e, i) => [e, i]).filter(([e]) => isStrengthSession(e));
+    ses.innerHTML = sessions.map(([e, i]) => `<div class="lift-session" onclick="showCardioProgress(${i})">
+      <span class="cardio-src">Garmin session</span><span class="lift-item-sub" style="margin:0;">${cardioLine(e) || 'No stats yet'}</span></div>`).join('');
+  }
+  const rows = items.map((e, i) => [e, i]).filter(([e]) => !isStrengthSession(e));
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-msg" style="padding:6px 0;">No cardio ${date === todayStr() ? 'yet today' : 'this day'}</div>`;
     return;
   }
-  el.innerHTML = items.map((e, i) => {
+  el.innerHTML = rows.map(([e, i]) => {
     const manual = !e.source || e.source === 'manual';
     const src = e.source === 'garmin' || e.source === 'health' ? 'Garmin' : e.source === 'strava' ? 'Strava' : 'Manual';
     return `<div class="lift-item">
@@ -8064,7 +8075,7 @@ function renderCardio(date) {
         <div class="lift-item-name">${escapeHtml(e.name || cardioTitle(e))}<span class="cardio-src">${src}</span></div>
         <div class="lift-item-sub">${cardioLine(e) || 'No stats yet'}</div>
       </div>
-      <button class="edit-btn" onclick="openCardioDetails(${e.id})" title="${cardioIsTreadmill(e) ? 'Add speed and incline' : 'Add machine level'}">✎</button>
+      <button class="edit-btn" onclick="openCardioDetails(${e.id})" title="${cardioIsStairs(e) ? 'Add level and floors' : cardioIsTreadmill(e) ? 'Add speed and incline' : 'Add machine level'}">✎</button>
       ${manual ? `<button class="del-btn" onclick="removeCardio(${e.id})" title="Remove">×</button>` : ''}
     </div>${_cardioEditId === e.id ? cardioDetailsForm(e) : ''}`;
   }).join('');
@@ -8081,14 +8092,19 @@ function showCardioProgress(i) {
   const onFoot = cardioOnFoot(pickd);
   const hasSpeed = s => !!(s.details?.speed_mph || ((s.stats?.distance_m || 0) >= 80 && cardioSpeed(s)));
   const withSpeed = sessions.filter(hasSpeed);
-  const useSpeed = withSpeed.length >= Math.max(2, sessions.length * 0.5);
+  const withFpm = sessions.filter(s => cardioFpm(s));
+  const useFpm = cardioIsStairs(pickd) && withFpm.length >= Math.max(2, sessions.length * 0.5);
+  const useSpeed = !useFpm && withSpeed.length >= Math.max(2, sessions.length * 0.5);
   const shortDate = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const totalMin = Math.round(sessions.reduce((a, s) => a + (s.moving_time || 0), 0) / 60);
   const today = todayStr(), d28 = addDaysStr(today, -27), d56 = addDaysStr(today, -55);
   const hrAvg = rows => { const v = rows.map(r => r.stats?.avg_hr).filter(Boolean); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
   const hrNow = hrAvg(sessions.filter(s => s.date >= d28)), hrPrev = hrAvg(sessions.filter(s => s.date >= d56 && s.date < d28));
   let bestTile;
-  if (useSpeed) {
+  if (useFpm) {
+    const best = withFpm.reduce((b, s) => (cardioFpm(s) > cardioFpm(b) ? s : b), withFpm[0]);
+    bestTile = `<div class="lift-stat"><div class="lift-stat-v">${cardioFpm(best)}</div><div class="lift-stat-l">Best floors/min · ${shortDate(best.date)}</div></div>`;
+  } else if (useSpeed) {
     const best = withSpeed.reduce((b, s) => (cardioSpeed(s) > cardioSpeed(b) ? s : b), withSpeed[0]);
     bestTile = `<div class="lift-stat"><div class="lift-stat-v">${onFoot ? cardioPaceStr(cardioSpeed(best)).replace('/mi', '') : (cardioSpeed(best) * 2.23694).toFixed(1)}</div><div class="lift-stat-l">Best ${onFoot ? 'pace /mi' : 'mph'} · ${shortDate(best.date)}</div></div>`;
   } else {
@@ -8107,7 +8123,7 @@ function showCardioProgress(i) {
     </div>
     ${noStats ? '<div class="search-hint">Heart rate, distance and pace show up here once Garmin syncs them. Run "Backfill 120 days" on the Coach tab to fill in older workouts.</div>' : ''}
     <div class="chart-wrap" style="height:210px;"><canvas id="liftProgressChart"></canvas></div>
-    <div class="search-hint" style="margin-top:-6px;">${useSpeed ? `Getting fitter looks like ${onFoot ? 'faster pace' : 'higher speed'} at the same or lower heart rate.` : 'Getting fitter looks like the same work at a lower average heart rate.'}</div>
+    <div class="search-hint" style="margin-top:-6px;">${useFpm ? 'Getting fitter looks like more floors per minute at the same or lower heart rate.' : useSpeed ? `Getting fitter looks like ${onFoot ? 'faster pace' : 'higher speed'} at the same or lower heart rate.` : 'Getting fitter looks like the same work at a lower average heart rate.'}</div>
     <div>
       <div class="section-title" style="margin-bottom:4px;">History</div>
       ${[...sessions].reverse().slice(0, 40).map(s => `<div class="lift-hist-row">
@@ -8129,7 +8145,9 @@ function showCardioProgress(i) {
     const shown = sessions.slice(-25);
     const paceMin = s => { const sp = cardioSpeed(s); return sp ? Math.round((1609.34 / sp / 60) * 100) / 100 : null; };
     const fmtPace = v => { const m = Math.floor(v), sec = Math.round((v - m) * 60); return `${m}:${String(sec === 60 ? 0 : sec).padStart(2, '0')}`; };
-    const second = useSpeed
+    const second = useFpm
+      ? { type: 'line', label: 'Floors per min', yAxisID: 'y1', borderColor: '#378ADD', backgroundColor: '#378ADD', borderWidth: 2, pointRadius: 3, spanGaps: true, cubicInterpolationMode: 'monotone', data: shown.map(s => cardioFpm(s)) }
+      : useSpeed
       ? { type: 'line', label: onFoot ? 'Pace (min/mi)' : 'Speed (mph)', yAxisID: 'y1', borderColor: '#378ADD', backgroundColor: '#378ADD', borderWidth: 2, pointRadius: 3, spanGaps: true, cubicInterpolationMode: 'monotone',
           data: shown.map(s => (hasSpeed(s) ? (onFoot ? paceMin(s) : Math.round(cardioSpeed(s) * 2.23694 * 10) / 10) : null)) }
       : { type: 'bar', label: 'Minutes', yAxisID: 'y1', backgroundColor: 'rgba(55,138,221,0.25)', borderRadius: 4, order: 2,
@@ -8152,7 +8170,7 @@ function showCardioProgress(i) {
         scales: {
           x: { ticks: { color: tickColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } },
           y: { position: 'left', ticks: { color: tickColor }, grid: { color: gridColor } },
-          y1: { position: 'right', reverse: useSpeed && onFoot, beginAtZero: !useSpeed, grid: { display: false },
+          y1: { position: 'right', reverse: useSpeed && onFoot, beginAtZero: !useSpeed && !useFpm, grid: { display: false },
             ticks: { color: tickColor, callback: v => (useSpeed && onFoot ? fmtPace(v) : v) } },
         },
       },
@@ -8374,13 +8392,17 @@ function renderCardioZones(date) {
 
 // ── Machine details Garmin can't know: treadmill speed/incline, machine level ──
 const cardioIsTreadmill = e => /treadmill|run|walk|jog/i.test(`${e.sport_type || ''} ${e.name || ''}`);
+const cardioIsStairs = e => /stair|step ?mill|stepper|climb/i.test(`${e.sport_type || ''} ${e.name || ''}`);
+// Floors per minute: the stair machine's version of pace
+function cardioFloors(e) { return e.details?.floors || e.stats?.floors || null; }
+function cardioFpm(e) { const f = cardioFloors(e); return f && e.moving_time ? Math.round((f / (e.moving_time / 60)) * 10) / 10 : null; }
 function openCardioDetails(id) { _cardioEditId = _cardioEditId === id ? null : id; renderCardio(liftDateStr()); }
 async function saveCardioDetails(id) {
   const date = liftDateStr();
   const row = ((_exercise || {})[date] || []).find(e => e.id === id);
   if (!row) return;
   const v = k => { const el = document.getElementById(`cd_${k}_${id}`); return el && el.value !== '' ? parseFloat(el.value) : null; };
-  const details = { speed_mph: v('speed'), incline_pct: v('incline'), level: v('level') };
+  const details = { speed_mph: v('speed'), incline_pct: v('incline'), level: v('level'), floors: v('floors') };
   Object.keys(details).forEach(k => (details[k] == null || !Number.isFinite(details[k])) && delete details[k]);
   try {
     await api(`exercise?id=${id}`, { method: 'PATCH', body: { details } });
@@ -8394,12 +8416,15 @@ async function saveCardioDetails(id) {
 function cardioDetailsForm(e) {
   const d = e.details || {};
   const f = (k, label, val, step) => `<div><label for="cd_${k}_${e.id}">${label}</label><input id="cd_${k}_${e.id}" type="number" inputmode="decimal" step="${step}" value="${val ?? ''}"/></div>`;
-  const fields = cardioIsTreadmill(e)
+  const stairs = cardioIsStairs(e), tread = !stairs && cardioIsTreadmill(e);
+  const fields = tread
     ? f('speed', 'Speed mph', d.speed_mph, '0.1') + f('incline', 'Incline %', d.incline_pct, '0.5')
+    : stairs ? f('level', 'Level', d.level, '1') + f('floors', 'Floors', d.floors ?? e.stats?.floors, '1')
     : f('level', 'Level', d.level, '1');
+  const cols = tread || stairs ? 2 : 1;
   return `<div class="result-card" style="margin:4px 0 8px;">
-    <div class="lift-form-grid" style="grid-template-columns:repeat(${cardioIsTreadmill(e) ? 2 : 1}, minmax(0,1fr));margin-top:0;">${fields}</div>
-    <div class="search-hint" style="margin:-4px 0 10px;">${cardioIsTreadmill(e) ? 'Your treadmill speed replaces Garmin\'s distance and pace estimate.' : 'Resistance or level on the machine.'}</div>
+    <div class="lift-form-grid" style="grid-template-columns:repeat(${cols}, minmax(0,1fr));margin-top:0;">${fields}</div>
+    <div class="search-hint" style="margin:-4px 0 10px;">${tread ? 'Your treadmill speed replaces Garmin\'s distance and pace estimate.' : stairs ? 'Floors from the machine\'s screen. Your pace is worked out as floors per minute.' : 'Resistance or level on the machine.'}</div>
     <div class="result-actions"><button class="confirm-btn" onclick="saveCardioDetails(${e.id})">Save</button><button class="discard-btn" onclick="openCardioDetails(${e.id})">Cancel</button></div>
   </div>`;
 }

@@ -259,7 +259,8 @@ async function syncGarmin({ profileId, days = 8, end = null }) {
       if (hits.length) { if (!haveGarmin.has(`garmin:${id}`)) replacedShortcut++; hits.forEach(h => shortcutDrop.add(h.id)); }
       if (haveGarmin.has(`garmin:${id}`)) refreshed++;
       const type = title(pick(a, ['activityType.typeKey', 'activityTypeDTO.typeKey', 'activityType']) || 'workout');
-      const secs = Number(pick(a, ['movingDuration', 'duration', 'elapsedDuration']) || 0);
+      // First duration that's actually set (stair/strength workouts can report movingDuration 0)
+      const secs = ['movingDuration', 'duration', 'elapsedDuration'].map(k => Number(pick(a, [k])) || 0).find(v => v > 0) || 0;
       return { profile_id: profileId, date: m[1], name: String(pick(a, ['activityName']) || type).slice(0, 80),
         calories_burned: Math.round(Number(pick(a, ['calories', 'activeKilocalories']) || 0)), source: 'garmin',
         health_id: `garmin:${id}`, sport_type: type, trainer: null, moving_time: secs ? Math.round(secs) : null,
